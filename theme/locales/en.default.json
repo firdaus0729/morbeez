@@ -251,6 +251,7 @@
     "seasonal_campaign": {
       "name": "Seasonal campaign",
       "settings": {
+        "campaign": "Campaign metaobject (optional)",
         "image": "Background image",
         "badge": "Badge",
         "heading": "Heading",
@@ -361,11 +362,6 @@
         "collection": "Fallback collection",
         "collection_info": "Uses product's first collection if empty",
         "products_to_show": "Products to show"
-      }
-    },
-    "seasonal_campaign": {
-      "settings": {
-        "campaign": "Campaign metaobject (optional)"
       }
     }
   },
