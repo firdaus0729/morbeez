@@ -1,0 +1,25 @@
+<article class="morbeez-container morbeez-section max-w-3xl">
+  {%- render 'morbeez-breadcrumbs' -%}
+  <header>
+    <a href="{{ blog.url }}" class="text-sm font-semibold text-[var(--color-primary)]">← {{ blog.title }}</a>
+    <h1 class="mt-4 font-heading text-3xl font-bold">{{ article.title }}</h1>
+    <time class="mt-2 block text-sm text-[var(--color-muted)]" datetime="{{ article.published_at | date: '%Y-%m-%d' }}">
+      {{ article.published_at | date: format: 'date' }}
+    </time>
+  </header>
+  {%- if article.image -%}
+    <div class="my-8 overflow-hidden rounded-xl">
+      {%- render 'morbeez-lazy-image', image: article.image, alt: article.title, class: 'w-full h-auto' -%}
+    </div>
+  {%- endif -%}
+  <div class="prose prose-sm max-w-none">{{ article.content }}</div>
+</article>
+
+{%- render 'schema-article' -%}
+
+{% schema %}
+{
+  "name": "t:sections.main_article.name",
+  "settings": []
+}
+{% endschema %}

@@ -1,0 +1,47 @@
+{% comment %}
+  Mega menu dropdown for top-level links with children
+  Accepts: link (menu link object), menu_crop, menu_problem (optional link_list ids from section settings)
+{% endcomment %}
+{%- if link.links.size > 0 -%}
+  <div class="morbeez-mega-menu group relative">
+    <a
+      href="{{ link.url }}"
+      class="flex items-center gap-1 py-4 text-sm font-medium text-[var(--color-trust)] hover:text-[var(--color-primary)]"
+      aria-expanded="false"
+      data-mega-trigger
+    >
+      {{ link.title }}
+      <span class="text-xs opacity-60" aria-hidden="true">▾</span>
+    </a>
+    <div
+      class="morbeez-mega-panel pointer-events-none invisible absolute left-0 top-full z-50 w-[min(100vw,48rem)] rounded-xl border border-gray-100 bg-white p-6 opacity-0 shadow-xl transition group-hover:pointer-events-auto group-hover:visible group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:visible group-focus-within:opacity-100"
+      data-mega-panel
+    >
+      <div class="grid grid-cols-2 gap-6 md:grid-cols-3">
+        {%- for child in link.links -%}
+          <div>
+            <a href="{{ child.url }}" class="font-semibold text-[var(--color-primary)] hover:underline">{{ child.title }}</a>
+            {%- if child.links.size > 0 -%}
+              <ul class="mt-2 space-y-1" role="list">
+                {%- for grandchild in child.links -%}
+                  <li>
+                    <a href="{{ grandchild.url }}" class="text-sm text-[var(--color-muted)] hover:text-[var(--color-primary)]">
+                      {{ grandchild.title }}
+                    </a>
+                  </li>
+                {%- endfor -%}
+              </ul>
+            {%- endif -%}
+          </div>
+        {%- endfor -%}
+      </div>
+      <a href="{{ link.url }}" class="mt-4 inline-block text-sm font-semibold text-[var(--color-primary)]">
+        {{ 'general.view_all' | t }} {{ link.title }} →
+      </a>
+    </div>
+  </div>
+{%- else -%}
+  <a href="{{ link.url }}" class="py-4 text-sm font-medium text-[var(--color-trust)] hover:text-[var(--color-primary)]">
+    {{ link.title }}
+  </a>
+{%- endif -%}

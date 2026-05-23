@@ -1,0 +1,59 @@
+{%- comment -%}
+  Subcollection chips — links from a menu or sibling collections.
+  Assign menu with child links of parent collection group.
+{%- endcomment -%}
+{%- assign nav_menu = linklists[section.settings.menu] -%}
+{%- if nav_menu.links.size > 0 -%}
+  <div class="border-b border-gray-100 bg-white">
+    <div class="morbeez-container py-4">
+      <div class="morbeez-scroll-x lg:flex lg:flex-wrap lg:gap-2 lg:overflow-visible">
+        {%- for link in nav_menu.links -%}
+          <a
+            href="{{ link.url }}"
+            class="inline-flex shrink-0 items-center rounded-full border px-4 py-2 text-sm font-medium transition {% if link.active or link.child_active %}border-[var(--color-primary)] bg-[var(--color-primary)] text-white{% else %}border-gray-200 bg-white text-[var(--color-trust)] hover:border-[var(--color-primary)]{% endif %}"
+          >
+            {{ link.title }}
+          </a>
+        {%- endfor -%}
+      </div>
+    </div>
+  </div>
+{%- elsif section.settings.show_sibling_collections and collection.metafields.morbeez.collection_type != blank -%}
+  <div class="border-b border-gray-100 bg-white">
+    <div class="morbeez-container py-4">
+      <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--color-muted)]">{{ 'collections.explore_more' | t }}</p>
+      <div class="morbeez-scroll-x">
+        {%- for coll in collections limit: 12 -%}
+          {%- if coll.handle != collection.handle and coll.metafields.morbeez.collection_type.value == collection.metafields.morbeez.collection_type.value and coll.metafields.morbeez.collection_type.value != blank -%}
+            <a href="{{ coll.url }}" class="inline-flex shrink-0 rounded-full border border-gray-200 px-4 py-2 text-sm font-medium hover:border-[var(--color-primary)]">
+              {{ coll.title }}
+            </a>
+          {%- endif -%}
+        {%- endfor -%}
+      </div>
+    </div>
+  </div>
+{%- endif -%}
+
+{% schema %}
+{
+  "name": "t:sections.subcollection_nav.name",
+  "tag": "section",
+  "class": "section-subcollection-nav",
+  "settings": [
+    {
+      "type": "link_list",
+      "id": "menu",
+      "label": "t:sections.subcollection_nav.settings.menu",
+      "info": "t:sections.subcollection_nav.settings.menu_info"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_sibling_collections",
+      "label": "t:sections.subcollection_nav.settings.show_sibling_collections",
+      "default": false,
+      "info": "t:sections.subcollection_nav.settings.show_sibling_info"
+    }
+  ]
+}
+{% endschema %}

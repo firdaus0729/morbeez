@@ -1,0 +1,52 @@
+{%- assign blog = blogs[section.settings.blog] -%}
+
+<section class="morbeez-section" id="MorbeezBlog-{{ section.id }}">
+  <div class="morbeez-container">
+    {%- render 'morbeez-section-header',
+      heading: section.settings.heading,
+      subheading: section.settings.subheading,
+      link_url: blog.url,
+      link_label: section.settings.view_all_label
+    -%}
+
+    {%- if blog != blank and blog.articles_count > 0 -%}
+      <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        {%- for article in blog.articles limit: section.settings.articles_count -%}
+          <article class="morbeez-card overflow-hidden">
+            <a href="{{ article.url }}" class="block">
+              {%- if article.image -%}
+                {%- render 'morbeez-lazy-image', image: article.image, alt: article.title, class: 'w-full aspect-[16/10] object-cover' -%}
+              {%- endif -%}
+              <div class="p-4">
+                <time class="text-xs text-[var(--color-muted)]" datetime="{{ article.published_at | date: '%Y-%m-%d' }}">
+                  {{ article.published_at | date: format: 'date' }}
+                </time>
+                <h3 class="mt-1 font-semibold leading-snug hover:text-[var(--color-primary)]">{{ article.title }}</h3>
+                {%- if article.excerpt != blank -%}
+                  <p class="mt-2 line-clamp-2 text-sm text-[var(--color-muted)]">{{ article.excerpt | strip_html | truncate: 120 }}</p>
+                {%- endif -%}
+              </div>
+            </a>
+          </article>
+        {%- endfor -%}
+      </div>
+    {%- else -%}
+      <p class="text-center text-[var(--color-muted)]">{{ 'sections.blog_preview.empty' | t }}</p>
+    {%- endif -%}
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "t:sections.blog_preview.name",
+  "tag": "section",
+  "settings": [
+    { "type": "text", "id": "heading", "label": "t:sections.blog_preview.settings.heading", "default": "Crop advisory & tips" },
+    { "type": "text", "id": "subheading", "label": "t:sections.blog_preview.settings.subheading", "default": "Learn from agronomy experts" },
+    { "type": "blog", "id": "blog", "label": "t:sections.blog_preview.settings.blog" },
+    { "type": "range", "id": "articles_count", "min": 2, "max": 6, "step": 1, "default": 3, "label": "t:sections.blog_preview.settings.articles_count" },
+    { "type": "text", "id": "view_all_label", "label": "t:sections.blog_preview.settings.view_all_label", "default": "Read all articles" }
+  ],
+  "presets": [{ "name": "t:sections.blog_preview.presets.default" }]
+}
+{% endschema %}

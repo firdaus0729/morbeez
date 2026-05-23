@@ -1,0 +1,71 @@
+{% layout none %}
+<!doctype html>
+<html lang="{{ request.locale.iso_code }}">
+  <head>
+    {%- assign formatted_balance = gift_card.balance | money_without_trailing_zeros -%}
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ 'gift_cards.issued.title' | t: value: formatted_balance, shop: shop.name }}</title>
+
+    {{ content_for_header }}
+
+    {%- render 'css-variables' -%}
+    {{ 'theme.css' | asset_url | stylesheet_tag }}
+  </head>
+
+  <body class="gift-card" style="background: var(--color-surface); min-height: 100vh; margin: 0; padding: 2rem;">
+    <main style="max-width: 32rem; margin: 0 auto; text-align: center; font-family: var(--font-body);">
+      {%- if settings.logo != blank -%}
+        {{ settings.logo | image_url: width: 200 | image_tag: alt: shop.name, style: 'height: 3rem; width: auto; margin: 0 auto 1.5rem;' }}
+      {%- else -%}
+        <p style="font-size: 1.25rem; font-weight: 700; color: var(--color-primary); margin-bottom: 1.5rem;">{{ shop.name }}</p>
+      {%- endif -%}
+
+      <h1 style="font-size: 1.5rem; color: var(--color-trust); margin: 0 0 0.5rem;">
+        {{ 'gift_cards.issued.title' | t: value: formatted_balance, shop: shop.name }}
+      </h1>
+
+      {%- if gift_card.enabled == false or gift_card.expired -%}
+        <p style="color: var(--color-muted);">{{ 'gift_cards.issued.expired' | t }}</p>
+      {%- endif -%}
+
+      <div class="morbeez-card" style="margin-top: 1.5rem; padding: 1.5rem;">
+        {%- if gift_card.expires_on -%}
+          <p style="font-size: 0.875rem; color: var(--color-muted); margin: 0 0 1rem;">
+            {{ 'gift_cards.issued.expiration_date' | t: expires_on: gift_card.expires_on | date: format: 'date' }}
+          </p>
+        {%- endif -%}
+
+        {{ gift_card | gift_card_img_tag: class: 'gift-card__image' }}
+
+        <p style="font-size: 0.75rem; text-transform: uppercase; color: var(--color-muted); margin: 1rem 0 0.25rem;">
+          {{ 'gift_cards.issued.card_label' | t }}
+        </p>
+        <p style="font-size: 1.25rem; font-weight: 700; letter-spacing: 0.08em; word-break: break-all;">
+          {{ gift_card.code | format_code }}
+        </p>
+
+        <button
+          type="button"
+          class="morbeez-btn-primary"
+          style="margin-top: 1rem; border: none; cursor: pointer;"
+          onclick="navigator.clipboard.writeText('{{ gift_card.code | escape }}'); this.innerText='{{ 'gift_cards.issued.copy_code_success' | t | escape }}';"
+        >
+          {{ 'gift_cards.issued.copy_code' | t }}
+        </button>
+      </div>
+
+      <p style="margin-top: 1.5rem;">
+        <a href="{{ shop.url }}" class="morbeez-btn-secondary">{{ 'gift_cards.issued.shop_link' | t }}</a>
+      </p>
+
+      {%- if gift_card.pass_url -%}
+        <p style="margin-top: 1rem;">
+          <a href="{{ gift_card.pass_url }}" style="color: var(--color-primary); font-weight: 600;">
+            {{ 'gift_cards.issued.add_to_apple_wallet' | t }}
+          </a>
+        </p>
+      {%- endif -%}
+    </main>
+  </body>
+</html>

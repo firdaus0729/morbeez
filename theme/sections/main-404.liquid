@@ -1,0 +1,16 @@
+<div class="morbeez-container morbeez-section text-center">
+  <p class="text-6xl font-bold text-[var(--color-primary)]">404</p>
+  <h1 class="mt-4 font-heading text-2xl font-bold">{{ 'general.404.title' | t }}</h1>
+  <p class="mt-2 text-[var(--color-muted)]">{{ 'general.404.subtext' | t }}</p>
+  <div class="mt-8 flex flex-wrap justify-center gap-3">
+    <a href="{{ routes.root_url }}" class="morbeez-btn-primary">{{ 'general.404.home' | t }}</a>
+    <a href="{{ routes.all_products_collection_url }}" class="morbeez-btn-secondary">{{ 'general.404.shop' | t }}</a>
+  </div>
+</div>
+
+{% schema %}
+{
+  "name": "t:sections.main_404.name",
+  "settings": []
+}
+{% endschema %}

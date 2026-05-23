@@ -1,0 +1,69 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    @apply scroll-smooth;
+  }
+
+  body {
+    @apply font-body text-morbeez-trust antialiased bg-white;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+  }
+}
+
+@layer components {
+  .morbeez-container {
+    @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+  }
+
+  .morbeez-section {
+    @apply py-10 md:py-14;
+  }
+
+  .morbeez-btn-primary {
+    @apply inline-flex items-center justify-center rounded-lg bg-morbeez-primary px-5 py-3 text-sm font-semibold text-white transition hover:opacity-90 min-h-[44px];
+  }
+
+  .morbeez-btn-secondary {
+    @apply inline-flex items-center justify-center rounded-lg border-2 border-morbeez-primary px-5 py-3 text-sm font-semibold text-morbeez-primary transition hover:bg-morbeez-primary hover:text-white min-h-[44px];
+  }
+
+  .morbeez-card {
+    @apply rounded-xl border border-gray-100 bg-white shadow-sm transition hover:shadow-md;
+  }
+
+  .morbeez-scroll-x {
+    @apply -mx-4 flex gap-4 overflow-x-auto px-4 pb-2 snap-x snap-mandatory;
+  }
+
+  .morbeez-scroll-x > * {
+    @apply snap-start;
+  }
+
+  .morbeez-tab {
+    @apply shrink-0 border-b-2 border-transparent px-4 py-3 text-sm font-medium text-[var(--color-muted)] transition hover:text-[var(--color-primary)];
+  }
+
+  .morbeez-tab.is-active {
+    @apply border-[var(--color-primary)] text-[var(--color-primary)];
+  }
+
+  .morbeez-badge--sale {
+    @apply bg-red-100 text-red-800;
+  }
+
+  .morbeez-badge--new {
+    @apply bg-[var(--color-primary)]/10 text-[var(--color-primary)];
+  }
+
+  .morbeez-drawer:not(.hidden) {
+    @apply block;
+  }
+}

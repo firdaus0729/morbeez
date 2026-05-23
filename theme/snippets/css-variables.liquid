@@ -1,0 +1,20 @@
+{% style %}
+  {%- unless settings.type_header_font.system? -%}
+    {{ settings.type_header_font | font_face: font_display: 'swap' }}
+  {%- endunless -%}
+  {%- unless settings.type_body_font.system? -%}
+    {{ settings.type_body_font | font_face: font_display: 'swap' }}
+  {%- endunless -%}
+
+  :root {
+    --color-primary: {{ settings.color_primary | default: '#1b5e3b' }};
+    --color-accent: {{ settings.color_accent | default: '#c9a227' }};
+    --color-trust: {{ settings.color_trust | default: '#1e293b' }};
+    --color-surface: {{ settings.color_surface | default: '#f8faf6' }};
+    --color-muted: {{ settings.color_muted | default: '#64748b' }};
+    --font-heading: {{ settings.type_header_font.family }}, {{ settings.type_header_font.fallback_families }};
+    --font-body: {{ settings.type_body_font.family }}, "Noto Sans Malayalam", {{ settings.type_body_font.fallback_families }};
+    --font-heading-weight: {{ settings.type_header_font.weight }};
+    --font-body-weight: {{ settings.type_body_font.weight }};
+  }
+{% endstyle %}

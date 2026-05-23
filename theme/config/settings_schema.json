@@ -1,0 +1,79 @@
+[
+  {
+    "name": "theme_info",
+    "theme_name": "Morbeez Ag",
+    "theme_version": "1.0.0-m1",
+    "theme_author": "Morbeez",
+    "theme_documentation_url": "https://github.com/",
+    "theme_support_url": "https://github.com/"
+  },
+  {
+    "name": "t:settings.brand.name",
+    "settings": [
+      { "type": "color", "id": "color_primary", "label": "t:settings.brand.color_primary", "default": "#1b5e3b" },
+      { "type": "color", "id": "color_accent", "label": "t:settings.brand.color_accent", "default": "#c9a227" },
+      { "type": "color", "id": "color_trust", "label": "t:settings.brand.color_trust", "default": "#1e293b" },
+      { "type": "color", "id": "color_surface", "label": "t:settings.brand.color_surface", "default": "#f8faf6" },
+      { "type": "color", "id": "color_muted", "label": "t:settings.brand.color_muted", "default": "#64748b" },
+      { "type": "image_picker", "id": "logo", "label": "t:settings.brand.logo" },
+      { "type": "image_picker", "id": "default_og_image", "label": "t:settings.brand.default_og_image" }
+    ]
+  },
+  {
+    "name": "t:settings.typography.name",
+    "settings": [
+      {
+        "type": "font_picker",
+        "id": "type_header_font",
+        "label": "t:settings.typography.type_header_font",
+        "default": "assistant_n4"
+      },
+      {
+        "type": "font_picker",
+        "id": "type_body_font",
+        "label": "t:settings.typography.type_body_font",
+        "default": "assistant_n4"
+      }
+    ]
+  },
+  {
+    "name": "t:settings.whatsapp.name",
+    "settings": [
+      {
+        "type": "text",
+        "id": "whatsapp_phone",
+        "label": "t:settings.whatsapp.phone",
+        "info": "t:settings.whatsapp.phone_info"
+      },
+      {
+        "type": "textarea",
+        "id": "whatsapp_message",
+        "label": "t:settings.whatsapp.message",
+        "default": "Hi Morbeez, I need help with "
+      }
+    ]
+  },
+  {
+    "name": "t:settings.features.name",
+    "settings": [
+      {
+        "type": "checkbox",
+        "id": "enable_ai_crop_doctor_cta",
+        "label": "t:settings.features.enable_ai_crop_doctor_cta",
+        "default": true
+      },
+      {
+        "type": "checkbox",
+        "id": "enable_dealer_enquiry",
+        "label": "t:settings.features.enable_dealer_enquiry",
+        "default": true
+      },
+      {
+        "type": "checkbox",
+        "id": "enable_organization_schema",
+        "label": "t:settings.features.enable_organization_schema",
+        "default": true
+      }
+    ]
+  }
+]

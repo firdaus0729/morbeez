@@ -1,0 +1,46 @@
+<div class="morbeez-container morbeez-section">
+  {%- paginate collection.products by section.settings.products_per_page -%}
+    {%- if collection.products.size == 0 -%}
+      <p class="py-12 text-center text-[var(--color-muted)]">{{ 'collections.empty' | t }}</p>
+    {%- else -%}
+      <div class="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4 lg:gap-6">
+        {%- for product in collection.products -%}
+          {%- render 'morbeez-product-card', product: product -%}
+        {%- endfor -%}
+      </div>
+
+      {%- if paginate.pages > 1 -%}
+        {%- if paginate.previous -%}
+          <link rel="prev" href="{{ paginate.previous.url }}">
+        {%- endif -%}
+        {%- if paginate.next -%}
+          <link rel="next" href="{{ paginate.next.url }}">
+        {%- endif -%}
+        <nav class="mt-10 flex justify-center gap-2" aria-label="{{ 'general.pagination' | t }}">
+          {%- if paginate.previous -%}
+            <a href="{{ paginate.previous.url }}" class="morbeez-btn-secondary" rel="prev">← {{ 'general.pagination_previous' | t }}</a>
+          {%- endif -%}
+          <span class="flex items-center px-4 text-sm text-[var(--color-muted)]">{{ paginate.current_page }} / {{ paginate.pages }}</span>
+          {%- if paginate.next -%}
+            <a href="{{ paginate.next.url }}" class="morbeez-btn-secondary" rel="next">{{ 'general.pagination_next' | t }} →</a>
+          {%- endif -%}
+        </nav>
+      {%- endif -%}
+    {%- endif -%}
+  {%- endpaginate -%}
+
+  {%- if collection.metafields.morbeez.seo_body != blank -%}
+    <div class="mt-12 border-t border-gray-100 pt-8 prose prose-sm max-w-none text-[var(--color-muted)]">
+      {{ collection.metafields.morbeez.seo_body | metafield_tag }}
+    </div>
+  {%- endif -%}
+</div>
+
+{% schema %}
+{
+  "name": "t:sections.main_collection.name",
+  "settings": [
+    { "type": "range", "id": "products_per_page", "min": 8, "max": 36, "step": 4, "default": 16, "label": "t:sections.main_collection.settings.products_per_page" }
+  ]
+}
+{% endschema %}

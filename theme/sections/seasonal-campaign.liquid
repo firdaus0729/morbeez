@@ -1,0 +1,79 @@
+{%- liquid
+  assign campaign = section.settings.campaign
+  assign banner_image = section.settings.image
+  assign banner_badge = section.settings.badge
+  assign banner_heading = section.settings.heading
+  assign banner_text = section.settings.text
+  assign banner_cta_url = section.settings.cta_url
+  assign banner_cta_label = section.settings.cta_label
+
+  if campaign != blank
+    if campaign.image.value != blank
+      assign banner_image = campaign.image.value
+    endif
+    assign banner_badge = campaign.badge.value | default: banner_badge
+    assign banner_heading = campaign.title.value | default: banner_heading
+    assign banner_text = campaign.description.value | default: banner_text
+    assign banner_cta_url = campaign.link.value | default: banner_cta_url
+  endif
+-%}
+
+<section class="morbeez-section" id="MorbeezSeasonal-{{ section.id }}">
+  <div class="morbeez-container">
+    <div class="relative overflow-hidden rounded-2xl">
+      {%- if banner_image != blank -%}
+        {%- render 'morbeez-lazy-image',
+          image: banner_image,
+          alt: banner_heading,
+          class: 'absolute inset-0 h-full w-full object-cover'
+        -%}
+      {%- endif -%}
+      <div
+        class="relative flex min-h-[200px] flex-col justify-center p-8 md:min-h-[280px] md:p-12"
+        style="background: linear-gradient(90deg, rgba(27,94,59,0.92) 0%, rgba(27,94,59,0.6) 100%);"
+      >
+        {%- if banner_badge != blank -%}
+          <span class="mb-2 inline-block w-fit rounded-full bg-[var(--color-accent)] px-3 py-1 text-xs font-bold text-[var(--color-trust)]">
+            {{ banner_badge }}
+          </span>
+        {%- endif -%}
+        <h2 class="max-w-lg font-heading text-2xl font-bold text-white md:text-4xl">{{ banner_heading }}</h2>
+        {%- if banner_text != blank -%}
+          <p class="mt-2 max-w-md text-sm text-white/90 md:text-base">{{ banner_text }}</p>
+        {%- endif -%}
+        {%- if banner_cta_url != blank -%}
+          <div class="mt-6">
+            {%- render 'morbeez-button',
+              url: banner_cta_url,
+              label: banner_cta_label,
+              style: 'secondary',
+              class: '!border-white !text-white hover:!bg-white hover:!text-[var(--color-primary)]'
+            -%}
+          </div>
+        {%- endif -%}
+      </div>
+    </div>
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "t:sections.seasonal_campaign.name",
+  "tag": "section",
+  "settings": [
+    {
+      "type": "metaobject",
+      "id": "campaign",
+      "label": "t:sections.seasonal_campaign.settings.campaign",
+      "metaobject_type": "morbeez_campaign_banner"
+    },
+    { "type": "image_picker", "id": "image", "label": "t:sections.seasonal_campaign.settings.image" },
+    { "type": "text", "id": "badge", "label": "t:sections.seasonal_campaign.settings.badge", "default": "Monsoon ready" },
+    { "type": "text", "id": "heading", "label": "t:sections.seasonal_campaign.settings.heading", "default": "Monsoon crop protection essentials" },
+    { "type": "textarea", "id": "text", "label": "t:sections.seasonal_campaign.settings.text" },
+    { "type": "url", "id": "cta_url", "label": "t:sections.seasonal_campaign.settings.cta_url" },
+    { "type": "text", "id": "cta_label", "label": "t:sections.seasonal_campaign.settings.cta_label", "default": "Shop monsoon kit" }
+  ],
+  "presets": [{ "name": "t:sections.seasonal_campaign.presets.default" }]
+}
+{% endschema %}

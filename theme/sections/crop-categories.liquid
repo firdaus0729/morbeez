@@ -1,0 +1,71 @@
+<section class="morbeez-section" id="MorbeezCrops-{{ section.id }}">
+  <div class="morbeez-container">
+    {%- render 'morbeez-section-header',
+      heading: section.settings.heading,
+      subheading: section.settings.subheading,
+      link_url: section.settings.view_all_url,
+      link_label: section.settings.view_all_label
+    -%}
+
+    <div class="morbeez-scroll-x lg:grid lg:grid-cols-6 lg:gap-4 lg:overflow-visible">
+      {%- for block in section.blocks -%}
+        {%- assign coll = block.settings.collection -%}
+        {%- if coll != blank -%}
+          {%- assign tile_url = coll.url -%}
+          {%- assign tile_title = block.settings.title | default: coll.title -%}
+          {%- assign tile_image = block.settings.image | default: coll.image -%}
+          {%- capture count_label -%}{{ coll.products_count }} {{ 'collections.products_count' | t }}{%- endcapture -%}
+        {%- else -%}
+          {%- assign tile_url = block.settings.link -%}
+          {%- assign tile_title = block.settings.title -%}
+          {%- assign tile_image = block.settings.image -%}
+          {%- assign count_label = '' -%}
+        {%- endif -%}
+        <div {{ block.shopify_attributes }}>
+          {%- render 'morbeez-collection-tile',
+            image: tile_image,
+            title: tile_title,
+            url: tile_url,
+            count_label: count_label
+          -%}
+        </div>
+      {%- endfor -%}
+    </div>
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "t:sections.crop_categories.name",
+  "tag": "section",
+  "settings": [
+    { "type": "text", "id": "heading", "label": "t:sections.crop_categories.settings.heading", "default": "Shop by crop" },
+    { "type": "text", "id": "subheading", "label": "t:sections.crop_categories.settings.subheading", "default": "Find solutions for your crop" },
+    { "type": "url", "id": "view_all_url", "label": "t:sections.crop_categories.settings.view_all_url" },
+    { "type": "text", "id": "view_all_label", "label": "t:sections.crop_categories.settings.view_all_label", "default": "View all crops" }
+  ],
+  "blocks": [
+    {
+      "type": "category_tile",
+      "name": "t:sections.crop_categories.blocks.tile.name",
+      "settings": [
+        { "type": "collection", "id": "collection", "label": "t:sections.crop_categories.blocks.tile.settings.collection" },
+        { "type": "image_picker", "id": "image", "label": "t:sections.crop_categories.blocks.tile.settings.image" },
+        { "type": "text", "id": "title", "label": "t:sections.crop_categories.blocks.tile.settings.title" },
+        { "type": "url", "id": "link", "label": "t:sections.crop_categories.blocks.tile.settings.link" }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:sections.crop_categories.presets.default",
+      "blocks": [
+        { "type": "category_tile", "settings": { "title": "Paddy" } },
+        { "type": "category_tile", "settings": { "title": "Coconut" } },
+        { "type": "category_tile", "settings": { "title": "Vegetables" } },
+        { "type": "category_tile", "settings": { "title": "Spices" } }
+      ]
+    }
+  ]
+}
+{% endschema %}

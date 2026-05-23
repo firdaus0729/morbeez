@@ -1,0 +1,51 @@
+<header class="sticky top-0 z-40 border-b border-gray-100 bg-white" role="banner">
+  <div class="morbeez-container flex h-16 items-center justify-between gap-4">
+    <a href="{{ routes.root_url }}" class="shrink-0 font-heading text-xl font-bold text-[var(--color-primary)]">
+      {%- if settings.logo != blank -%}
+        {{ settings.logo | image_url: width: 180 | image_tag: alt: shop.name, class: 'h-10 w-auto' }}
+      {%- else -%}
+        {{ shop.name }}
+      {%- endif -%}
+    </a>
+
+    <nav class="hidden items-center gap-1 lg:flex" aria-label="{{ 'accessibility.main_navigation' | t }}">
+      {%- for link in linklists[section.settings.menu].links -%}
+        {%- render 'morbeez-mega-menu', link: link -%}
+      {%- endfor -%}
+    </nav>
+
+    <div class="flex items-center gap-2 sm:gap-3">
+      <div class="hidden md:block">
+        {%- render 'morbeez-language-switcher' -%}
+      </div>
+      <a href="{{ routes.search_url }}" class="hidden p-2 text-sm font-medium sm:inline-flex" aria-label="{{ 'general.search' | t }}">
+        <span aria-hidden="true">⌕</span>
+      </a>
+      <a href="{{ routes.cart_url }}" class="p-2 text-sm font-medium" aria-label="{{ 'general.cart' | t }}">
+        <span class="hidden sm:inline">{{ 'general.cart' | t }}</span>
+        <span class="sm:ml-1">({{ cart.item_count }})</span>
+      </a>
+      <button
+        type="button"
+        class="flex h-10 w-10 items-center justify-center rounded-lg border border-gray-200 lg:hidden"
+        data-drawer-open
+        aria-controls="morbeez-mobile-drawer"
+        aria-expanded="false"
+        aria-label="{{ 'accessibility.menu_open' | t }}"
+      >
+        <span aria-hidden="true">☰</span>
+      </button>
+    </div>
+  </div>
+</header>
+
+{%- render 'morbeez-mobile-drawer', menu: section.settings.menu -%}
+
+{% schema %}
+{
+  "name": "t:sections.header.name",
+  "settings": [
+    { "type": "link_list", "id": "menu", "label": "t:sections.header.settings.menu", "default": "main-menu" }
+  ]
+}
+{% endschema %}

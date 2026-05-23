@@ -1,0 +1,26 @@
+{
+  "metaobject_definitions": [
+    {
+      "type": "morbeez_campaign_banner",
+      "name": "Campaign banner",
+      "field_definitions": [
+        { "key": "title", "name": "Title", "type": "single_line_text_field" },
+        { "key": "image", "name": "Image", "type": "file_reference" },
+        { "key": "link", "name": "Link", "type": "url" },
+        { "key": "badge", "name": "Badge", "type": "single_line_text_field" },
+        { "key": "description", "name": "Description", "type": "multi_line_text_field" },
+        { "key": "season", "name": "Season", "type": "single_line_text_field" }
+      ]
+    },
+    {
+      "type": "morbeez_advisory_card",
+      "name": "Advisory card",
+      "field_definitions": [
+        { "key": "title", "name": "Title", "type": "single_line_text_field" },
+        { "key": "excerpt", "name": "Excerpt", "type": "multi_line_text_field" },
+        { "key": "link", "name": "Link", "type": "url" },
+        { "key": "icon", "name": "Icon", "type": "file_reference" }
+      ]
+    }
+  ]
+}

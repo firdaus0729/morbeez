@@ -1,0 +1,23 @@
+<div class="morbeez-container morbeez-section">
+  <h1 class="font-heading text-3xl font-bold">{{ 'collections.all_title' | t }}</h1>
+  <div class="mt-8 grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
+    {%- for collection in collections -%}
+      {%- unless collection.handle == 'frontpage' -%}
+        {%- render 'morbeez-collection-tile',
+          image: collection.image,
+          title: collection.title,
+          url: collection.url,
+          count_label: collection.products_count | append: ' products',
+          class: 'w-full shrink'
+        -%}
+      {%- endunless -%}
+    {%- endfor -%}
+  </div>
+</div>
+
+{% schema %}
+{
+  "name": "t:sections.main_list_collections.name",
+  "settings": []
+}
+{% endschema %}

@@ -1,0 +1,70 @@
+import { z } from 'zod';
+import 'dotenv/config';
+
+const envSchema = z.object({
+  NODE_ENV: z.enum(['development', 'staging', 'production', 'test']).default('development'),
+  PORT: z.coerce.number().default(3000),
+  API_BASE_URL: z.string().url().optional(),
+  LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
+
+  SUPABASE_URL: z.string().url(),
+  SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
+  SUPABASE_ANON_KEY: z.string().optional(),
+
+  SHOPIFY_STORE_DOMAIN: z.string().min(1),
+  SHOPIFY_ADMIN_API_ACCESS_TOKEN: z.string().min(1),
+  SHOPIFY_API_VERSION: z.string().default('2024-10'),
+  SHOPIFY_WEBHOOK_SECRET: z.string().min(1),
+  SHOPIFY_APP_CLIENT_SECRET: z.string().optional(),
+
+  RAZORPAY_KEY_ID: z.string().optional(),
+  RAZORPAY_KEY_SECRET: z.string().optional(),
+  RAZORPAY_WEBHOOK_SECRET: z.string().optional(),
+
+  SHIPROCKET_EMAIL: z.string().optional(),
+  SHIPROCKET_PASSWORD: z.string().optional(),
+  SHIPROCKET_WEBHOOK_TOKEN: z.string().optional(),
+
+  WHATSAPP_PROVIDER: z.enum(['cloud', 'wati', 'interakt']).default('cloud'),
+  WHATSAPP_PHONE_NUMBER_ID: z.string().optional(),
+  WHATSAPP_ACCESS_TOKEN: z.string().optional(),
+  WHATSAPP_APP_SECRET: z.string().optional(),
+  WHATSAPP_VERIFY_TOKEN: z.string().optional(),
+  WATI_API_ENDPOINT: z.string().url().optional(),
+  WATI_ACCESS_TOKEN: z.string().optional(),
+  INTERAKT_API_KEY: z.string().optional(),
+
+  INTERNAL_API_KEY: z.string().min(16),
+  RATE_LIMIT_MAX: z.coerce.number().default(100),
+  RATE_LIMIT_WINDOW_MS: z.coerce.number().default(60_000),
+
+  ENABLE_SHIPROCKET_AUTO_SHIP: z
+    .string()
+    .transform((v) => v === 'true')
+    .default('true'),
+  ENABLE_RAZORPAY_PAYMENT_LINKS: z
+    .string()
+    .transform((v) => v === 'true')
+    .default('true'),
+  ENABLE_WHATSAPP_AUTO_REPLY: z
+    .string()
+    .transform((v) => v === 'true')
+    .default('false'),
+  ENABLE_OUTBOX_WORKER: z
+    .string()
+    .transform((v) => v !== 'false')
+    .default('true'),
+});
+
+export type Env = z.infer<typeof envSchema>;
+
+function loadEnv(): Env {
+  const parsed = envSchema.safeParse(process.env);
+  if (!parsed.success) {
+    console.error('Invalid environment variables:', parsed.error.flatten().fieldErrors);
+    process.exit(1);
+  }
+  return parsed.data;
+}
+
+export const env = loadEnv();

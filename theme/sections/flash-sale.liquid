@@ -1,0 +1,47 @@
+{%- assign sale_collection = collections[section.settings.collection] -%}
+
+<section class="morbeez-section" id="MorbeezFlash-{{ section.id }}" data-flash-sale data-end="{{ section.settings.end_datetime }}">
+  <div class="morbeez-container">
+    <div class="flex flex-wrap items-end justify-between gap-4 mb-8">
+      <div>
+        {%- if section.settings.badge != blank -%}
+          <span class="mb-2 inline-block rounded-full bg-red-600 px-3 py-1 text-xs font-bold text-white">{{ section.settings.badge }}</span>
+        {%- endif -%}
+        <h2 class="font-heading text-2xl font-bold">{{ section.settings.heading }}</h2>
+        {%- if section.settings.subheading != blank -%}
+          <p class="mt-1 text-[var(--color-muted)]">{{ section.settings.subheading }}</p>
+        {%- endif -%}
+      </div>
+      {%- if section.settings.end_datetime != blank -%}
+        <div class="rounded-xl bg-[var(--color-trust)] px-4 py-3 text-center text-white" data-countdown aria-live="polite">
+          <p class="text-xs uppercase tracking-wide opacity-80">{{ 'sections.flash_sale.ends_in' | t }}</p>
+          <p class="mt-1 font-mono text-lg font-bold" data-countdown-display>--:--:--</p>
+        </div>
+      {%- endif -%}
+    </div>
+
+    {%- if sale_collection != blank -%}
+      <div class="grid grid-cols-2 gap-4 md:grid-cols-4">
+        {%- for product in sale_collection.products limit: section.settings.products_to_show -%}
+          {%- render 'morbeez-product-card', product: product -%}
+        {%- endfor -%}
+      </div>
+    {%- endif -%}
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "t:sections.flash_sale.name",
+  "tag": "section",
+  "settings": [
+    { "type": "text", "id": "badge", "label": "t:sections.flash_sale.settings.badge", "default": "Flash sale" },
+    { "type": "text", "id": "heading", "label": "t:sections.flash_sale.settings.heading", "default": "Limited time offers" },
+    { "type": "text", "id": "subheading", "label": "t:sections.flash_sale.settings.subheading" },
+    { "type": "collection", "id": "collection", "label": "t:sections.flash_sale.settings.collection" },
+    { "type": "text", "id": "end_datetime", "label": "t:sections.flash_sale.settings.end_datetime", "info": "t:sections.flash_sale.settings.end_datetime_info", "default": "2026-12-31T23:59:59" },
+    { "type": "range", "id": "products_to_show", "min": 4, "max": 8, "step": 1, "default": 4, "label": "t:sections.flash_sale.settings.products_to_show" }
+  ],
+  "presets": [{ "name": "t:sections.flash_sale.presets.default" }]
+}
+{% endschema %}

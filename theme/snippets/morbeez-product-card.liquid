@@ -1,0 +1,26 @@
+{% comment %} Product card — used across homepage and collection grids {% endcomment %}
+{%- if product != blank -%}
+  <article class="morbeez-card group overflow-hidden">
+    <a href="{{ product.url }}" class="block">
+      <div class="aspect-square overflow-hidden bg-[var(--color-surface)]">
+        {%- render 'morbeez-lazy-image',
+          image: product.featured_image,
+          alt: product.title,
+          class: 'h-full w-full object-cover transition group-hover:scale-105'
+        -%}
+      </div>
+      <div class="p-4">
+        <h3 class="text-sm font-semibold leading-snug">{{ product.title }}</h3>
+        {%- if product.metafields.morbeez.pack_size_label != blank -%}
+          <p class="mt-1 text-xs text-[var(--color-muted)]">{{ product.metafields.morbeez.pack_size_label }}</p>
+        {%- endif -%}
+        <div class="mt-2 flex items-baseline gap-2">
+          <span class="font-semibold text-[var(--color-primary)]">{{ product.price | money }}</span>
+          {%- if product.compare_at_price > product.price -%}
+            <s class="text-xs text-[var(--color-muted)]">{{ product.compare_at_price | money }}</s>
+          {%- endif -%}
+        </div>
+      </div>
+    </a>
+  </article>
+{%- endif -%}

@@ -1,0 +1,20 @@
+{% comment %}
+  Renders a CTA button.
+  Accepts: url, label, style (primary|secondary|whatsapp), class, attributes
+{% endcomment %}
+{%- liquid
+  assign btn_style = style | default: 'primary'
+  assign btn_class = 'morbeez-btn-primary'
+  if btn_style == 'secondary'
+    assign btn_class = 'morbeez-btn-secondary'
+  elsif btn_style == 'whatsapp'
+    assign btn_class = 'morbeez-btn-primary'
+  endif
+-%}
+<a
+  href="{{ url }}"
+  class="{{ btn_class }} {{ class }}"
+  {{ attributes }}
+>
+  {{ label }}
+</a>

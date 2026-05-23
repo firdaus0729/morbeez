@@ -1,0 +1,13 @@
+{
+  "sections": {
+    "form": {
+      "type": "dealer-enquiry-form",
+      "settings": {
+        "heading": "Become a Morbeez dealer",
+        "body": "Fill in your details and our team will contact you about wholesale partnership.",
+        "use_app_proxy": true
+      }
+    }
+  },
+  "order": ["form"]
+}

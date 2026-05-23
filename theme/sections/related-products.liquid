@@ -1,0 +1,37 @@
+{%- liquid
+  assign products_to_show = section.settings.products_to_show
+  assign rec_collection = collections[section.settings.collection]
+  if rec_collection == blank and product.collections.size > 0
+    assign rec_collection = product.collections.first
+  endif
+-%}
+
+{%- if rec_collection != blank -%}
+  <section class="morbeez-section border-t border-gray-100 bg-[var(--color-surface)]" id="MorbeezRelated-{{ section.id }}">
+    <div class="morbeez-container">
+      {%- render 'morbeez-section-header', heading: section.settings.heading, subheading: section.settings.subheading -%}
+      <div class="grid grid-cols-2 gap-4 md:grid-cols-4">
+        {%- assign shown = 0 -%}
+        {%- for related_product in rec_collection.products -%}
+          {%- if related_product.id != product.id and shown < products_to_show -%}
+            {%- render 'morbeez-product-card', product: related_product -%}
+            {%- assign shown = shown | plus: 1 -%}
+          {%- endif -%}
+        {%- endfor -%}
+      </div>
+    </div>
+  </section>
+{%- endif -%}
+
+{% schema %}
+{
+  "name": "t:sections.related_products.name",
+  "tag": "section",
+  "settings": [
+    { "type": "text", "id": "heading", "label": "t:sections.related_products.settings.heading", "default": "Related products" },
+    { "type": "text", "id": "subheading", "label": "t:sections.related_products.settings.subheading" },
+    { "type": "collection", "id": "collection", "label": "t:sections.related_products.settings.collection", "info": "t:sections.related_products.settings.collection_info" },
+    { "type": "range", "id": "products_to_show", "min": 2, "max": 8, "step": 1, "default": 4, "label": "t:sections.related_products.settings.products_to_show" }
+  ]
+}
+{% endschema %}

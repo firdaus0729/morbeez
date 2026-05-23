@@ -1,0 +1,116 @@
+{
+  "sections": {
+    "hero": {
+      "type": "hero-premium",
+      "settings": {
+        "badge": "Trusted by farmers across India",
+        "heading": "Premium crop care for every season",
+        "subheading": "<p>Shop crop-wise solutions, expert-backed advisory, and reliable delivery — built for Indian agriculture.</p>",
+        "primary_cta_label": "Shop now",
+        "secondary_cta_label": "Talk on WhatsApp"
+      }
+    },
+    "crops": {
+      "type": "crop-categories",
+      "settings": {
+        "heading": "Shop by crop",
+        "subheading": "Find the right products for your field"
+      }
+    },
+    "problems": {
+      "type": "shop-by-problem",
+      "settings": {
+        "heading": "Shop by problem",
+        "subheading": "Target diseases, pests & deficiencies"
+      }
+    },
+    "featured": {
+      "type": "featured-collection",
+      "settings": {
+        "heading": "Featured products",
+        "subheading": "Top picks from our agronomy team",
+        "collection": "all",
+        "products_to_show": 8,
+        "show_view_all": true
+      }
+    },
+    "combos": {
+      "type": "combo-offer",
+      "settings": {
+        "heading": "Combo offers",
+        "subheading": "Save more on bundled crop care",
+        "collection": "all",
+        "view_all_label": "View all combos"
+      }
+    },
+    "seasonal": {
+      "type": "seasonal-campaign",
+      "settings": {
+        "badge": "Monsoon ready",
+        "heading": "Monsoon crop protection essentials",
+        "text": "Prepare your fields before the rains arrive.",
+        "cta_label": "Shop monsoon essentials"
+      }
+    },
+    "flash": {
+      "type": "flash-sale",
+      "settings": {
+        "badge": "Flash sale",
+        "heading": "Limited time offers",
+        "end_datetime": "2026-12-31T23:59:59",
+        "products_to_show": 4
+      }
+    },
+    "advisory": {
+      "type": "advisory-education",
+      "settings": {
+        "heading": "Learn & grow better",
+        "subheading": "Expert guides for Indian farmers"
+      }
+    },
+    "testimonials": {
+      "type": "testimonials",
+      "settings": {
+        "heading": "Trusted by farmers"
+      }
+    },
+    "blog": {
+      "type": "blog-preview",
+      "settings": {
+        "heading": "Crop advisory & tips",
+        "articles_count": 3,
+        "view_all_label": "Read all articles"
+      }
+    },
+    "crop_doctor": {
+      "type": "ai-crop-doctor-cta",
+      "settings": {
+        "heading": "AI Crop Doctor",
+        "body": "Snap a photo of crop damage and get guided product recommendations. Launching soon.",
+        "cta_label": "Learn more"
+      }
+    },
+    "dealer": {
+      "type": "dealer-enquiry-cta",
+      "settings": {
+        "heading": "Become a Morbeez dealer",
+        "body": "Wholesale pricing, territory support, and farmer outreach programs.",
+        "cta_label": "Dealer enquiry"
+      }
+    }
+  },
+  "order": [
+    "hero",
+    "crops",
+    "problems",
+    "featured",
+    "combos",
+    "seasonal",
+    "flash",
+    "advisory",
+    "testimonials",
+    "blog",
+    "crop_doctor",
+    "dealer"
+  ]
+}

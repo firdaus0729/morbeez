@@ -1,0 +1,391 @@
+{
+  "forms": {
+    "name": "Full name",
+    "phone": "Mobile number",
+    "district": "District",
+    "notes": "Message (optional)"
+  },
+  "general": {
+    "search": "Search",
+    "cart": "Cart",
+    "view_all": "View all",
+    "read_more": "Read more",
+    "pagination": "Pagination",
+    "pagination_previous": "Previous",
+    "pagination_next": "Next",
+    "language": "Language",
+    "breadcrumbs": {
+      "label": "Breadcrumb",
+      "home": "Home"
+    },
+    "whatsapp": {
+      "label": "WhatsApp",
+      "contact": "Contact us on WhatsApp"
+    },
+    "404": {
+      "title": "Page not found",
+      "subtext": "The page you are looking for does not exist.",
+      "home": "Back to home",
+      "shop": "Browse products"
+    },
+    "password_page": {
+      "login_form_heading": "Enter store using password",
+      "login_form_password_label": "This store is password protected.",
+      "login_form_password_placeholder": "Your password",
+      "login_form_submit": "Enter",
+      "admin_link_html": "Are you the store owner? <a href=\"/admin\">Log in here</a>"
+    }
+  },
+  "accessibility": {
+    "skip_to_content": "Skip to content",
+    "main_navigation": "Main navigation",
+    "mobile_navigation": "Mobile navigation",
+    "menu_open": "Open menu",
+    "close": "Close"
+  },
+  "collections": {
+    "products_count": "products",
+    "empty": "No products in this collection yet.",
+    "all_title": "All collections",
+    "explore_more": "Explore more",
+    "filters": {
+      "title": "Filter products",
+      "clear": "Clear all",
+      "apply": "Apply"
+    },
+    "sort": {
+      "label": "Sort by"
+    }
+  },
+  "products": {
+    "add_to_cart": "Add to cart",
+    "sold_out": "Sold out",
+    "variant": "Pack size",
+    "waiting_period": "Harvest waiting period: {{ days }} days after last application",
+    "tabs": {
+      "description": "Description",
+      "dosage": "Dosage",
+      "benefits": "Benefits",
+      "compatibility": "Compatibility",
+      "technical": "Technical",
+      "faq": "FAQ"
+    },
+    "technical": {
+      "formulation": "Formulation",
+      "moa": "Mode of action"
+    }
+  },
+  "search": {
+    "placeholder": "Search products, crops, problems…",
+    "submit": "Search",
+    "results_count": "{{ count }} results for \"{{ terms }}\"",
+    "no_results": "No products found. Try another search."
+  },
+  "cart": {
+    "title": "Your cart",
+    "empty": "Your cart is empty",
+    "continue_shopping": "Continue shopping",
+    "subtotal": "Subtotal",
+    "checkout": "Checkout",
+    "quantity": "Quantity",
+    "update": "Update cart"
+  },
+  "gift_cards": {
+    "issued": {
+      "title": "Here's your {{ value }} gift card for {{ shop }}",
+      "subtext": "Your gift card",
+      "expired": "This gift card has expired",
+      "expiration_date": "Expires {{ expires_on }}",
+      "card_label": "Gift card code",
+      "copy_code": "Copy code",
+      "copy_code_success": "Copied!",
+      "shop_link": "Continue shopping",
+      "add_to_apple_wallet": "Add to Apple Wallet"
+    }
+  },
+  "sections": {
+    "announcement": {
+      "name": "Announcement bar",
+      "settings": {
+        "message": "Message",
+        "link": "Link"
+      }
+    },
+    "hero_premium": {
+      "name": "Hero (Premium)",
+      "settings": {
+        "image": "Hero image (desktop)",
+        "image_mobile": "Hero image (mobile)",
+        "overlay_opacity": "Image overlay opacity",
+        "badge": "Badge text",
+        "heading": "Heading",
+        "subheading": "Subheading",
+        "primary_cta_url": "Primary button link",
+        "primary_cta_label": "Primary button label",
+        "secondary_cta_url": "Secondary button link",
+        "secondary_cta_label": "Secondary button label"
+      },
+      "blocks": {
+        "trust_badge": {
+          "name": "Trust badge",
+          "settings": { "icon": "Icon", "text": "Text" }
+        }
+      },
+      "presets": { "default": "Hero (Premium)" }
+    },
+    "crop_categories": {
+      "name": "Crop categories",
+      "settings": {
+        "heading": "Heading",
+        "subheading": "Subheading",
+        "view_all_url": "View all link",
+        "view_all_label": "View all label"
+      },
+      "blocks": {
+        "tile": {
+          "name": "Category tile",
+          "settings": {
+            "collection": "Collection",
+            "image": "Image override",
+            "title": "Title override",
+            "link": "Custom link"
+          }
+        }
+      },
+      "presets": { "default": "Crop categories" }
+    },
+    "shop_by_problem": {
+      "name": "Shop by problem",
+      "settings": {
+        "heading": "Heading",
+        "subheading": "Subheading",
+        "view_all_url": "View all link",
+        "view_all_label": "View all label"
+      },
+      "blocks": {
+        "tile": {
+          "name": "Problem tile",
+          "settings": {
+            "collection": "Collection",
+            "image": "Image",
+            "title": "Title",
+            "link": "Link"
+          }
+        }
+      },
+      "presets": { "default": "Shop by problem" }
+    },
+    "featured_collection": {
+      "name": "Featured collection",
+      "settings": {
+        "heading": "Heading",
+        "subheading": "Subheading",
+        "collection": "Collection",
+        "products_to_show": "Products to show",
+        "show_view_all": "Show view all link"
+      },
+      "presets": { "default": "Featured collection" },
+      "empty": "Select a collection with products to display."
+    },
+    "combo_offer": {
+      "name": "Combo offers",
+      "settings": {
+        "heading": "Heading",
+        "subheading": "Subheading",
+        "collection": "Collection fallback",
+        "products_to_show": "Products to show",
+        "view_all_label": "View all label"
+      },
+      "blocks": {
+        "card": {
+          "name": "Combo card",
+          "settings": {
+            "image": "Image",
+            "title": "Title",
+            "savings": "Savings text",
+            "text": "Description",
+            "link": "Link",
+            "button_label": "Button label"
+          }
+        }
+      },
+      "presets": { "default": "Combo offers" }
+    },
+    "testimonials": {
+      "name": "Testimonials",
+      "settings": { "heading": "Heading", "subheading": "Subheading" },
+      "blocks": {
+        "item": {
+          "name": "Testimonial",
+          "settings": {
+            "quote": "Quote",
+            "name": "Name",
+            "location": "Location",
+            "crop": "Crop",
+            "rating": "Rating",
+            "image": "Photo"
+          }
+        }
+      },
+      "presets": { "default": "Testimonials" }
+    },
+    "blog_preview": {
+      "name": "Blog preview",
+      "settings": {
+        "heading": "Heading",
+        "subheading": "Subheading",
+        "blog": "Blog",
+        "articles_count": "Articles count",
+        "view_all_label": "View all label"
+      },
+      "presets": { "default": "Blog preview" },
+      "empty": "Select a blog with published articles."
+    },
+    "seasonal_campaign": {
+      "name": "Seasonal campaign",
+      "settings": {
+        "image": "Background image",
+        "badge": "Badge",
+        "heading": "Heading",
+        "text": "Description",
+        "cta_url": "Button link",
+        "cta_label": "Button label"
+      },
+      "presets": { "default": "Seasonal campaign" }
+    },
+    "flash_sale": {
+      "name": "Flash sale",
+      "settings": {
+        "badge": "Badge",
+        "heading": "Heading",
+        "subheading": "Subheading",
+        "collection": "Collection",
+        "end_datetime": "End date (ISO)",
+        "end_datetime_info": "Format: 2026-12-31T23:59:59",
+        "products_to_show": "Products to show"
+      },
+      "ends_in": "Ends in",
+      "presets": { "default": "Flash sale" }
+    },
+    "advisory_education": {
+      "name": "Advisory education",
+      "settings": { "heading": "Heading", "subheading": "Subheading" },
+      "blocks": {
+        "card": {
+          "name": "Education card",
+          "settings": { "icon": "Icon", "title": "Title", "excerpt": "Excerpt", "link": "Link" }
+        }
+      },
+      "presets": { "default": "Advisory education" }
+    },
+    "dealer_enquiry_form": {
+      "name": "Dealer enquiry form"
+    },
+    "dealer_enquiry": {
+      "name": "Dealer enquiry CTA",
+      "settings": {
+        "heading": "Heading",
+        "body": "Description",
+        "cta_url": "Button link",
+        "cta_label": "Button label"
+      },
+      "presets": { "default": "Dealer enquiry CTA" }
+    },
+    "sticky_whatsapp": {
+      "name": "Sticky WhatsApp CTA",
+      "settings": {
+        "enabled": "Enable sticky button",
+        "phone": "WhatsApp phone number",
+        "phone_info": "Country code without +, e.g. 919876543210",
+        "default_message": "Default message"
+      }
+    },
+    "ai_crop_doctor": {
+      "name": "AI Crop Doctor CTA",
+      "settings": {
+        "heading": "Heading",
+        "body": "Description",
+        "cta_url": "Button link",
+        "cta_label": "Button label"
+      },
+      "presets": { "default": "AI Crop Doctor CTA" }
+    },
+    "header": { "name": "Header", "settings": { "menu": "Menu" } },
+    "footer": {
+      "name": "Footer",
+      "settings": { "tagline": "Tagline" },
+      "blocks": {
+        "menu": { "name": "Menu", "settings": { "heading": "Heading", "menu": "Menu" } }
+      },
+      "presets": { "default": "Footer" }
+    },
+    "collection_banner": { "name": "Collection banner" },
+    "main_collection": {
+      "name": "Collection products",
+      "settings": { "products_per_page": "Products per page" }
+    },
+    "main_product": { "name": "Product information" },
+    "main_page": { "name": "Page" },
+    "main_blog": { "name": "Blog posts" },
+    "main_article": { "name": "Article" },
+    "main_cart": { "name": "Cart" },
+    "main_404": { "name": "404 page" },
+    "main_list_collections": { "name": "Collections list" },
+    "main_password": { "name": "Password page" },
+    "main_search": { "name": "Search results" },
+    "subcollection_nav": {
+      "name": "Subcollection navigation",
+      "settings": {
+        "menu": "Subcollection menu",
+        "menu_info": "Optional menu with sibling collection links",
+        "show_sibling_collections": "Show sibling collections by type",
+        "show_sibling_info": "Uses morbeez.collection_type metafield"
+      }
+    },
+    "collection_filters": { "name": "Collection filters" },
+    "related_products": {
+      "name": "Related products",
+      "settings": {
+        "heading": "Heading",
+        "subheading": "Subheading",
+        "collection": "Fallback collection",
+        "collection_info": "Uses product's first collection if empty",
+        "products_to_show": "Products to show"
+      }
+    },
+    "seasonal_campaign": {
+      "settings": {
+        "campaign": "Campaign metaobject (optional)"
+      }
+    }
+  },
+  "settings": {
+    "brand": {
+      "name": "Brand",
+      "color_primary": "Primary color",
+      "color_accent": "Accent color",
+      "color_trust": "Text color",
+      "color_surface": "Surface color",
+      "color_muted": "Muted text color",
+      "logo": "Logo",
+      "default_og_image": "Default social image"
+    },
+    "typography": {
+      "name": "Typography",
+      "type_header_font": "Heading font",
+      "type_body_font": "Body font"
+    },
+    "whatsapp": {
+      "name": "WhatsApp (global)",
+      "phone": "Default WhatsApp number",
+      "phone_info": "Used when section phone is empty. E.g. 919876543210",
+      "message": "Default message prefix"
+    },
+    "features": {
+      "name": "Features",
+      "enable_ai_crop_doctor_cta": "Show AI Crop Doctor CTA",
+      "enable_dealer_enquiry": "Show dealer enquiry",
+      "enable_organization_schema": "Enable organization schema"
+    }
+  }
+}

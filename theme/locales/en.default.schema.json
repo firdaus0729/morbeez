@@ -1,0 +1,31 @@
+{
+  "settings": {
+    "brand": {
+      "name": "Brand",
+      "color_primary": "Primary color",
+      "color_accent": "Accent color",
+      "color_trust": "Text color",
+      "color_surface": "Surface color",
+      "color_muted": "Muted text color",
+      "logo": "Logo",
+      "default_og_image": "Default social image"
+    },
+    "typography": {
+      "name": "Typography",
+      "type_header_font": "Heading font",
+      "type_body_font": "Body font"
+    },
+    "whatsapp": {
+      "name": "WhatsApp (global)",
+      "phone": "Default WhatsApp number",
+      "phone_info": "Country code without +",
+      "message": "Default message prefix"
+    },
+    "features": {
+      "name": "Features",
+      "enable_ai_crop_doctor_cta": "Show AI Crop Doctor CTA",
+      "enable_dealer_enquiry": "Show dealer enquiry",
+      "enable_organization_schema": "Enable organization schema"
+    }
+  }
+}

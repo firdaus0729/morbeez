@@ -1,0 +1,16 @@
+handle,title,type,rule_tag,metafield_collection_type
+crop-paddy,Paddy,automated,crop:paddy,crop
+crop-coconut,Coconut,automated,crop:coconut,crop
+crop-vegetables,Vegetables,automated,crop:vegetables,crop
+problem-fungal-diseases,Fungal Diseases,automated,problem:fungal-diseases,problem
+problem-sucking-pests,Sucking Pests,automated,problem:sucking-pests,problem
+problem-mites,Mites,automated,problem:mites,problem
+category-fungicides,Fungicides,automated,category:fungicide,category
+category-insecticides,Insecticides,automated,category:insecticide,category
+category-bio-products,Bio & Organic,automated,category:bio-stimulant,category
+featured,Featured Products,custom,,campaign
+combos,Combo Offers,custom,,campaign
+flash-sale,Flash Sale,custom,,campaign
+season-monsoon-2026,Monsoon Essentials,custom,,campaign
+new-arrivals,New Arrivals,automated,,campaign
+ai-monsoon-kit-2026,AI Monsoon Kit (Coming Soon),custom,,ai

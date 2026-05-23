@@ -1,0 +1,23 @@
+{%- if section.settings.message != blank -%}
+  <div
+    class="bg-[var(--color-primary)] px-4 py-2 text-center text-sm text-white"
+    role="region"
+    aria-label="{{ 'sections.announcement.name' | t }}"
+  >
+    {%- if section.settings.link != blank -%}
+      <a href="{{ section.settings.link }}" class="font-medium hover:underline">{{ section.settings.message }}</a>
+    {%- else -%}
+      {{ section.settings.message }}
+    {%- endif -%}
+  </div>
+{%- endif -%}
+
+{% schema %}
+{
+  "name": "t:sections.announcement.name",
+  "settings": [
+    { "type": "text", "id": "message", "label": "t:sections.announcement.settings.message", "default": "Free advisory support on WhatsApp — chat with us today" },
+    { "type": "url", "id": "link", "label": "t:sections.announcement.settings.link" }
+  ]
+}
+{% endschema %}

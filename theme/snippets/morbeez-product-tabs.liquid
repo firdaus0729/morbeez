@@ -1,0 +1,85 @@
+{% comment %} PDP tabs from product metafields {% endcomment %}
+{%- liquid
+  assign tabs = '' | split: ','
+  assign tab_ids = 'description|dosage|benefits|compatibility|technical|faq' | split: '|'
+  assign tab_labels = 'products.tabs.description|products.tabs.dosage|products.tabs.benefits|products.tabs.compatibility|products.tabs.technical|products.tabs.faq' | split: '|'
+-%}
+
+<div class="morbeez-tabs" data-morbeez-product-tabs>
+  <div class="flex gap-1 overflow-x-auto border-b border-gray-200" role="tablist">
+    {%- if product.description != blank -%}
+      <button type="button" class="morbeez-tab is-active" data-tab="description" role="tab">{{ 'products.tabs.description' | t }}</button>
+    {%- endif -%}
+    {%- if product.metafields.morbeez.dosage_instructions != blank -%}
+      <button type="button" class="morbeez-tab" data-tab="dosage" role="tab">{{ 'products.tabs.dosage' | t }}</button>
+    {%- endif -%}
+    {%- if product.metafields.morbeez.benefits != blank -%}
+      <button type="button" class="morbeez-tab" data-tab="benefits" role="tab">{{ 'products.tabs.benefits' | t }}</button>
+    {%- endif -%}
+    {%- if product.metafields.morbeez.compatibility != blank -%}
+      <button type="button" class="morbeez-tab" data-tab="compatibility" role="tab">{{ 'products.tabs.compatibility' | t }}</button>
+    {%- endif -%}
+    {%- if product.metafields.morbeez.technical_composition != blank or product.metafields.morbeez.active_ingredients != blank -%}
+      <button type="button" class="morbeez-tab" data-tab="technical" role="tab">{{ 'products.tabs.technical' | t }}</button>
+    {%- endif -%}
+    {%- if product.metafields.morbeez.faq != blank -%}
+      <button type="button" class="morbeez-tab" data-tab="faq" role="tab">{{ 'products.tabs.faq' | t }}</button>
+    {%- endif -%}
+  </div>
+
+  <div class="morbeez-tab-panels py-6">
+    {%- if product.description != blank -%}
+      <div class="morbeez-tab-panel is-active" data-panel="description" role="tabpanel">
+        <div class="prose prose-sm max-w-none">{{ product.description }}</div>
+      </div>
+    {%- endif -%}
+    {%- if product.metafields.morbeez.dosage_instructions != blank -%}
+      <div class="morbeez-tab-panel hidden" data-panel="dosage" role="tabpanel">
+        <div class="prose prose-sm max-w-none">{{ product.metafields.morbeez.dosage_instructions | metafield_tag }}</div>
+      </div>
+    {%- endif -%}
+    {%- if product.metafields.morbeez.benefits != blank -%}
+      <div class="morbeez-tab-panel hidden" data-panel="benefits" role="tabpanel">
+        <div class="prose prose-sm max-w-none">{{ product.metafields.morbeez.benefits | newline_to_br }}</div>
+      </div>
+    {%- endif -%}
+    {%- if product.metafields.morbeez.compatibility != blank -%}
+      <div class="morbeez-tab-panel hidden" data-panel="compatibility" role="tabpanel">
+        <div class="prose prose-sm max-w-none">{{ product.metafields.morbeez.compatibility | metafield_tag }}</div>
+      </div>
+    {%- endif -%}
+    {%- if product.metafields.morbeez.technical_composition != blank or product.metafields.morbeez.active_ingredients != blank -%}
+      <div class="morbeez-tab-panel hidden" data-panel="technical" role="tabpanel">
+        <div class="prose prose-sm max-w-none space-y-4">
+          {%- if product.metafields.morbeez.formulation != blank -%}
+            <p><strong>{{ 'products.technical.formulation' | t }}:</strong> {{ product.metafields.morbeez.formulation }}</p>
+          {%- endif -%}
+          {%- if product.metafields.morbeez.mode_of_action != blank -%}
+            <p><strong>{{ 'products.technical.moa' | t }}:</strong> {{ product.metafields.morbeez.mode_of_action }}</p>
+          {%- endif -%}
+          {%- if product.metafields.morbeez.active_ingredients != blank -%}
+            {{ product.metafields.morbeez.active_ingredients | metafield_tag }}
+          {%- endif -%}
+          {%- if product.metafields.morbeez.technical_composition != blank -%}
+            {{ product.metafields.morbeez.technical_composition | metafield_tag }}
+          {%- endif -%}
+        </div>
+      </div>
+    {%- endif -%}
+    {%- if product.metafields.morbeez.faq != blank -%}
+      <div class="morbeez-tab-panel hidden" data-panel="faq" role="tabpanel">
+        {%- assign faq_items = product.metafields.morbeez.faq.value -%}
+        {%- if faq_items -%}
+          <dl class="space-y-4">
+            {%- for item in faq_items -%}
+              <div>
+                <dt class="font-semibold text-[var(--color-trust)]">{{ item.q }}</dt>
+                <dd class="mt-1 text-sm text-[var(--color-muted)]">{{ item.a }}</dd>
+              </div>
+            {%- endfor -%}
+          </dl>
+        {%- endif -%}
+      </div>
+    {%- endif -%}
+  </div>
+</div>

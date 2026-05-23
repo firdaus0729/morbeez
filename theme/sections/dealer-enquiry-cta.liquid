@@ -1,0 +1,36 @@
+{%- if settings.enable_dealer_enquiry -%}
+  <section
+    class="morbeez-section border-y border-gray-100 bg-[var(--color-surface)]"
+    id="MorbeezDealer-{{ section.id }}"
+    data-morbeez-feature="dealer-enquiry"
+  >
+    <div class="morbeez-container flex flex-col items-center gap-6 text-center md:flex-row md:text-left">
+      <div class="flex-1">
+        <h2 class="font-heading text-2xl font-bold">{{ section.settings.heading }}</h2>
+        <p class="mt-2 text-[var(--color-muted)]">{{ section.settings.body }}</p>
+      </div>
+      {%- if section.settings.cta_url != blank -%}
+        {%- render 'morbeez-button', url: section.settings.cta_url, label: section.settings.cta_label, style: 'primary' -%}
+      {%- endif -%}
+    </div>
+  </section>
+{%- endif -%}
+
+{% schema %}
+{
+  "name": "t:sections.dealer_enquiry.name",
+  "tag": "section",
+  "settings": [
+    { "type": "text", "id": "heading", "label": "t:sections.dealer_enquiry.settings.heading", "default": "Become a Morbeez dealer" },
+    { "type": "textarea", "id": "body", "label": "t:sections.dealer_enquiry.settings.body", "default": "Partner with us for wholesale pricing, territory support, and farmer outreach." },
+    {
+      "type": "url",
+      "id": "cta_url",
+      "label": "t:sections.dealer_enquiry.settings.cta_url",
+      "info": "Link to /pages/dealer-enquiry when using the app proxy form"
+    },
+    { "type": "text", "id": "cta_label", "label": "t:sections.dealer_enquiry.settings.cta_label", "default": "Dealer enquiry" }
+  ],
+  "presets": [{ "name": "t:sections.dealer_enquiry.presets.default" }]
+}
+{% endschema %}

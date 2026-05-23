@@ -1,0 +1,24 @@
+{% comment %} Shopify Markets language/country selector {% endcomment %}
+{%- if localization.available_languages.size > 1 -%}
+  <div class="morbeez-language-switcher">
+    {% form 'localization', id: 'MorbeezLocalization' %}
+      <label class="sr-only" for="MorbeezLocaleCode">{{ 'general.language' | t }}</label>
+      <select
+        id="MorbeezLocaleCode"
+        name="locale_code"
+        class="rounded-lg border border-gray-200 bg-white px-2 py-1 text-sm"
+        onchange="this.form.submit()"
+      >
+        {%- for language in localization.available_languages -%}
+          <option
+            value="{{ language.iso_code }}"
+            lang="{{ language.iso_code }}"
+            {% if language.iso_code == localization.language.iso_code %}selected{% endif %}
+          >
+            {{ language.endonym_name }}
+          </option>
+        {%- endfor -%}
+      </select>
+    {% endform %}
+  </div>
+{%- endif -%}

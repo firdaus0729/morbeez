@@ -1,0 +1,19 @@
+{
+  "name": "morbeez-shopify",
+  "version": "1.0.0-m1",
+  "private": true,
+  "description": "Morbeez agriculture commerce — Shopify theme & foundation",
+  "scripts": {
+    "dev:css": "tailwindcss -i ./theme/src/tailwind.css -o ./theme/assets/theme.css --watch",
+    "build:css": "tailwindcss -i ./theme/src/tailwind.css -o ./theme/assets/theme.css --minify",
+    "theme:dev": "cd theme && shopify theme dev",
+    "theme:check": "cd theme && shopify theme check",
+    "build": "npm run build:css",
+    "setup:m1": "node scripts/setup-m1.mjs"
+  },
+  "devDependencies": {
+    "@shopify/prettier-plugin-liquid": "^1.5.0",
+    "prettier": "^3.3.0",
+    "tailwindcss": "^3.4.0"
+  }
+}

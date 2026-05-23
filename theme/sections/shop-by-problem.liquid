@@ -1,0 +1,64 @@
+<section class="morbeez-section bg-[var(--color-surface)]" id="MorbeezProblems-{{ section.id }}">
+  <div class="morbeez-container">
+    {%- render 'morbeez-section-header',
+      heading: section.settings.heading,
+      subheading: section.settings.subheading,
+      link_url: section.settings.view_all_url,
+      link_label: section.settings.view_all_label
+    -%}
+
+    <div class="morbeez-scroll-x lg:grid lg:grid-cols-5 lg:gap-4 lg:overflow-visible">
+      {%- for block in section.blocks -%}
+        {%- assign coll = block.settings.collection -%}
+        {%- if coll != blank -%}
+          {%- assign tile_url = coll.url -%}
+          {%- assign tile_title = block.settings.title | default: coll.title -%}
+          {%- assign tile_image = block.settings.image | default: coll.image -%}
+        {%- else -%}
+          {%- assign tile_url = block.settings.link -%}
+          {%- assign tile_title = block.settings.title -%}
+          {%- assign tile_image = block.settings.image -%}
+        {%- endif -%}
+        <div {{ block.shopify_attributes }}>
+          {%- render 'morbeez-collection-tile', image: tile_image, title: tile_title, url: tile_url -%}
+        </div>
+      {%- endfor -%}
+    </div>
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "t:sections.shop_by_problem.name",
+  "tag": "section",
+  "settings": [
+    { "type": "text", "id": "heading", "label": "t:sections.shop_by_problem.settings.heading", "default": "Shop by problem" },
+    { "type": "text", "id": "subheading", "label": "t:sections.shop_by_problem.settings.subheading", "default": "Target the issue, not guesswork" },
+    { "type": "url", "id": "view_all_url", "label": "t:sections.shop_by_problem.settings.view_all_url" },
+    { "type": "text", "id": "view_all_label", "label": "t:sections.shop_by_problem.settings.view_all_label", "default": "View all" }
+  ],
+  "blocks": [
+    {
+      "type": "problem_tile",
+      "name": "t:sections.shop_by_problem.blocks.tile.name",
+      "settings": [
+        { "type": "collection", "id": "collection", "label": "t:sections.shop_by_problem.blocks.tile.settings.collection" },
+        { "type": "image_picker", "id": "image", "label": "t:sections.shop_by_problem.blocks.tile.settings.image" },
+        { "type": "text", "id": "title", "label": "t:sections.shop_by_problem.blocks.tile.settings.title" },
+        { "type": "url", "id": "link", "label": "t:sections.shop_by_problem.blocks.tile.settings.link" }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:sections.shop_by_problem.presets.default",
+      "blocks": [
+        { "type": "problem_tile", "settings": { "title": "Fungal diseases" } },
+        { "type": "problem_tile", "settings": { "title": "Pests" } },
+        { "type": "problem_tile", "settings": { "title": "Mites" } },
+        { "type": "problem_tile", "settings": { "title": "Nutrient deficiency" } }
+      ]
+    }
+  ]
+}
+{% endschema %}

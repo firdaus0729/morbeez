@@ -1,0 +1,45 @@
+<div class="morbeez-container morbeez-section">
+  <h1 class="font-heading text-3xl font-bold">{{ 'cart.title' | t }}</h1>
+
+  {%- if cart.item_count == 0 -%}
+    <p class="mt-8 text-[var(--color-muted)]">{{ 'cart.empty' | t }}</p>
+    <a href="{{ routes.all_products_collection_url }}" class="morbeez-btn-primary mt-4 inline-flex">{{ 'cart.continue_shopping' | t }}</a>
+  {%- else -%}
+    <form action="{{ routes.cart_url }}" method="post" id="cart-form" class="mt-8">
+      <button type="submit" name="update" class="mb-4 text-sm font-semibold text-[var(--color-primary)]">{{ 'cart.update' | t }}</button>
+      <div class="space-y-4">
+        {%- for item in cart.items -%}
+          <div class="morbeez-card flex gap-4 p-4">
+            {%- if item.image -%}
+              {{ item.image | image_url: width: 100 | image_tag: class: 'h-20 w-20 rounded-lg object-cover' }}
+            {%- endif -%}
+            <div class="flex-1">
+              <a href="{{ item.url }}" class="font-semibold hover:text-[var(--color-primary)]">{{ item.product.title }}</a>
+              <p class="text-sm text-[var(--color-muted)]">{{ item.variant.title }}</p>
+              <p class="mt-1 font-semibold text-[var(--color-primary)]">{{ item.final_line_price | money }}</p>
+            </div>
+            <input
+              type="number"
+              name="updates[{{ item.key }}]"
+              value="{{ item.quantity }}"
+              min="0"
+              class="w-16 rounded border border-gray-200 p-2 text-center text-sm"
+              aria-label="{{ 'cart.quantity' | t }}"
+            >
+          </div>
+        {%- endfor -%}
+      </div>
+      <div class="mt-8 flex flex-wrap items-center justify-between gap-4 border-t border-gray-100 pt-6">
+        <p class="text-xl font-bold">{{ 'cart.subtotal' | t }}: {{ cart.total_price | money }}</p>
+        <button type="submit" name="checkout" class="morbeez-btn-primary border-0">{{ 'cart.checkout' | t }}</button>
+      </div>
+    </form>
+  {%- endif -%}
+</div>
+
+{% schema %}
+{
+  "name": "t:sections.main_cart.name",
+  "settings": []
+}
+{% endschema %}

@@ -1,0 +1,5 @@
+{% comment %} Badge: text, variant (sale|new|organic) {% endcomment %}
+{%- assign variant = variant | default: 'default' -%}
+<span class="morbeez-badge morbeez-badge--{{ variant }} inline-block rounded-full px-2 py-0.5 text-xs font-semibold">
+  {{ text }}
+</span>

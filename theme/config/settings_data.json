@@ -1,0 +1,45 @@
+{
+  "current": {
+    "color_primary": "#1b5e3b",
+    "color_accent": "#c9a227",
+    "color_trust": "#1e293b",
+    "color_surface": "#f8faf6",
+    "color_muted": "#64748b",
+    "enable_ai_crop_doctor_cta": true,
+    "enable_dealer_enquiry": true,
+    "enable_organization_schema": true,
+    "sections": {
+      "header-group": {
+        "type": "header",
+        "sections": {
+          "announcement": {
+            "type": "announcement-bar",
+            "settings": {
+              "message": "Free crop advisory on WhatsApp — connect with Morbeez experts"
+            }
+          },
+          "header": {
+            "type": "header",
+            "settings": {
+              "menu": "main-menu"
+            }
+          }
+        },
+        "block_order": [],
+        "settings": {}
+      },
+      "footer-group": {
+        "type": "footer",
+        "sections": {
+          "footer": {
+            "type": "footer",
+            "settings": {
+              "tagline": "Premium agriculture solutions for Indian farmers"
+            }
+          }
+        },
+        "settings": {}
+      }
+    }
+  }
+}

@@ -1,0 +1,46 @@
+{%- assign collection = collections[section.settings.collection] -%}
+
+<section class="morbeez-section" id="MorbeezFeatured-{{ section.id }}">
+  <div class="morbeez-container">
+    {%- if section.settings.heading != blank -%}
+      <div class="mb-8 flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h2 class="text-2xl font-bold font-heading">{{ section.settings.heading }}</h2>
+          {%- if section.settings.subheading != blank -%}
+            <p class="mt-2 text-[var(--color-muted)]">{{ section.settings.subheading }}</p>
+          {%- endif -%}
+        </div>
+        {%- if section.settings.show_view_all and collection != blank -%}
+          <a href="{{ collection.url }}" class="text-sm font-semibold text-[var(--color-primary)]">
+            {{ 'general.view_all' | t }} →
+          </a>
+        {%- endif -%}
+      </div>
+    {%- endif -%}
+
+    {%- if collection != blank and collection.products_count > 0 -%}
+      <div class="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4 lg:gap-6">
+        {%- for product in collection.products limit: section.settings.products_to_show -%}
+          {%- render 'morbeez-product-card', product: product -%}
+        {%- endfor -%}
+      </div>
+    {%- else -%}
+      <p class="text-center text-[var(--color-muted)]">{{ 'sections.featured_collection.empty' | t }}</p>
+    {%- endif -%}
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "t:sections.featured_collection.name",
+  "tag": "section",
+  "settings": [
+    { "type": "text", "id": "heading", "label": "t:sections.featured_collection.settings.heading", "default": "Featured products" },
+    { "type": "text", "id": "subheading", "label": "t:sections.featured_collection.settings.subheading" },
+    { "type": "collection", "id": "collection", "label": "t:sections.featured_collection.settings.collection" },
+    { "type": "range", "id": "products_to_show", "min": 4, "max": 12, "step": 1, "default": 8, "label": "t:sections.featured_collection.settings.products_to_show" },
+    { "type": "checkbox", "id": "show_view_all", "label": "t:sections.featured_collection.settings.show_view_all", "default": true }
+  ],
+  "presets": [{ "name": "t:sections.featured_collection.presets.default" }]
+}
+{% endschema %}

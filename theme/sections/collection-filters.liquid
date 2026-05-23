@@ -1,0 +1,89 @@
+{%- if collection.filters.size > 0 -%}
+  <div class="border-b border-gray-100 bg-[var(--color-surface)]">
+    <div class="morbeez-container py-4">
+      <form id="CollectionFilters" action="{{ collection.url }}" method="get" class="space-y-4">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <p class="text-sm font-semibold text-[var(--color-trust)]">{{ 'collections.filters.title' | t }}</p>
+          {%- if collection.filters.active_values.size > 0 -%}
+            <a href="{{ collection.url }}" class="text-sm font-medium text-[var(--color-primary)]">{{ 'collections.filters.clear' | t }}</a>
+          {%- endif -%}
+        </div>
+
+        <div class="flex flex-wrap gap-4">
+          {%- for filter in collection.filters -%}
+            <details class="group relative min-w-[140px]">
+              <summary class="flex cursor-pointer list-none items-center justify-between rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium">
+                {{ filter.label }}
+                <span class="ml-2 text-xs opacity-60">▾</span>
+              </summary>
+              <div class="absolute left-0 z-20 mt-1 max-h-60 min-w-[200px] overflow-y-auto rounded-lg border border-gray-100 bg-white p-2 shadow-lg">
+                {%- case filter.type -%}
+                  {%- when 'list', 'boolean' -%}
+                    {%- for value in filter.values -%}
+                      <label class="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm hover:bg-[var(--color-surface)]">
+                        <input
+                          type="checkbox"
+                          name="{{ value.param_name }}"
+                          value="{{ value.value }}"
+                          {% if value.active %}checked{% endif %}
+                          {% if value.count == 0 and value.active == false %}disabled{% endif %}
+                          onchange="this.form.submit()"
+                        >
+                        <span>{{ value.label }} ({{ value.count }})</span>
+                      </label>
+                    {%- endfor -%}
+                  {%- when 'price_range' -%}
+                    <div class="space-y-2 p-2">
+                      <input
+                        type="number"
+                        name="{{ filter.min_value.param_name }}"
+                        value="{{ filter.min_value.value | money_without_currency }}"
+                        placeholder="Min"
+                        class="w-full rounded border border-gray-200 px-2 py-1 text-sm"
+                      >
+                      <input
+                        type="number"
+                        name="{{ filter.max_value.param_name }}"
+                        value="{{ filter.max_value.value | money_without_currency }}"
+                        placeholder="Max"
+                        class="w-full rounded border border-gray-200 px-2 py-1 text-sm"
+                      >
+                      <button type="submit" class="morbeez-btn-primary w-full border-0 text-xs">{{ 'collections.filters.apply' | t }}</button>
+                    </div>
+                {%- endcase -%}
+              </div>
+            </details>
+          {%- endfor -%}
+        </div>
+
+        <div class="flex items-center gap-2">
+          <label for="SortBy" class="text-sm font-medium">{{ 'collections.sort.label' | t }}</label>
+          <select id="SortBy" name="sort_by" class="rounded-lg border border-gray-200 px-3 py-2 text-sm" onchange="this.form.submit()">
+            {%- for option in collection.sort_options -%}
+              <option value="{{ option.value }}" {% if option.value == collection.sort_by %}selected{% endif %}>
+                {{ option.name }}
+              </option>
+            {%- endfor -%}
+          </select>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    document.getElementById('CollectionFilters')?.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var params = new URLSearchParams(new FormData(this));
+      window.location.href = '{{ collection.url }}?' + params.toString();
+    });
+  </script>
+{%- endif -%}
+
+{% schema %}
+{
+  "name": "t:sections.collection_filters.name",
+  "tag": "section",
+  "class": "section-collection-filters",
+  "settings": []
+}
+{% endschema %}

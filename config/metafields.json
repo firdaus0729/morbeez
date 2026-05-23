@@ -1,0 +1,216 @@
+{
+  "$schema": "Morbeez metafield definitions — install via Admin API or Custom Data UI",
+  "product": [
+    {
+      "namespace": "morbeez",
+      "key": "target_crops",
+      "name": "Target crops",
+      "type": "list.single_line_text_field",
+      "description": "Crops this product applies to (e.g. Paddy, Coconut)"
+    },
+    {
+      "namespace": "morbeez",
+      "key": "target_diseases",
+      "name": "Target diseases",
+      "type": "list.single_line_text_field"
+    },
+    {
+      "namespace": "morbeez",
+      "key": "target_pests",
+      "name": "Target pests",
+      "type": "list.single_line_text_field"
+    },
+    {
+      "namespace": "morbeez",
+      "key": "suitable_stages",
+      "name": "Suitable growth stages",
+      "type": "list.single_line_text_field"
+    },
+    {
+      "namespace": "morbeez",
+      "key": "benefits",
+      "name": "Benefits",
+      "type": "multi_line_text_field"
+    },
+    {
+      "namespace": "morbeez",
+      "key": "mode_of_action",
+      "name": "Mode of action",
+      "type": "single_line_text_field"
+    },
+    {
+      "namespace": "morbeez",
+      "key": "dosage_instructions",
+      "name": "Dosage instructions",
+      "type": "rich_text_field"
+    },
+    {
+      "namespace": "morbeez",
+      "key": "application_method",
+      "name": "Application method",
+      "type": "multi_line_text_field"
+    },
+    {
+      "namespace": "morbeez",
+      "key": "waiting_period_days",
+      "name": "Waiting period (days)",
+      "type": "number_integer"
+    },
+    {
+      "namespace": "morbeez",
+      "key": "precautions",
+      "name": "Precautions",
+      "type": "rich_text_field"
+    },
+    {
+      "namespace": "morbeez",
+      "key": "compatibility",
+      "name": "Compatibility",
+      "type": "rich_text_field"
+    },
+    {
+      "namespace": "morbeez",
+      "key": "incompatible_with",
+      "name": "Incompatible with",
+      "type": "list.single_line_text_field"
+    },
+    {
+      "namespace": "morbeez",
+      "key": "active_ingredients",
+      "name": "Active ingredients",
+      "type": "rich_text_field"
+    },
+    {
+      "namespace": "morbeez",
+      "key": "technical_composition",
+      "name": "Technical composition",
+      "type": "rich_text_field"
+    },
+    {
+      "namespace": "morbeez",
+      "key": "formulation",
+      "name": "Formulation",
+      "type": "single_line_text_field"
+    },
+    {
+      "namespace": "morbeez",
+      "key": "faq",
+      "name": "FAQ (JSON)",
+      "type": "json",
+      "description": "Array of { \"q\": \"\", \"a\": \"\" }"
+    },
+    {
+      "namespace": "morbeez",
+      "key": "pack_size_label",
+      "name": "Pack size label",
+      "type": "single_line_text_field"
+    },
+    {
+      "namespace": "morbeez",
+      "key": "video_url",
+      "name": "Product video URL",
+      "type": "url"
+    },
+    {
+      "namespace": "morbeez",
+      "key": "seo_focus_keyword",
+      "name": "SEO focus keyword",
+      "type": "single_line_text_field"
+    },
+    {
+      "namespace": "morbeez",
+      "key": "search_synonyms",
+      "name": "Search synonyms",
+      "type": "list.single_line_text_field"
+    },
+    {
+      "namespace": "morbeez",
+      "key": "content_locale",
+      "name": "Master content locale",
+      "type": "single_line_text_field"
+    },
+    {
+      "namespace": "morbeez",
+      "key": "ai_product_slug",
+      "name": "AI product slug",
+      "type": "single_line_text_field"
+    },
+    {
+      "namespace": "morbeez",
+      "key": "ai_recommendation_tags",
+      "name": "AI recommendation tags",
+      "type": "list.single_line_text_field"
+    },
+    {
+      "namespace": "morbeez",
+      "key": "symptom_keywords",
+      "name": "Symptom keywords",
+      "type": "list.single_line_text_field"
+    },
+    {
+      "namespace": "morbeez",
+      "key": "external_crm_id",
+      "name": "External CRM ID",
+      "type": "single_line_text_field"
+    }
+  ],
+  "collection": [
+    {
+      "namespace": "morbeez",
+      "key": "collection_type",
+      "name": "Collection type",
+      "type": "single_line_text_field",
+      "description": "crop | problem | category | campaign | ai"
+    },
+    {
+      "namespace": "morbeez",
+      "key": "icon",
+      "name": "Collection icon",
+      "type": "file_reference"
+    },
+    {
+      "namespace": "morbeez",
+      "key": "seo_body",
+      "name": "SEO body content",
+      "type": "rich_text_field"
+    },
+    {
+      "namespace": "morbeez",
+      "key": "featured_guide_url",
+      "name": "Featured guide URL",
+      "type": "url"
+    }
+  ],
+  "customer": [
+    {
+      "namespace": "morbeez",
+      "key": "farmer_profile_id",
+      "name": "Farmer profile ID (Supabase)",
+      "type": "single_line_text_field"
+    },
+    {
+      "namespace": "morbeez",
+      "key": "preferred_language",
+      "name": "Preferred language",
+      "type": "single_line_text_field"
+    },
+    {
+      "namespace": "morbeez",
+      "key": "whatsapp_opt_in",
+      "name": "WhatsApp opt-in",
+      "type": "boolean"
+    },
+    {
+      "namespace": "morbeez",
+      "key": "district",
+      "name": "District",
+      "type": "single_line_text_field"
+    },
+    {
+      "namespace": "morbeez",
+      "key": "primary_crops",
+      "name": "Primary crops",
+      "type": "list.single_line_text_field"
+    }
+  ]
+}

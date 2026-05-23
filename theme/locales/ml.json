@@ -1,0 +1,64 @@
+{
+  "general": {
+    "search": "തിരയുക",
+    "cart": "കാർട്ട്",
+    "view_all": "എല്ലാം കാണുക",
+    "read_more": "കൂടുതൽ വായിക്കുക",
+    "language": "ഭാഷ",
+    "breadcrumbs": {
+      "label": "ബ്രെഡ്ക്രംബ്",
+      "home": "ഹോം"
+    },
+    "whatsapp": {
+      "label": "വാട്ട്സ്ആപ്പ്",
+      "contact": "വാട്ട്സ്ആപ്പിൽ ബന്ധപ്പെടുക"
+    },
+    "404": {
+      "title": "പേജ് കണ്ടെത്തിയില്ല",
+      "subtext": "നിങ്ങൾ തിരയുന്ന പേജ് നിലവിലില്ല.",
+      "home": "ഹോമിലേക്ക്",
+      "shop": "ഉൽപ്പന്നങ്ങൾ കാണുക"
+    }
+  },
+  "products": {
+    "add_to_cart": "കാർട്ടിൽ ചേർക്കുക",
+    "sold_out": "തീർന്നു",
+    "variant": "പാക്ക് സൈസ്",
+    "tabs": {
+      "description": "വിവരണം",
+      "dosage": "ഡോസേജ്",
+      "benefits": "ഗുണങ്ങൾ",
+      "compatibility": "അനുയോജ്യത",
+      "technical": "ടെക്നിക്കൽ",
+      "faq": "ചോദ്യോത്തരങ്ങൾ"
+    }
+  },
+  "collections": {
+    "products_count": "ഉൽപ്പന്നങ്ങൾ",
+    "filters": {
+      "title": "ഫിൽട്ടർ ചെയ്യുക",
+      "clear": "എല്ലാം നീക്കം ചെയ്യുക",
+      "apply": "പ്രയോഗിക്കുക"
+    },
+    "sort": {
+      "label": "വർഗ്ഗീകരിക്കുക"
+    }
+  },
+  "cart": {
+    "title": "നിങ്ങളുടെ കാർട്ട്",
+    "empty": "കാർട്ട് ശൂന്യമാണ്",
+    "checkout": "ചെക്ക്ഔട്ട്",
+    "continue_shopping": "ഷോപ്പിംഗ് തുടരുക"
+  },
+  "sections": {
+    "crop_categories": {
+      "presets": { "default": "വിള അനുസരിച്ച്" }
+    },
+    "shop_by_problem": {
+      "presets": { "default": "പ്രശ്നം അനുസരിച്ച്" }
+    },
+    "hero_premium": {
+      "presets": { "default": "ഹീരോ ബാനർ" }
+    }
+  }
+}

@@ -1,0 +1,115 @@
+<section class="morbeez-section" id="MorbeezProduct-{{ section.id }}">
+  <div class="morbeez-container">
+    {%- render 'morbeez-breadcrumbs' -%}
+    <div class="grid gap-8 lg:grid-cols-2 lg:gap-12">
+      <div class="space-y-4">
+        {%- liquid
+          assign product_image = product.featured_image
+          if product.selected_or_first_available_variant.featured_image
+            assign product_image = product.selected_or_first_available_variant.featured_image
+          endif
+        -%}
+        {%- if product_image -%}
+          <div class="overflow-hidden rounded-xl border border-gray-100" id="MorbeezProduct-main">
+            {%- render 'morbeez-lazy-image',
+              image: product_image,
+              alt: product.title,
+              loading: 'eager',
+              fetchpriority: 'high',
+              class: 'w-full aspect-square object-cover',
+              id: 'MorbeezProduct-main-image'
+            -%}
+          </div>
+        {%- endif -%}
+        {%- if product.images.size > 1 -%}
+          <div class="flex gap-2 overflow-x-auto">
+            {%- for image in product.images limit: 5 -%}
+              <button type="button" class="shrink-0 overflow-hidden rounded-lg border-2 border-transparent hover:border-[var(--color-primary)]" data-product-thumb>
+                {{ image | image_url: width: 80 | image_tag: class: 'h-16 w-16 object-cover' }}
+              </button>
+            {%- endfor -%}
+          </div>
+        {%- endif -%}
+      </div>
+
+      <div>
+        {%- if product.vendor != blank -%}
+          <p class="text-sm font-medium text-[var(--color-muted)]">{{ product.vendor }}</p>
+        {%- endif -%}
+        <h1 class="mt-1 font-heading text-2xl font-bold md:text-3xl">{{ product.title }}</h1>
+
+        {%- if product.metafields.morbeez.target_crops.value.size > 0 -%}
+          <div class="mt-3 flex flex-wrap gap-2">
+            {%- for crop in product.metafields.morbeez.target_crops.value -%}
+              <span class="rounded-full bg-[var(--color-surface)] px-2 py-1 text-xs font-medium">{{ crop }}</span>
+            {%- endfor -%}
+          </div>
+        {%- endif -%}
+
+        <div class="mt-4 flex items-baseline gap-3">
+          <span class="text-2xl font-bold text-[var(--color-primary)]">{{ product.selected_or_first_available_variant.price | money }}</span>
+          {%- if product.selected_or_first_available_variant.compare_at_price > product.selected_or_first_available_variant.price -%}
+            <s class="text-lg text-[var(--color-muted)]">{{ product.selected_or_first_available_variant.compare_at_price | money }}</s>
+            {%- render 'morbeez-badge', text: 'Sale', variant: 'sale' -%}
+          {%- endif -%}
+        </div>
+
+        {%- form 'product', product, id: 'product-form', class: 'mt-6' -%}
+          {%- unless product.has_only_default_variant -%}
+            <div class="mb-4">
+              <label class="text-sm font-semibold" for="VariantSelect">{{ 'products.variant' | t }}</label>
+              <select name="id" id="VariantSelect" class="mt-1 w-full rounded-lg border border-gray-200 p-3 text-sm">
+                {%- for variant in product.variants -%}
+                  <option
+                    value="{{ variant.id }}"
+                    {% if variant == product.selected_or_first_available_variant %}selected{% endif %}
+                    {% unless variant.available %}disabled{% endunless %}
+                  >
+                    {{ variant.title }} — {{ variant.price | money }}
+                  </option>
+                {%- endfor -%}
+              </select>
+            </div>
+          {%- else -%}
+            <input type="hidden" name="id" value="{{ product.selected_or_first_available_variant.id }}">
+          {%- endunless -%}
+
+          <button
+            type="submit"
+            name="add"
+            class="morbeez-btn-primary w-full border-0 {% unless product.available %}opacity-50 cursor-not-allowed{% endunless %}"
+            {% unless product.available %}disabled{% endunless %}
+          >
+            {%- if product.available -%}
+              {{ 'products.add_to_cart' | t }}
+            {%- else -%}
+              {{ 'products.sold_out' | t }}
+            {%- endif -%}
+          </button>
+        {%- endform -%}
+
+        {%- if product.metafields.morbeez.waiting_period_days != blank -%}
+          <p class="mt-4 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900">
+            {{ 'products.waiting_period' | t: days: product.metafields.morbeez.waiting_period_days }}
+          </p>
+        {%- endif -%}
+      </div>
+    </div>
+
+    <div class="mt-12 border-t border-gray-100 pt-8">
+      {%- render 'morbeez-product-tabs' -%}
+    </div>
+  </div>
+</section>
+
+{%- render 'schema-product' -%}
+{%- render 'schema-faq' -%}
+
+{% schema %}
+{
+  "name": "t:sections.main_product.name",
+  "settings": [],
+  "blocks": [{ "type": "@app" }],
+  "enabled_on": { "templates": ["product"] }
+}
+{% endschema %}

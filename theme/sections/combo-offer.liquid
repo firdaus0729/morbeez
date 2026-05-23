@@ -1,0 +1,74 @@
+<section class="morbeez-section" id="MorbeezCombo-{{ section.id }}">
+  <div class="morbeez-container">
+    {%- render 'morbeez-section-header',
+      heading: section.settings.heading,
+      subheading: section.settings.subheading,
+      link_url: collections[section.settings.collection].url,
+      link_label: section.settings.view_all_label
+    -%}
+
+    {%- assign combo_collection = collections[section.settings.collection] -%}
+    {%- if section.blocks.size > 0 -%}
+      <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {%- for block in section.blocks -%}
+          <div class="morbeez-card overflow-hidden" {{ block.shopify_attributes }}>
+            {%- if block.settings.image != blank -%}
+              <a href="{{ block.settings.link }}">
+                {%- render 'morbeez-lazy-image', image: block.settings.image, alt: block.settings.title, class: 'w-full aspect-[16/9] object-cover' -%}
+              </a>
+            {%- endif -%}
+            <div class="p-4">
+              <h3 class="font-semibold">{{ block.settings.title }}</h3>
+              {%- if block.settings.savings != blank -%}
+                <p class="mt-1 text-sm font-semibold text-[var(--color-accent)]">{{ block.settings.savings }}</p>
+              {%- endif -%}
+              {%- if block.settings.text != blank -%}
+                <p class="mt-2 text-sm text-[var(--color-muted)]">{{ block.settings.text }}</p>
+              {%- endif -%}
+              {%- if block.settings.link != blank -%}
+                <a href="{{ block.settings.link }}" class="mt-3 inline-block text-sm font-semibold text-[var(--color-primary)]">
+                  {{ block.settings.button_label | default: 'Shop combo' }} →
+                </a>
+              {%- endif -%}
+            </div>
+          </div>
+        {%- endfor -%}
+      </div>
+    {%- elsif combo_collection != blank -%}
+      <div class="grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+        {%- for product in combo_collection.products limit: section.settings.products_to_show -%}
+          {%- render 'morbeez-product-card', product: product -%}
+        {%- endfor -%}
+      </div>
+    {%- endif -%}
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "t:sections.combo_offer.name",
+  "tag": "section",
+  "settings": [
+    { "type": "text", "id": "heading", "label": "t:sections.combo_offer.settings.heading", "default": "Combo offers" },
+    { "type": "text", "id": "subheading", "label": "t:sections.combo_offer.settings.subheading", "default": "Save more on bundled crop care" },
+    { "type": "collection", "id": "collection", "label": "t:sections.combo_offer.settings.collection" },
+    { "type": "range", "id": "products_to_show", "min": 3, "max": 12, "step": 1, "default": 6, "label": "t:sections.combo_offer.settings.products_to_show" },
+    { "type": "text", "id": "view_all_label", "label": "t:sections.combo_offer.settings.view_all_label", "default": "View all combos" }
+  ],
+  "blocks": [
+    {
+      "type": "combo_card",
+      "name": "t:sections.combo_offer.blocks.card.name",
+      "settings": [
+        { "type": "image_picker", "id": "image", "label": "t:sections.combo_offer.blocks.card.settings.image" },
+        { "type": "text", "id": "title", "label": "t:sections.combo_offer.blocks.card.settings.title" },
+        { "type": "text", "id": "savings", "label": "t:sections.combo_offer.blocks.card.settings.savings" },
+        { "type": "textarea", "id": "text", "label": "t:sections.combo_offer.blocks.card.settings.text" },
+        { "type": "url", "id": "link", "label": "t:sections.combo_offer.blocks.card.settings.link" },
+        { "type": "text", "id": "button_label", "label": "t:sections.combo_offer.blocks.card.settings.button_label" }
+      ]
+    }
+  ],
+  "presets": [{ "name": "t:sections.combo_offer.presets.default" }]
+}
+{% endschema %}

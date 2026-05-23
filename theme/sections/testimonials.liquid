@@ -1,0 +1,63 @@
+<section class="morbeez-section bg-[var(--color-surface)]" id="MorbeezTestimonials-{{ section.id }}">
+  <div class="morbeez-container">
+    {%- render 'morbeez-section-header', heading: section.settings.heading, subheading: section.settings.subheading -%}
+
+    <div class="morbeez-scroll-x lg:grid lg:grid-cols-3 lg:gap-6 lg:overflow-visible">
+      {%- for block in section.blocks -%}
+        <blockquote class="morbeez-card w-[280px] shrink-0 p-5 lg:w-auto" {{ block.shopify_attributes }}>
+          {%- if block.settings.rating > 0 -%}
+            <p class="mb-2 text-[var(--color-accent)]" aria-label="{{ block.settings.rating }} stars">
+              {%- for i in (1..block.settings.rating) -%}★{%- endfor -%}
+            </p>
+          {%- endif -%}
+          <p class="text-sm leading-relaxed text-[var(--color-trust)]">"{{ block.settings.quote }}"</p>
+          <footer class="mt-4 flex items-center gap-3">
+            {%- if block.settings.image != blank -%}
+              {{ block.settings.image | image_url: width: 48 | image_tag: class: 'h-10 w-10 rounded-full object-cover' }}
+            {%- endif -%}
+            <div>
+              <cite class="not-italic text-sm font-semibold">{{ block.settings.name }}</cite>
+              <p class="text-xs text-[var(--color-muted)]">
+                {{ block.settings.location }}{% if block.settings.crop != blank %} · {{ block.settings.crop }}{% endif %}
+              </p>
+            </div>
+          </footer>
+        </blockquote>
+      {%- endfor -%}
+    </div>
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "t:sections.testimonials.name",
+  "tag": "section",
+  "settings": [
+    { "type": "text", "id": "heading", "label": "t:sections.testimonials.settings.heading", "default": "Trusted by farmers" },
+    { "type": "text", "id": "subheading", "label": "t:sections.testimonials.settings.subheading" }
+  ],
+  "blocks": [
+    {
+      "type": "testimonial",
+      "name": "t:sections.testimonials.blocks.item.name",
+      "settings": [
+        { "type": "textarea", "id": "quote", "label": "t:sections.testimonials.blocks.item.settings.quote" },
+        { "type": "text", "id": "name", "label": "t:sections.testimonials.blocks.item.settings.name" },
+        { "type": "text", "id": "location", "label": "t:sections.testimonials.blocks.item.settings.location" },
+        { "type": "text", "id": "crop", "label": "t:sections.testimonials.blocks.item.settings.crop" },
+        { "type": "range", "id": "rating", "min": 0, "max": 5, "step": 1, "default": 5, "label": "t:sections.testimonials.blocks.item.settings.rating" },
+        { "type": "image_picker", "id": "image", "label": "t:sections.testimonials.blocks.item.settings.image" }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:sections.testimonials.presets.default",
+      "blocks": [
+        { "type": "testimonial", "settings": { "quote": "Visible results within two weeks on my paddy crop.", "name": "Rajesh K.", "location": "Palakkad", "crop": "Paddy", "rating": 5 } },
+        { "type": "testimonial", "settings": { "quote": "Easy to order on WhatsApp and fast delivery.", "name": "Suma M.", "location": "Thrissur", "crop": "Coconut", "rating": 5 } }
+      ]
+    }
+  ]
+}
+{% endschema %}

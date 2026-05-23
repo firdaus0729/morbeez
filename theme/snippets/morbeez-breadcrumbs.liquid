@@ -1,0 +1,83 @@
+{% comment %}
+  Visual breadcrumbs. Builds schema list for JSON-LD.
+  Context-aware: product, collection, article, page, blog
+{% endcomment %}
+{%- liquid
+  assign crumbs = '' | split: '|'
+  assign crumb_titles = '' | split: '|'
+  assign crumb_urls = '' | split: '|'
+
+  assign home_title = 'general.breadcrumbs.home' | t
+  assign home_url = routes.root_url
+-%}
+
+<nav class="morbeez-breadcrumbs mb-6 text-sm text-[var(--color-muted)]" aria-label="{{ 'general.breadcrumbs.label' | t }}">
+  <ol class="flex flex-wrap items-center gap-1" role="list">
+    <li>
+      <a href="{{ home_url }}" class="hover:text-[var(--color-primary)]">{{ home_title }}</a>
+    </li>
+
+    {%- if template.name == 'product' -%}
+      {%- assign crumb_collection = collection -%}
+      {%- if crumb_collection == blank and product.collections.size > 0 -%}
+        {%- assign crumb_collection = product.collections.first -%}
+      {%- endif -%}
+      {%- if crumb_collection != blank -%}
+        <li aria-hidden="true" class="px-1">/</li>
+        <li>
+          <a href="{{ crumb_collection.url }}" class="hover:text-[var(--color-primary)]">{{ crumb_collection.title }}</a>
+        </li>
+      {%- endif -%}
+      <li aria-hidden="true" class="px-1">/</li>
+      <li class="font-medium text-[var(--color-trust)]" aria-current="page">{{ product.title }}</li>
+
+    {%- elsif template.name == 'collection' -%}
+      <li aria-hidden="true" class="px-1">/</li>
+      <li class="font-medium text-[var(--color-trust)]" aria-current="page">{{ collection.title }}</li>
+
+    {%- elsif template.name == 'article' -%}
+      <li aria-hidden="true" class="px-1">/</li>
+      <li>
+        <a href="{{ blog.url }}" class="hover:text-[var(--color-primary)]">{{ blog.title }}</a>
+      </li>
+      <li aria-hidden="true" class="px-1">/</li>
+      <li class="font-medium text-[var(--color-trust)]" aria-current="page">{{ article.title }}</li>
+
+    {%- elsif template.name == 'blog' -%}
+      <li aria-hidden="true" class="px-1">/</li>
+      <li class="font-medium text-[var(--color-trust)]" aria-current="page">{{ blog.title }}</li>
+
+    {%- elsif template.name == 'page' -%}
+      <li aria-hidden="true" class="px-1">/</li>
+      <li class="font-medium text-[var(--color-trust)]" aria-current="page">{{ page.title }}</li>
+
+    {%- elsif template.name == 'search' -%}
+      <li aria-hidden="true" class="px-1">/</li>
+      <li class="font-medium text-[var(--color-trust)]" aria-current="page">{{ 'general.search' | t }}</li>
+    {%- endif -%}
+  </ol>
+</nav>
+
+{%- comment -%} JSON-LD BreadcrumbList {%- endcomment -%}
+{%- capture breadcrumb_json -%}
+[
+  { "@type": "ListItem", "position": 1, "name": {{ home_title | json }}, "item": {{ shop.url | json }} }
+  {%- if template.name == 'product' -%}
+    {%- assign bc = collection | default: product.collections.first -%}
+    {%- if bc -%},{ "@type": "ListItem", "position": 2, "name": {{ bc.title | json }}, "item": {{ shop.url | append: bc.url | json }} },{ "@type": "ListItem", "position": 3, "name": {{ product.title | json }}, "item": {{ shop.url | append: product.url | json }} }
+    {%- else -%},{ "@type": "ListItem", "position": 2, "name": {{ product.title | json }}, "item": {{ shop.url | append: product.url | json }} }
+    {%- endif -%}
+  {%- elsif template.name == 'collection' -%}
+  ,{ "@type": "ListItem", "position": 2, "name": {{ collection.title | json }}, "item": {{ shop.url | append: collection.url | json }} }
+  {%- elsif template.name == 'article' -%}
+  ,{ "@type": "ListItem", "position": 2, "name": {{ blog.title | json }}, "item": {{ shop.url | append: blog.url | json }} },{ "@type": "ListItem", "position": 3, "name": {{ article.title | json }}, "item": {{ shop.url | append: article.url | json }} }
+  {%- endif -%}
+]
+{%- endcapture -%}
+<script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": {{ breadcrumb_json }}
+  }
+</script>

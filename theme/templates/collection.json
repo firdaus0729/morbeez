@@ -1,0 +1,25 @@
+{
+  "sections": {
+    "banner": {
+      "type": "collection-banner",
+      "settings": {}
+    },
+    "subnav": {
+      "type": "subcollection-nav",
+      "settings": {
+        "show_sibling_collections": true
+      }
+    },
+    "filters": {
+      "type": "collection-filters",
+      "settings": {}
+    },
+    "main": {
+      "type": "main-collection",
+      "settings": {
+        "products_per_page": 16
+      }
+    }
+  },
+  "order": ["banner", "subnav", "filters", "main"]
+}

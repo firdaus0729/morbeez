@@ -1,0 +1,5 @@
+# Link to store: shopify theme dev (from theme/ directory)
+# https://shopify.dev/docs/storefronts/themes/tools/cli
+
+name = "morbeez"
+# store = "your-store.myshopify.com"

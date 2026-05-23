@@ -1,0 +1,12 @@
+<div class="morbeez-container morbeez-section">
+  {%- render 'morbeez-breadcrumbs' -%}
+  <h1 class="font-heading text-3xl font-bold">{{ page.title }}</h1>
+  <div class="mt-6 prose prose-sm max-w-none">{{ page.content }}</div>
+</div>
+
+{% schema %}
+{
+  "name": "t:sections.main_page.name",
+  "settings": []
+}
+{% endschema %}

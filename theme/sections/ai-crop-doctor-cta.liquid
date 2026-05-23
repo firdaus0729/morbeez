@@ -1,0 +1,36 @@
+{%- if settings.enable_ai_crop_doctor_cta -%}
+  <section
+    class="morbeez-section bg-[var(--color-primary)] text-white"
+    id="MorbeezCropDoctor-{{ section.id }}"
+    data-morbeez-feature="crop-doctor"
+  >
+    <div class="morbeez-container flex flex-col items-start gap-6 md:flex-row md:items-center md:justify-between">
+      <div class="max-w-xl">
+        <h2 class="text-2xl font-bold font-heading">{{ section.settings.heading }}</h2>
+        <p class="mt-2 opacity-90">{{ section.settings.body }}</p>
+      </div>
+      {%- if section.settings.cta_url != blank -%}
+        {%- render 'morbeez-button',
+          url: section.settings.cta_url,
+          label: section.settings.cta_label,
+          style: 'secondary',
+          class: '!border-white !text-white hover:!bg-white hover:!text-[var(--color-primary)]'
+        -%}
+      {%- endif -%}
+    </div>
+  </section>
+{%- endif -%}
+
+{% schema %}
+{
+  "name": "t:sections.ai_crop_doctor.name",
+  "tag": "section",
+  "settings": [
+    { "type": "text", "id": "heading", "label": "t:sections.ai_crop_doctor.settings.heading", "default": "AI Crop Doctor" },
+    { "type": "textarea", "id": "body", "label": "t:sections.ai_crop_doctor.settings.body", "default": "Upload a photo of your crop issue and get product guidance. Coming soon in the app." },
+    { "type": "url", "id": "cta_url", "label": "t:sections.ai_crop_doctor.settings.cta_url" },
+    { "type": "text", "id": "cta_label", "label": "t:sections.ai_crop_doctor.settings.cta_label", "default": "Learn more" }
+  ],
+  "presets": [{ "name": "t:sections.ai_crop_doctor.presets.default" }]
+}
+{% endschema %}

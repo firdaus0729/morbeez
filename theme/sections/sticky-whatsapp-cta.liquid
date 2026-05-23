@@ -1,0 +1,58 @@
+{%- liquid
+  assign wa_phone = section.settings.phone | default: settings.whatsapp_phone
+  assign wa_default_message = section.settings.default_message | default: settings.whatsapp_message | default: 'Hi Morbeez, I need help with '
+-%}
+{%- if section.settings.enabled and wa_phone != blank -%}
+  {%- capture wa_message -%}
+    {{ wa_default_message }}{{ request.page_type }}
+  {%- endcapture -%}
+  {%- assign wa_url = 'https://wa.me/' | append: wa_phone | remove: '+' | remove: ' ' | remove: '-' -%}
+  {%- assign wa_url = wa_url | append: '?text=' | append: wa_message | url_encode -%}
+
+  <div
+    class="fixed z-50 flex items-center justify-center shadow-lg transition"
+    style="bottom: calc(1rem + env(safe-area-inset-bottom, 0px)); right: 1rem;"
+    data-morbeez-whatsapp-cta
+    {{ section.shopify_attributes }}
+  >
+    <a
+      href="{{ wa_url }}"
+      target="_blank"
+      rel="noopener noreferrer"
+      class="flex h-14 w-14 items-center justify-center rounded-full bg-[#25D366] text-white hover:scale-105 md:h-auto md:w-auto md:rounded-full md:px-5 md:py-3"
+      aria-label="{{ 'general.whatsapp.contact' | t }}"
+    >
+      <span class="hidden md:inline font-semibold text-sm">{{ 'general.whatsapp.label' | t }}</span>
+      <span class="md:hidden text-xl" aria-hidden="true">💬</span>
+    </a>
+  </div>
+{%- endif -%}
+
+{% schema %}
+{
+  "name": "t:sections.sticky_whatsapp.name",
+  "tag": "section",
+  "class": "section-sticky-whatsapp",
+  "settings": [
+    {
+      "type": "checkbox",
+      "id": "enabled",
+      "label": "t:sections.sticky_whatsapp.settings.enabled",
+      "default": true
+    },
+    {
+      "type": "text",
+      "id": "phone",
+      "label": "t:sections.sticky_whatsapp.settings.phone",
+      "info": "t:sections.sticky_whatsapp.settings.phone_info",
+      "default": "919999999999"
+    },
+    {
+      "type": "textarea",
+      "id": "default_message",
+      "label": "t:sections.sticky_whatsapp.settings.default_message",
+      "default": "Hi Morbeez, I need help with "
+    }
+  ]
+}
+{% endschema %}
