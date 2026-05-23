@@ -11,7 +11,10 @@ export type MorbeezEventType =
   | 'whatsapp.message.received'
   | 'lead.created'
   | 'quotation.requested'
-  | 'farmer.upserted';
+  | 'farmer.upserted'
+  | 'advisory.completed'
+  | 'advisory.escalated'
+  | 'callback.requested';
 
 export interface MorbeezEvent<T = Record<string, unknown>> {
   id: string;

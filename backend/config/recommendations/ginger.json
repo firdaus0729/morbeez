@@ -1,0 +1,51 @@
+{
+  "cropType": "ginger",
+  "rules": [
+    {
+      "matchTags": ["rhizome_rot", "soft_rot", "bacterial"],
+      "products": [
+        {
+          "handle": "ginger-disease-shield",
+          "title": "Ginger Disease Shield Kit",
+          "reason": "Rhizome rot / bacterial wilt management",
+          "priority": 1,
+          "dosageSchedule": { "spray": "2 ml/L", "interval": "7 days", "max": "3 applications" }
+        }
+      ]
+    },
+    {
+      "matchTags": ["nutrient", "yellowing", "deficiency", "nitrogen"],
+      "products": [
+        {
+          "handle": "ginger-growth-booster",
+          "title": "Ginger Growth Booster",
+          "reason": "Nutrient deficiency support",
+          "priority": 1,
+          "dosageSchedule": { "soil": "5 kg/acre", "timing": "split application" }
+        }
+      ]
+    },
+    {
+      "matchTags": ["pest", "shoot_borer", "rhizome_scale"],
+      "products": [
+        {
+          "handle": "ginger-pest-control",
+          "title": "Ginger Integrated Pest Control",
+          "reason": "Shoot borer / rhizome scale",
+          "priority": 2
+        }
+      ]
+    },
+    {
+      "matchTags": ["default"],
+      "products": [
+        {
+          "handle": "ginger-starter-kit",
+          "title": "Ginger Starter Advisory Kit",
+          "reason": "General ginger crop care",
+          "priority": 3
+        }
+      ]
+    }
+  ]
+}

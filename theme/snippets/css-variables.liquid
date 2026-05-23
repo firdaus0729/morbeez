@@ -7,14 +7,30 @@
   {%- endunless -%}
 
   :root {
-    --color-primary: {{ settings.color_primary | default: '#1b5e3b' }};
+    --color-primary: {{ settings.color_primary | default: '#0d4f2b' }};
+    --color-primary-dark: color-mix(in srgb, var(--color-primary) 85%, #000);
     --color-accent: {{ settings.color_accent | default: '#c9a227' }};
-    --color-trust: {{ settings.color_trust | default: '#1e293b' }};
-    --color-surface: {{ settings.color_surface | default: '#f8faf6' }};
-    --color-muted: {{ settings.color_muted | default: '#64748b' }};
+    --color-trust: {{ settings.color_trust | default: '#0f172a' }};
+    --color-surface: {{ settings.color_surface | default: '#f4f7f2' }};
+    --color-surface-elevated: #ffffff;
+    --color-muted: {{ settings.color_muted | default: '#5c6b7a' }};
+    --color-border: color-mix(in srgb, var(--color-trust) 10%, transparent);
     --font-heading: {{ settings.type_header_font.family }}, {{ settings.type_header_font.fallback_families }};
     --font-body: {{ settings.type_body_font.family }}, "Noto Sans Malayalam", {{ settings.type_body_font.fallback_families }};
     --font-heading-weight: {{ settings.type_header_font.weight }};
     --font-body-weight: {{ settings.type_body_font.weight }};
+    --radius-sm: 0.5rem;
+    --radius-md: 0.75rem;
+    --radius-lg: 1rem;
+    --radius-xl: 1.25rem;
+    --radius-2xl: 1.5rem;
+    --radius-full: 9999px;
+    --shadow-sm: 0 1px 2px rgb(15 23 42 / 0.04);
+    --shadow-md: 0 4px 16px rgb(15 23 42 / 0.06);
+    --shadow-lg: 0 12px 40px rgb(15 23 42 / 0.08);
+    --shadow-glow: 0 0 0 1px rgb(13 79 43 / 0.08), 0 8px 24px rgb(13 79 43 / 0.12);
+    --gradient-hero: linear-gradient(135deg, var(--color-surface) 0%, #ffffff 45%, color-mix(in srgb, var(--color-primary) 8%, white) 100%);
+    --gradient-brand: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
+    --gradient-accent: linear-gradient(135deg, var(--color-accent) 0%, color-mix(in srgb, var(--color-accent) 70%, #fff) 100%);
   }
 {% endstyle %}

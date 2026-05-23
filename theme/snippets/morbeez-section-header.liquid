@@ -1,18 +1,24 @@
-{% comment %}
-  Section header: title, subtitle, optional link
-  Accepts: heading, subheading, link_url, link_label
-{% endcomment %}
+{% comment %} Section header with optional eyebrow {% endcomment %}
 {%- if heading != blank -%}
-  <div class="mb-8 flex flex-wrap items-end justify-between gap-4">
-    <div>
-      <h2 class="font-heading text-2xl font-bold text-[var(--color-trust)] md:text-3xl">{{ heading }}</h2>
+  <div class="mb-10 flex flex-wrap items-end justify-between gap-6 md:mb-12">
+    <div class="max-w-2xl">
+      {%- if eyebrow != blank -%}
+        <p class="morbeez-eyebrow mb-3">{{ eyebrow }}</p>
+      {%- endif -%}
+      <h2 class="font-heading text-3xl font-bold tracking-tight text-[var(--color-trust)] md:text-4xl">
+        {{ heading }}
+      </h2>
       {%- if subheading != blank -%}
-        <p class="mt-2 text-[var(--color-muted)]">{{ subheading }}</p>
+        <p class="mt-3 text-base leading-relaxed text-[var(--color-muted)] md:text-lg">{{ subheading }}</p>
       {%- endif -%}
     </div>
     {%- if link_url != blank and link_label != blank -%}
-      <a href="{{ link_url }}" class="text-sm font-semibold text-[var(--color-primary)] hover:underline">
-        {{ link_label }} →
+      <a
+        href="{{ link_url }}"
+        class="group inline-flex items-center gap-2 text-sm font-semibold text-[var(--color-primary)] transition hover:gap-3"
+      >
+        {{ link_label }}
+        {%- render 'morbeez-icon', name: 'arrow-right', class: 'h-4 w-4 transition group-hover:translate-x-0.5' -%}
       </a>
     {%- endif -%}
   </div>

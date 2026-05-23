@@ -23,6 +23,39 @@ export async function shopifyProxyRoutes(app: FastifyInstance): Promise<void> {
     verifyShopifyAppProxy(request.query as Record<string, string | undefined>);
   });
 
+  app.post('/proxy/advisory/diagnose', async (request, reply) => {
+    const body = z
+      .object({
+        phone: z.string().min(10),
+        name: z.string().optional(),
+        cropType: z.string().default('ginger'),
+        cropStage: z.string().optional(),
+        language: z.enum(['en', 'ml']).default('en'),
+        symptomsText: z.string().max(2000).optional(),
+        imageBase64: z.string().optional(),
+        imageMimeType: z.string().optional(),
+      })
+      .parse(request.body);
+
+    const { cropDoctorService } = await import('../../services/ai/crop-doctor.service.js');
+    const result = await cropDoctorService.diagnoseByPhone({
+      ...body,
+      channel: 'web',
+    });
+
+    const summary =
+      body.language === 'ml' ? result.advisory.farmerSummaryMl : result.advisory.farmerSummaryEn;
+
+    return reply.code(201).send({
+      ok: true,
+      sessionId: result.sessionId,
+      summary,
+      escalated: result.escalated,
+      products: result.productRecommendations,
+      disclaimer: 'AI-assisted recommendation with agronomist support available.',
+    });
+  });
+
   app.post('/proxy/leads', async (request, reply) => {
     const body = leadBodySchema.parse(request.body);
     const result = await leadService.createLead({

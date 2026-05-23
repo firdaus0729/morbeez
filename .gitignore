@@ -3,5 +3,9 @@ node_modules/
 *.log
 .env
 .env.local
+backend/.env
+*.env
+!.env.example
+!backend/.env.example
 .shopify/bundle.pem
 theme/.shopify

@@ -33,7 +33,8 @@ Secret = `SHOPIFY_WEBHOOK_SECRET` from app or custom app.
 1. API user for `SHIPROCKET_EMAIL` / `PASSWORD`
 2. Configure pickup location `Primary`
 3. Enable Delhivery in courier priority
-4. Tracking webhook → `/webhooks/shiprocket`
+4. Tracking webhook → `https://YOUR_API/webhooks/tracking` (not `/shiprocket` — blocked by Shiprocket)
+5. Auth token → copy into `SHIPROCKET_WEBHOOK_TOKEN` (use `x-api-key` in Shiprocket UI)
 
 ## 6. WhatsApp
 

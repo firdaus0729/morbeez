@@ -34,9 +34,8 @@
       })
       .then(function (result) {
         if (msgEl) {
-          msgEl.classList.remove('hidden');
-          msgEl.className =
-            'text-sm ' + (result.ok ? 'text-green-700' : 'text-red-600');
+          msgEl.classList.remove('hidden', 'morbeez-result-box--success', 'morbeez-result-box--error');
+          msgEl.classList.add(result.ok ? 'morbeez-result-box--success' : 'morbeez-result-box--error');
           msgEl.textContent = result.ok
             ? result.data.message || 'Submitted successfully!'
             : result.data.message || 'Something went wrong. Please try again.';
@@ -45,8 +44,8 @@
       })
       .catch(function () {
         if (msgEl) {
-          msgEl.classList.remove('hidden');
-          msgEl.className = 'text-sm text-red-600';
+          msgEl.classList.remove('hidden', 'morbeez-result-box--success');
+          msgEl.classList.add('morbeez-result-box--error');
           msgEl.textContent = 'Network error. Please try again or WhatsApp us.';
         }
       })

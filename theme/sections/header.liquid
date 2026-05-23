@@ -1,10 +1,16 @@
-<header class="sticky top-0 z-40 border-b border-gray-100 bg-white" role="banner">
-  <div class="morbeez-container flex h-16 items-center justify-between gap-4">
-    <a href="{{ routes.root_url }}" class="shrink-0 font-heading text-xl font-bold text-[var(--color-primary)]">
+<header class="sticky top-0 z-40 border-b border-[var(--color-border)] morbeez-glass" role="banner">
+  <div class="morbeez-container flex h-[4.25rem] items-center justify-between gap-4">
+    <a
+      href="{{ routes.root_url }}"
+      class="group flex shrink-0 items-center gap-2 font-heading text-xl font-bold tracking-tight text-[var(--color-primary)]"
+    >
       {%- if settings.logo != blank -%}
-        {{ settings.logo | image_url: width: 180 | image_tag: alt: shop.name, class: 'h-10 w-auto' }}
+        {{ settings.logo | image_url: width: 200 | image_tag: alt: shop.name, class: 'h-9 w-auto transition group-hover:opacity-90' }}
       {%- else -%}
-        {{ shop.name }}
+        <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-[var(--color-primary)]/10 text-[var(--color-primary)]">
+          {%- render 'morbeez-icon', name: 'leaf', class: 'h-5 w-5' -%}
+        </span>
+        <span>{{ shop.name }}</span>
       {%- endif -%}
     </a>
 
@@ -14,26 +20,30 @@
       {%- endfor -%}
     </nav>
 
-    <div class="flex items-center gap-2 sm:gap-3">
+    <div class="flex items-center gap-1 sm:gap-2">
       <div class="hidden md:block">
         {%- render 'morbeez-language-switcher' -%}
       </div>
-      <a href="{{ routes.search_url }}" class="hidden p-2 text-sm font-medium sm:inline-flex" aria-label="{{ 'general.search' | t }}">
-        <span aria-hidden="true">⌕</span>
+      <a href="{{ routes.search_url }}" class="morbeez-icon-btn hidden sm:flex" aria-label="{{ 'general.search' | t }}">
+        {%- render 'morbeez-icon', name: 'search', class: 'h-5 w-5' -%}
       </a>
-      <a href="{{ routes.cart_url }}" class="p-2 text-sm font-medium" aria-label="{{ 'general.cart' | t }}">
-        <span class="hidden sm:inline">{{ 'general.cart' | t }}</span>
-        <span class="sm:ml-1">({{ cart.item_count }})</span>
+      <a href="{{ routes.cart_url }}" class="morbeez-icon-btn relative" aria-label="{{ 'general.cart' | t }}">
+        {%- render 'morbeez-icon', name: 'cart', class: 'h-5 w-5' -%}
+        {%- if cart.item_count > 0 -%}
+          <span class="absolute -right-0.5 -top-0.5 flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-[var(--color-accent)] px-1 text-[10px] font-bold text-[var(--color-trust)]">
+            {{ cart.item_count }}
+          </span>
+        {%- endif -%}
       </a>
       <button
         type="button"
-        class="flex h-10 w-10 items-center justify-center rounded-lg border border-gray-200 lg:hidden"
+        class="morbeez-icon-btn border border-[var(--color-border)] lg:hidden"
         data-drawer-open
         aria-controls="morbeez-mobile-drawer"
         aria-expanded="false"
         aria-label="{{ 'accessibility.menu_open' | t }}"
       >
-        <span aria-hidden="true">☰</span>
+        {%- render 'morbeez-icon', name: 'menu', class: 'h-5 w-5' -%}
       </button>
     </div>
   </div>

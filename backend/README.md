@@ -56,7 +56,7 @@ Header: `x-api-key: <INTERNAL_API_KEY>`
 |------|----------|
 | `POST /webhooks/shopify` | Shopify (HMAC) |
 | `POST /webhooks/razorpay` | Razorpay (signature) |
-| `POST /webhooks/shiprocket` | Shiprocket tracking |
+| `POST /webhooks/tracking` | Shiprocket tracking (use this in Shiprocket dashboard) |
 | `GET/POST /webhooks/whatsapp` | Meta Cloud API |
 
 ## Deploy (Railway)

@@ -1,0 +1,12 @@
+{
+  "sections": {
+    "form": {
+      "type": "crop-doctor-form",
+      "settings": {
+        "heading": "AI Crop Doctor",
+        "body": "Upload a photo of your ginger crop and describe symptoms for AI-assisted guidance."
+      }
+    }
+  },
+  "order": ["form"]
+}

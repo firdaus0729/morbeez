@@ -3,19 +3,21 @@
 <section class="morbeez-section" id="MorbeezFeatured-{{ section.id }}">
   <div class="morbeez-container">
     {%- if section.settings.heading != blank -%}
-      <div class="mb-8 flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h2 class="text-2xl font-bold font-heading">{{ section.settings.heading }}</h2>
-          {%- if section.settings.subheading != blank -%}
-            <p class="mt-2 text-[var(--color-muted)]">{{ section.settings.subheading }}</p>
-          {%- endif -%}
-        </div>
-        {%- if section.settings.show_view_all and collection != blank -%}
-          <a href="{{ collection.url }}" class="text-sm font-semibold text-[var(--color-primary)]">
-            {{ 'general.view_all' | t }} →
-          </a>
-        {%- endif -%}
-      </div>
+      {%- liquid
+        assign view_all_url = ''
+        assign view_all_label = ''
+        if section.settings.show_view_all and collection != blank
+          assign view_all_url = collection.url
+          assign view_all_label = 'general.view_all' | t
+        endif
+      -%}
+      {%- render 'morbeez-section-header',
+        eyebrow: 'Products',
+        heading: section.settings.heading,
+        subheading: section.settings.subheading,
+        link_url: view_all_url,
+        link_label: view_all_label
+      -%}
     {%- endif -%}
 
     {%- if collection != blank and collection.products_count > 0 -%}

@@ -1,9 +1,9 @@
 {
   "name": "@morbeez/api",
-  "version": "0.1.0-m2",
+  "version": "0.1.0-m3",
   "private": true,
   "type": "module",
-  "description": "Morbeez operational API — Shopify, Razorpay, Shiprocket, WhatsApp",
+  "description": "Morbeez API — commerce, WhatsApp, AI Crop Doctor",
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "build": "tsc",

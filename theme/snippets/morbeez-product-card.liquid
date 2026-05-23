@@ -1,25 +1,36 @@
-{% comment %} Product card — used across homepage and collection grids {% endcomment %}
+{% comment %} Product card — homepage & collection grids {% endcomment %}
 {%- if product != blank -%}
-  <article class="morbeez-card group overflow-hidden">
+  <article class="morbeez-card group">
     <a href="{{ product.url }}" class="block">
-      <div class="aspect-square overflow-hidden bg-[var(--color-surface)]">
+      <div class="relative aspect-square overflow-hidden bg-[var(--color-surface)]">
         {%- render 'morbeez-lazy-image',
           image: product.featured_image,
           alt: product.title,
-          class: 'h-full w-full object-cover transition group-hover:scale-105'
+          class: 'h-full w-full object-cover transition duration-500 group-hover:scale-105'
         -%}
+        <div class="absolute left-3 top-3 flex flex-col gap-1">
+          {%- if product.compare_at_price > product.price -%}
+            <span class="morbeez-badge--sale">Sale</span>
+          {%- endif -%}
+        </div>
       </div>
-      <div class="p-4">
-        <h3 class="text-sm font-semibold leading-snug">{{ product.title }}</h3>
+      <div class="p-5">
+        <h3 class="font-medium leading-snug text-[var(--color-trust)] transition group-hover:text-[var(--color-primary)]">
+          {{ product.title }}
+        </h3>
         {%- if product.metafields.morbeez.pack_size_label != blank -%}
           <p class="mt-1 text-xs text-[var(--color-muted)]">{{ product.metafields.morbeez.pack_size_label }}</p>
         {%- endif -%}
-        <div class="mt-2 flex items-baseline gap-2">
-          <span class="font-semibold text-[var(--color-primary)]">{{ product.price | money }}</span>
+        <div class="mt-3 flex items-baseline gap-2">
+          <span class="text-lg font-bold text-[var(--color-primary)]">{{ product.price | money }}</span>
           {%- if product.compare_at_price > product.price -%}
-            <s class="text-xs text-[var(--color-muted)]">{{ product.compare_at_price | money }}</s>
+            <s class="text-sm text-[var(--color-muted)]">{{ product.compare_at_price | money }}</s>
           {%- endif -%}
         </div>
+        <span class="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-[var(--color-primary)] opacity-0 transition group-hover:opacity-100">
+          View product
+          {%- render 'morbeez-icon', name: 'arrow-right', class: 'h-3.5 w-3.5' -%}
+        </span>
       </div>
     </a>
   </article>

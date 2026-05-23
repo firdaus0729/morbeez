@@ -1,20 +1,23 @@
 {% comment %}
-  Renders a CTA button.
-  Accepts: url, label, style (primary|secondary|whatsapp), class, attributes
+  CTA button — style: primary | secondary | ghost | whatsapp
 {% endcomment %}
 {%- liquid
   assign btn_style = style | default: 'primary'
   assign btn_class = 'morbeez-btn-primary'
   if btn_style == 'secondary'
     assign btn_class = 'morbeez-btn-secondary'
+  elsif btn_style == 'ghost'
+    assign btn_class = 'morbeez-btn-ghost'
   elsif btn_style == 'whatsapp'
-    assign btn_class = 'morbeez-btn-primary'
+    assign btn_class = 'morbeez-btn-whatsapp'
   endif
 -%}
-<a
-  href="{{ url }}"
-  class="{{ btn_class }} {{ class }}"
-  {{ attributes }}
->
-  {{ label }}
+<a href="{{ url }}" class="{{ btn_class }} {{ class }}" {{ attributes }}>
+  {%- if btn_style == 'whatsapp' -%}
+    {%- render 'morbeez-icon', name: 'whatsapp', class: 'h-5 w-5' -%}
+  {%- endif -%}
+  <span>{{ label }}</span>
+  {%- if show_arrow -%}
+    {%- render 'morbeez-icon', name: 'arrow-right', class: 'h-4 w-4' -%}
+  {%- endif -%}
 </a>

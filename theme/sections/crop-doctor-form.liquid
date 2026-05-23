@@ -1,0 +1,78 @@
+{%- if settings.enable_ai_crop_doctor_cta -%}
+  <section class="morbeez-section" id="MorbeezCropDoctorForm-{{ section.id }}" data-morbeez-feature="crop-doctor">
+    <div class="morbeez-container">
+      <div class="mx-auto max-w-2xl">
+        <p class="morbeez-eyebrow mb-3">AI Crop Doctor</p>
+        <h1 class="font-heading text-3xl font-bold tracking-tight text-[var(--color-trust)] md:text-4xl">
+          {{ section.settings.heading }}
+        </h1>
+        <p class="mt-3 text-lg text-[var(--color-muted)]">{{ section.settings.body }}</p>
+
+        <div class="morbeez-panel mt-8">
+          <p class="mb-6 flex items-start gap-2 rounded-xl bg-[var(--color-surface)] px-4 py-3 text-xs text-[var(--color-muted)]">
+            {%- render 'morbeez-icon', name: 'sparkles', class: 'mt-0.5 h-4 w-4 shrink-0 text-[var(--color-primary)]' -%}
+            {{ section.settings.disclaimer }}
+          </p>
+
+          <form id="MorbeezCropDoctorForm" class="space-y-5" enctype="multipart/form-data">
+            <div>
+              <label class="morbeez-label" for="cd-phone">{{ 'forms.phone' | t }}</label>
+              <input id="cd-phone" name="phone" type="tel" required placeholder="9876543210" class="morbeez-input">
+            </div>
+            <div class="grid gap-5 sm:grid-cols-2">
+              <div>
+                <label class="morbeez-label" for="cd-crop">{{ 'crop_doctor.crop_type' | t }}</label>
+                <select id="cd-crop" name="cropType" class="morbeez-input">
+                  <option value="ginger" selected>{{ 'crop_doctor.ginger' | t }}</option>
+                </select>
+              </div>
+              <div>
+                <label class="morbeez-label" for="cd-lang">{{ 'crop_doctor.language' | t }}</label>
+                <select id="cd-lang" name="language" class="morbeez-input">
+                  <option value="en">English</option>
+                  <option value="ml">മലയാളം</option>
+                </select>
+              </div>
+            </div>
+            <div>
+              <label class="morbeez-label" for="cd-symptoms">{{ 'crop_doctor.symptoms' | t }}</label>
+              <textarea id="cd-symptoms" name="symptoms" rows="3" class="morbeez-input" placeholder="Yellow leaves, wilting, spots on rhizome…"></textarea>
+            </div>
+            <div>
+              <label class="morbeez-label" for="cd-image">{{ 'crop_doctor.photo' | t }}</label>
+              <input id="cd-image" name="image" type="file" accept="image/jpeg,image/png,image/webp" class="morbeez-input file:mr-4 file:rounded-lg file:border-0 file:bg-[var(--color-primary)] file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white">
+            </div>
+            <button type="submit" class="morbeez-btn-primary w-full border-0">{{ section.settings.submit_label }}</button>
+            <div id="MorbeezCropDoctorResult" class="hidden morbeez-result-box" role="status"></div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <script src="{{ 'crop-doctor.js' | asset_url }}" defer></script>
+{%- endif -%}
+
+{% schema %}
+{
+  "name": "t:sections.crop_doctor_form.name",
+  "tag": "section",
+  "settings": [
+    { "type": "text", "id": "heading", "label": "Heading", "default": "Analyze your crop" },
+    {
+      "type": "textarea",
+      "id": "body",
+      "label": "Description",
+      "default": "Upload a photo and tell us what you see. Our AI-assisted system suggests care steps and products, with agronomist backup when needed."
+    },
+    {
+      "type": "text",
+      "id": "disclaimer",
+      "label": "Disclaimer",
+      "default": "AI-assisted recommendations only — not a guaranteed diagnosis. Severe cases are reviewed by our agronomy team."
+    },
+    { "type": "text", "id": "submit_label", "label": "Submit", "default": "Analyze my crop" }
+  ],
+  "presets": [{ "name": "Crop Doctor form" }]
+}
+{% endschema %}

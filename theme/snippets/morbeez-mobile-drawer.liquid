@@ -1,21 +1,25 @@
-{% comment %} Mobile nav drawer — requires menu link_list {% endcomment %}
 <div
   id="morbeez-mobile-drawer"
   class="morbeez-drawer fixed inset-0 z-[60] hidden"
   aria-hidden="true"
   data-mobile-drawer
 >
-  <div class="absolute inset-0 bg-black/40" data-drawer-backdrop></div>
+  <div class="absolute inset-0 bg-[var(--color-trust)]/40 backdrop-blur-sm" data-drawer-backdrop></div>
   <nav
-    class="absolute right-0 top-0 flex h-full w-[min(100%,20rem)] flex-col bg-white shadow-xl"
+    class="absolute right-0 top-0 flex h-full w-[min(100%,22rem)] flex-col bg-white shadow-2xl"
     role="dialog"
     aria-modal="true"
     aria-label="{{ 'accessibility.mobile_navigation' | t }}"
   >
-    <div class="flex h-16 items-center justify-between border-b border-gray-100 px-4">
+    <div class="flex h-[4.25rem] items-center justify-between border-b border-[var(--color-border)] px-5">
       <span class="font-heading font-bold text-[var(--color-primary)]">{{ shop.name }}</span>
-      <button type="button" class="flex h-10 w-10 items-center justify-center rounded-lg hover:bg-gray-100" data-drawer-close aria-label="{{ 'accessibility.close' | t }}">
-        ✕
+      <button
+        type="button"
+        class="morbeez-icon-btn"
+        data-drawer-close
+        aria-label="{{ 'accessibility.close' | t }}"
+      >
+        {%- render 'morbeez-icon', name: 'close', class: 'h-5 w-5' -%}
       </button>
     </div>
     <div class="flex-1 overflow-y-auto p-4">
@@ -23,15 +27,18 @@
         {%- for link in linklists[menu].links -%}
           <li>
             {%- if link.links.size > 0 -%}
-              <details class="group">
-                <summary class="flex cursor-pointer list-none items-center justify-between rounded-lg px-3 py-3 text-sm font-medium hover:bg-[var(--color-surface)]">
+              <details class="group rounded-xl">
+                <summary class="flex cursor-pointer list-none items-center justify-between rounded-xl px-4 py-3.5 text-sm font-medium text-[var(--color-trust)] hover:bg-[var(--color-surface)]">
                   {{ link.title }}
-                  <span class="text-xs">▾</span>
+                  {%- render 'morbeez-icon', name: 'chevron-down', class: 'h-4 w-4 text-[var(--color-muted)]' -%}
                 </summary>
-                <ul class="ml-3 space-y-1 border-l border-gray-100 py-2 pl-3" role="list">
+                <ul class="ml-2 space-y-0.5 border-l-2 border-[var(--color-border)] py-2 pl-4" role="list">
                   {%- for child in link.links -%}
                     <li>
-                      <a href="{{ child.url }}" class="block rounded-lg px-3 py-2 text-sm text-[var(--color-muted)] hover:bg-[var(--color-surface)]">
+                      <a
+                        href="{{ child.url }}"
+                        class="block rounded-lg px-3 py-2.5 text-sm text-[var(--color-muted)] hover:bg-[var(--color-surface)] hover:text-[var(--color-primary)]"
+                      >
                         {{ child.title }}
                       </a>
                     </li>
@@ -39,7 +46,10 @@
                 </ul>
               </details>
             {%- else -%}
-              <a href="{{ link.url }}" class="block rounded-lg px-3 py-3 text-sm font-medium hover:bg-[var(--color-surface)]">
+              <a
+                href="{{ link.url }}"
+                class="block rounded-xl px-4 py-3.5 text-sm font-medium text-[var(--color-trust)] hover:bg-[var(--color-surface)] hover:text-[var(--color-primary)]"
+              >
                 {{ link.title }}
               </a>
             {%- endif -%}
@@ -47,8 +57,10 @@
         {%- endfor -%}
       </ul>
     </div>
-    <div class="border-t border-gray-100 p-4">
-      <a href="{{ routes.cart_url }}" class="morbeez-btn-primary w-full text-center">{{ 'general.cart' | t }} ({{ cart.item_count }})</a>
+    <div class="border-t border-[var(--color-border)] p-4">
+      <a href="{{ routes.cart_url }}" class="morbeez-btn-primary w-full justify-center text-center">
+        {{ 'general.cart' | t }} ({{ cart.item_count }})
+      </a>
     </div>
   </nav>
 </div>

@@ -1,4 +1,3 @@
-{% comment %} Shopify Markets language/country selector {% endcomment %}
 {%- if localization.available_languages.size > 1 -%}
   <div class="morbeez-language-switcher">
     {% form 'localization', id: 'MorbeezLocalization' %}
@@ -6,7 +5,7 @@
       <select
         id="MorbeezLocaleCode"
         name="locale_code"
-        class="rounded-lg border border-gray-200 bg-white px-2 py-1 text-sm"
+        class="morbeez-input !w-auto !py-2 !text-sm"
         onchange="this.form.submit()"
       >
         {%- for language in localization.available_languages -%}

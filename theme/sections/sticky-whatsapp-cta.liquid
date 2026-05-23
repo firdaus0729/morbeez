@@ -10,8 +10,8 @@
   {%- assign wa_url = wa_url | append: '?text=' | append: wa_message | url_encode -%}
 
   <div
-    class="fixed z-50 flex items-center justify-center shadow-lg transition"
-    style="bottom: calc(1rem + env(safe-area-inset-bottom, 0px)); right: 1rem;"
+    class="fixed z-50"
+    style="bottom: calc(1.25rem + env(safe-area-inset-bottom, 0px)); right: 1.25rem;"
     data-morbeez-whatsapp-cta
     {{ section.shopify_attributes }}
   >
@@ -19,11 +19,11 @@
       href="{{ wa_url }}"
       target="_blank"
       rel="noopener noreferrer"
-      class="flex h-14 w-14 items-center justify-center rounded-full bg-[#25D366] text-white hover:scale-105 md:h-auto md:w-auto md:rounded-full md:px-5 md:py-3"
+      class="morbeez-btn-whatsapp flex h-14 w-14 items-center justify-center rounded-full p-0 shadow-lg md:h-auto md:w-auto md:rounded-full md:px-5"
       aria-label="{{ 'general.whatsapp.contact' | t }}"
     >
-      <span class="hidden md:inline font-semibold text-sm">{{ 'general.whatsapp.label' | t }}</span>
-      <span class="md:hidden text-xl" aria-hidden="true">💬</span>
+      {%- render 'morbeez-icon', name: 'whatsapp', class: 'h-6 w-6 md:h-5 md:w-5' -%}
+      <span class="hidden font-semibold md:inline">{{ 'general.whatsapp.label' | t }}</span>
     </a>
   </div>
 {%- endif -%}
@@ -34,12 +34,7 @@
   "tag": "section",
   "class": "section-sticky-whatsapp",
   "settings": [
-    {
-      "type": "checkbox",
-      "id": "enabled",
-      "label": "t:sections.sticky_whatsapp.settings.enabled",
-      "default": true
-    },
+    { "type": "checkbox", "id": "enabled", "label": "t:sections.sticky_whatsapp.settings.enabled", "default": true },
     {
       "type": "text",
       "id": "phone",

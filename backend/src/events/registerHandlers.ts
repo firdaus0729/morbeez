@@ -3,6 +3,7 @@ import { logger } from '../lib/logger.js';
 import { shiprocketService } from '../services/shiprocket/shiprocket.service.js';
 import { whatsappService } from '../services/whatsapp/whatsapp.service.js';
 import { env } from '../config/env.js';
+import { supabase } from '../lib/supabase.js';
 
 /** Wire domain reactions — keep thin; logic lives in services */
 export function registerEventHandlers(): void {
@@ -37,6 +38,39 @@ export function registerEventHandlers(): void {
       { orderId: event.payload.shopifyOrderId, tracking: event.payload.trackingNumber },
       'Order fulfilled'
     );
+  });
+
+  eventBus.on('advisory.escalated', async (event) => {
+    logger.warn(
+      {
+        sessionId: event.payload.sessionId,
+        escalationId: event.payload.escalationId,
+        priority: event.payload.priority,
+      },
+      'Agronomist escalation created'
+    );
+  });
+
+  eventBus.on('advisory.completed', async (event) => {
+    const farmerId = event.payload.farmerId as string | undefined;
+    const escalated = event.payload.escalated as boolean | undefined;
+    if (!farmerId || escalated) return;
+
+    const { data: farmer } = await supabase
+      .from('farmers')
+      .select('phone, preferred_language')
+      .eq('id', farmerId)
+      .single();
+
+    if (farmer?.phone && env.ENABLE_WHATSAPP_AUTO_REPLY) {
+      const msg =
+        farmer.preferred_language === 'ml'
+          ? 'നിങ്ങളുടെ വിള വിശകലനം പൂർത്തിയായി. കൂടുതൽ വിവരങ്ങൾക്ക് മറുപടി നൽകുക.'
+          : 'Your crop advisory is ready. Reply for more details or a callback.';
+      await whatsappService.sendText(farmer.phone, msg).catch((err) => {
+        logger.error({ err }, 'Advisory WhatsApp notify failed');
+      });
+    }
   });
 
   logger.info('Event handlers registered');

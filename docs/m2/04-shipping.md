@@ -21,9 +21,12 @@ Order paid (Shopify webhook)
 
 ## Webhook
 
-`POST /webhooks/shiprocket` — configure tracking URL in Shiprocket settings.
+`POST /webhooks/tracking` — configure this URL in Shiprocket settings.
 
-Optional header: `x-shiprocket-token` = `SHIPROCKET_WEBHOOK_TOKEN`
+**Important:** Shiprocket rejects URLs containing `shiprocket`, `sr`, or `kr`. Do **not** use `/webhooks/shiprocket` in their dashboard.
+
+Auth: set token type to `x-api-key` in Shiprocket; same value as `SHIPROCKET_WEBHOOK_TOKEN` in Railway/env.
+Also accepted: `x-shiprocket-token`, `Authorization: Bearer <token>`.
 
 ## Multi-courier future
 

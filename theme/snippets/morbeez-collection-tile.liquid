@@ -1,26 +1,28 @@
-{% comment %}
-  Collection/category tile
-  Accepts: image, title, url, count_label, class
-{% endcomment %}
 <a
   href="{{ url }}"
-  class="morbeez-card morbeez-tile group block w-[140px] shrink-0 overflow-hidden sm:w-[160px] {{ class }}"
+  class="morbeez-card morbeez-tile group relative block w-[9.5rem] shrink-0 sm:w-[11rem] {{ class }}"
 >
-  <div class="aspect-square overflow-hidden bg-[var(--color-surface)]">
+  <div class="relative aspect-square overflow-hidden bg-[var(--color-surface)]">
     {%- if image != blank -%}
       {%- render 'morbeez-lazy-image',
         image: image,
         alt: title,
-        class: 'h-full w-full object-cover transition group-hover:scale-105'
+        class: 'h-full w-full object-cover transition duration-500 group-hover:scale-110'
       -%}
     {%- else -%}
-      <div class="flex h-full w-full items-center justify-center bg-[var(--color-primary)]/10 text-3xl">🌿</div>
+      <div class="flex h-full w-full items-center justify-center bg-[var(--gradient-brand)] text-white/90">
+        {%- render 'morbeez-icon', name: 'leaf', class: 'h-10 w-10' -%}
+      </div>
     {%- endif -%}
+    <div class="morbeez-tile__overlay" aria-hidden="true"></div>
+    <div class="absolute bottom-0 left-0 right-0 p-3 text-white opacity-0 transition group-hover:opacity-100">
+      <span class="text-xs font-semibold">Explore →</span>
+    </div>
   </div>
-  <div class="p-3">
-    <p class="text-sm font-semibold leading-snug text-[var(--color-trust)]">{{ title }}</p>
+  <div class="p-4">
+    <p class="font-semibold leading-snug text-[var(--color-trust)]">{{ title }}</p>
     {%- if count_label != blank -%}
-      <p class="mt-0.5 text-xs text-[var(--color-muted)]">{{ count_label }}</p>
+      <p class="mt-1 text-xs text-[var(--color-muted)]">{{ count_label }}</p>
     {%- endif -%}
   </div>
 </a>

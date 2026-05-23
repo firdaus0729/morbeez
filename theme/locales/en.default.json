@@ -5,6 +5,13 @@
     "district": "District",
     "notes": "Message (optional)"
   },
+  "crop_doctor": {
+    "crop_type": "Crop type",
+    "ginger": "Ginger",
+    "language": "Language",
+    "symptoms": "Describe symptoms",
+    "photo": "Crop photo"
+  },
   "general": {
     "search": "Search",
     "cart": "Cart",
@@ -280,6 +287,9 @@
     },
     "dealer_enquiry_form": {
       "name": "Dealer enquiry form"
+    },
+    "crop_doctor_form": {
+      "name": "Crop Doctor form"
     },
     "dealer_enquiry": {
       "name": "Dealer enquiry CTA",

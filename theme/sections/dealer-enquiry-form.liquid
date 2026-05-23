@@ -1,58 +1,40 @@
 {%- if settings.enable_dealer_enquiry -%}
   <section class="morbeez-section" id="MorbeezDealerForm-{{ section.id }}" data-morbeez-feature="dealer-enquiry">
-    <div class="morbeez-container max-w-xl">
-      <h1 class="font-heading text-3xl font-bold">{{ section.settings.heading }}</h1>
-      <p class="mt-2 text-[var(--color-muted)]">{{ section.settings.body }}</p>
+    <div class="morbeez-container">
+      <div class="mx-auto max-w-2xl">
+        <p class="morbeez-eyebrow mb-3">Partnership</p>
+        <h1 class="font-heading text-3xl font-bold tracking-tight text-[var(--color-trust)] md:text-4xl">
+          {{ section.settings.heading }}
+        </h1>
+        <p class="mt-3 text-lg text-[var(--color-muted)]">{{ section.settings.body }}</p>
 
-      <form
-        id="MorbeezDealerForm"
-        class="mt-8 space-y-4"
-        data-proxy-url="{% if section.settings.use_app_proxy %}/apps/morbeez/leads{% else %}{{ section.settings.api_url }}{% endif %}"
-      >
-        <div>
-          <label class="block text-sm font-semibold" for="dealer-name">{{ 'forms.name' | t }}</label>
-          <input
-            id="dealer-name"
-            name="name"
-            type="text"
-            required
-            class="mt-1 w-full rounded-lg border border-gray-200 p-3 text-sm"
+        <div class="morbeez-panel mt-8">
+          <form
+            id="MorbeezDealerForm"
+            class="space-y-5"
+            data-proxy-url="{% if section.settings.use_app_proxy %}/apps/morbeez/leads{% else %}{{ section.settings.api_url }}{% endif %}"
           >
+            <div>
+              <label class="morbeez-label" for="dealer-name">{{ 'forms.name' | t }}</label>
+              <input id="dealer-name" name="name" type="text" required class="morbeez-input">
+            </div>
+            <div>
+              <label class="morbeez-label" for="dealer-phone">{{ 'forms.phone' | t }}</label>
+              <input id="dealer-phone" name="phone" type="tel" required placeholder="9876543210" class="morbeez-input">
+            </div>
+            <div>
+              <label class="morbeez-label" for="dealer-district">{{ 'forms.district' | t }}</label>
+              <input id="dealer-district" name="district" type="text" class="morbeez-input">
+            </div>
+            <div>
+              <label class="morbeez-label" for="dealer-notes">{{ 'forms.notes' | t }}</label>
+              <textarea id="dealer-notes" name="notes" rows="3" class="morbeez-input"></textarea>
+            </div>
+            <button type="submit" class="morbeez-btn-primary w-full border-0">{{ section.settings.submit_label }}</button>
+            <p id="MorbeezDealerFormMessage" class="hidden morbeez-result-box text-sm" role="status"></p>
+          </form>
         </div>
-        <div>
-          <label class="block text-sm font-semibold" for="dealer-phone">{{ 'forms.phone' | t }}</label>
-          <input
-            id="dealer-phone"
-            name="phone"
-            type="tel"
-            required
-            placeholder="9876543210"
-            class="mt-1 w-full rounded-lg border border-gray-200 p-3 text-sm"
-          >
-        </div>
-        <div>
-          <label class="block text-sm font-semibold" for="dealer-district">{{ 'forms.district' | t }}</label>
-          <input
-            id="dealer-district"
-            name="district"
-            type="text"
-            class="mt-1 w-full rounded-lg border border-gray-200 p-3 text-sm"
-          >
-        </div>
-        <div>
-          <label class="block text-sm font-semibold" for="dealer-notes">{{ 'forms.notes' | t }}</label>
-          <textarea
-            id="dealer-notes"
-            name="notes"
-            rows="3"
-            class="mt-1 w-full rounded-lg border border-gray-200 p-3 text-sm"
-          ></textarea>
-        </div>
-        <button type="submit" class="morbeez-btn-primary w-full border-0">
-          {{ section.settings.submit_label }}
-        </button>
-        <p id="MorbeezDealerFormMessage" class="hidden text-sm" role="status"></p>
-      </form>
+      </div>
     </div>
   </section>
 
@@ -64,8 +46,13 @@
   "name": "t:sections.dealer_enquiry_form.name",
   "tag": "section",
   "settings": [
-    { "type": "text", "id": "heading", "label": "Heading", "default": "Dealer enquiry" },
-    { "type": "textarea", "id": "body", "label": "Description", "default": "Partner with Morbeez for wholesale and territory support." },
+    { "type": "text", "id": "heading", "label": "Heading", "default": "Become a Morbeez dealer" },
+    {
+      "type": "textarea",
+      "id": "body",
+      "label": "Description",
+      "default": "Partner with us for wholesale pricing, territory support, and farmer outreach across Kerala and beyond."
+    },
     { "type": "text", "id": "submit_label", "label": "Submit button", "default": "Submit enquiry" },
     {
       "type": "checkbox",
@@ -73,12 +60,7 @@
       "label": "Use Shopify app proxy (/apps/morbeez/leads)",
       "default": true
     },
-    {
-      "type": "text",
-      "id": "api_url",
-      "label": "Direct API URL (if not using proxy)",
-      "info": "Only for development — requires CORS on API"
-    }
+    { "type": "text", "id": "api_url", "label": "Direct API URL (dev only)" }
   ],
   "presets": [{ "name": "Dealer enquiry form" }]
 }

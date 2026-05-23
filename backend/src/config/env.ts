@@ -34,6 +34,12 @@ const envSchema = z.object({
   WATI_ACCESS_TOKEN: z.string().optional(),
   INTERAKT_API_KEY: z.string().optional(),
 
+  OPENAI_API_KEY: z.string().optional(),
+  OPENAI_VISION_MODEL: z.string().default('gpt-4o'),
+  OPENAI_TEXT_MODEL: z.string().default('gpt-4o'),
+  OPENAI_WHISPER_MODEL: z.string().default('whisper-1'),
+  PLANT_ID_API_KEY: z.string().optional(),
+
   INTERNAL_API_KEY: z.string().min(16),
   RATE_LIMIT_MAX: z.coerce.number().default(100),
   RATE_LIMIT_WINDOW_MS: z.coerce.number().default(60_000),
@@ -54,6 +60,19 @@ const envSchema = z.object({
     .string()
     .transform((v) => v !== 'false')
     .default('true'),
+  ENABLE_AI_CROP_DOCTOR: z
+    .string()
+    .transform((v) => v === 'true')
+    .default('false'),
+  ENABLE_ADVISORY_FOLLOW_UPS: z
+    .string()
+    .transform((v) => v === 'true')
+    .default('true'),
+  ENABLE_ADVISORY_AUTOMATION: z
+    .string()
+    .transform((v) => v !== 'false')
+    .default('true'),
+  AI_ESCALATION_THRESHOLD: z.coerce.number().min(0).max(1).default(0.65),
 });
 
 export type Env = z.infer<typeof envSchema>;
