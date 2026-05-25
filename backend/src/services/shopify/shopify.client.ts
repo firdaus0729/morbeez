@@ -3,10 +3,29 @@ import { AppError } from '../../lib/errors.js';
 
 const baseUrl = `https://${env.SHOPIFY_STORE_DOMAIN}/admin/api/${env.SHOPIFY_API_VERSION}`;
 
-export async function shopifyAdmin<T>(
+export interface ShopifyLinkInfo {
+  nextPageInfo: string | null;
+  previousPageInfo: string | null;
+}
+
+function parseLinkHeader(header: string | null): ShopifyLinkInfo {
+  const out: ShopifyLinkInfo = { nextPageInfo: null, previousPageInfo: null };
+  if (!header) return out;
+
+  for (const part of header.split(',')) {
+    const pageMatch = part.match(/page_info=([^&>]+)/);
+    if (!pageMatch) continue;
+    const pageInfo = decodeURIComponent(pageMatch[1]);
+    if (part.includes('rel="next"')) out.nextPageInfo = pageInfo;
+    if (part.includes('rel="previous"')) out.previousPageInfo = pageInfo;
+  }
+  return out;
+}
+
+export async function shopifyAdminRaw(
   path: string,
   options: RequestInit = {}
-): Promise<T> {
+): Promise<{ data: unknown; links: ShopifyLinkInfo }> {
   const res = await fetch(`${baseUrl}${path}`, {
     ...options,
     headers: {
@@ -21,7 +40,16 @@ export async function shopifyAdmin<T>(
     throw new AppError(`Shopify API error: ${res.status}`, res.status, 'SHOPIFY_API_ERROR', text);
   }
 
-  return res.json() as Promise<T>;
+  const data = await res.json();
+  return { data, links: parseLinkHeader(res.headers.get('link')) };
+}
+
+export async function shopifyAdmin<T>(
+  path: string,
+  options: RequestInit = {}
+): Promise<T> {
+  const { data } = await shopifyAdminRaw(path, options);
+  return data as T;
 }
 
 export interface ShopifyOrder {

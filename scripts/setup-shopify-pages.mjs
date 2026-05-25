@@ -62,6 +62,22 @@ const PAGES = [
   { title: 'Dealer enquiry', handle: 'dealer-enquiry', templateSuffix: 'dealer-enquiry', body: '<p>Become a Morbeez dealer.</p>' },
   { title: 'Careers', handle: 'careers', templateSuffix: null, body: '<p>Careers at Morbeez.</p>' },
   { title: 'Initiatives', handle: 'initiatives', templateSuffix: null, body: '<p>Morbeez farmer initiatives.</p>' },
+  {
+    title: 'Staff console',
+    handle: 'console',
+    templateSuffix: 'console',
+    body: '<p>Redirecting to the Morbeez staff console…</p>',
+  },
+];
+
+const API_BASE =
+  process.env.API_BASE_URL ||
+  process.env.MORBEEZ_API_BASE_URL ||
+  'https://morbeez-api.onrender.com';
+
+const URL_REDIRECTS = [
+  { path: '/console', target: `${API_BASE.replace(/\/$/, '')}/console/` },
+  { path: '/admin', target: `${API_BASE.replace(/\/$/, '')}/console/` },
 ];
 
 async function gql(query, variables = {}) {
@@ -141,12 +157,64 @@ async function updatePageTemplate(pageId, templateSuffix) {
   if (errs?.length) throw new Error(errs.map((e) => e.message).join('; '));
 }
 
+async function listRedirects() {
+  const res = await fetch(`https://${STORE}/admin/api/${API_VERSION}/redirects.json?limit=250`, {
+    headers: { 'X-Shopify-Access-Token': TOKEN },
+  });
+  if (!res.ok) throw new Error(`Redirects list failed: ${res.status}`);
+  const json = await res.json();
+  return json.redirects ?? [];
+}
+
+async function ensureRedirect(path, target) {
+  const existing = (await listRedirects()).find((r) => r.path === path);
+  if (existing) {
+    if (existing.target === target) {
+      console.log(`  ⏭  redirect ${path} → already set`);
+      return;
+    }
+    const res = await fetch(`https://${STORE}/admin/api/${API_VERSION}/redirects/${existing.id}.json`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Shopify-Access-Token': TOKEN,
+      },
+      body: JSON.stringify({ redirect: { id: existing.id, path, target } }),
+    });
+    if (!res.ok) throw new Error(`Redirect update failed: ${res.status}`);
+    console.log(`  ✓  redirect ${path} → ${target}`);
+    return;
+  }
+
+  const res = await fetch(`https://${STORE}/admin/api/${API_VERSION}/redirects.json`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Shopify-Access-Token': TOKEN,
+    },
+    body: JSON.stringify({ redirect: { path, target } }),
+  });
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`Redirect create failed: ${res.status} ${err}`);
+  }
+  console.log(`  ✓  redirect ${path} → ${target}`);
+}
+
 async function main() {
+  const host = STORE.replace(/^https?:\/\//, '');
   console.log(`\nMorbeez pages setup → ${STORE}\n`);
   for (const p of PAGES) {
     await createPage(p);
   }
-  console.log('\nDone. Open https://' + STORE.replace(/^https?:\/\//, '') + '/pages/login\n');
+  console.log('\nURL redirects (fixes /console 404 on storefront):\n');
+  for (const r of URL_REDIRECTS) {
+    await ensureRedirect(r.path, r.target);
+  }
+  console.log('\nDone.');
+  console.log('  Storefront: https://' + host + '/console  → staff console');
+  console.log('  Or:        https://' + host + '/pages/console');
+  console.log('  API:       ' + API_BASE.replace(/\/$/, '') + '/console/\n');
 }
 
 main().catch((err) => {

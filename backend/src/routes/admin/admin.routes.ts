@@ -32,6 +32,13 @@ const productCreateSchema = z.object({
 
 const productUpdateSchema = productCreateSchema.partial();
 
+const imageUploadSchema = z.object({
+  fileName: z.string().min(1).max(255),
+  mimeType: z.string().max(100).default('image/jpeg'),
+  dataBase64: z.string().min(20).max(12_000_000),
+  alt: z.string().max(255).optional(),
+});
+
 export async function adminRoutes(app: FastifyInstance): Promise<void> {
   const api = '/console/api/v1';
 
@@ -49,15 +56,15 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
 
   app.get(`${api}/stats`, async (request, reply) => {
     requireAdmin(request);
-    const [farmers, products] = await Promise.all([
+    const [farmers, productCount] = await Promise.all([
       farmersAdminService.list({ page: 1, limit: 1 }),
-      shopifyProductsService.list({ page: 1, limit: 250 }),
+      shopifyProductsService.count(),
     ]);
     return reply.send({
       ok: true,
       stats: {
         farmers: farmers.pagination.total,
-        products: products.products.length,
+        products: productCount,
       },
     });
   });
@@ -119,5 +126,20 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
     const body = productUpdateSchema.parse(request.body);
     const product = await shopifyProductsService.update(id, body);
     return reply.send({ ok: true, product });
+  });
+
+  app.post(`${api}/products/:id/images`, async (request, reply) => {
+    requireAdminRole(request, 'admin', 'manager');
+    const { id } = request.params as { id: string };
+    const body = imageUploadSchema.parse(request.body);
+    const image = await shopifyProductsService.uploadImage(id, body);
+    return reply.code(201).send({ ok: true, image });
+  });
+
+  app.delete(`${api}/products/:id/images/:imageId`, async (request, reply) => {
+    requireAdminRole(request, 'admin', 'manager');
+    const { id, imageId } = request.params as { id: string; imageId: string };
+    await shopifyProductsService.deleteImage(id, imageId);
+    return reply.send({ ok: true });
   });
 }
