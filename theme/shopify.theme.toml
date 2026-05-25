@@ -1,0 +1,6 @@
+# Run theme commands from this folder, or from repo root:
+#   shopify theme dev --path theme
+#   npm run theme:dev
+
+[environments.development]
+store = "morbeez.myshopify.com"

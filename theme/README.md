@@ -5,12 +5,17 @@ Online Store 2.0 theme for agriculture commerce.
 ## Development
 
 ```bash
-# From repo root
+# From repo root (recommended)
 npm install
 npm run build:css
+npm run theme:dev
+
+# Or from theme/ folder
 cd theme
-shopify theme dev --store YOUR_STORE.myshopify.com
+shopify theme dev
 ```
+
+**Do not** run `shopify theme dev` from repo root without `--path theme` — the CLI will look in the wrong folder and show delete errors for `layout/theme.liquid`, `gift_card.liquid`, and config files.
 
 ## M1 implementation status
 

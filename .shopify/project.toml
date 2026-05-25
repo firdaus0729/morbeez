@@ -1,5 +1,5 @@
-# Link to store: shopify theme dev (from theme/ directory)
-# https://shopify.dev/docs/storefronts/themes/tools/cli
+# Morbeez monorepo — theme lives in theme/
+# Use: npm run theme:dev   (from repo root)
+# Or:  cd theme && shopify theme dev
 
 name = "morbeez"
-# store = "your-store.myshopify.com"

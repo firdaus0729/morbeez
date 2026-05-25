@@ -6,8 +6,12 @@
   "scripts": {
     "dev:css": "tailwindcss -i ./theme/src/tailwind.css -o ./theme/assets/theme.css --watch",
     "build:css": "tailwindcss -i ./theme/src/tailwind.css -o ./theme/assets/theme.css --minify",
-    "theme:dev": "cd theme && shopify theme dev",
-    "theme:check": "cd theme && shopify theme check",
+    "theme:dev": "shopify theme dev --path theme",
+    "theme:push": "shopify theme push --path theme",
+    "theme:pull": "shopify theme pull --path theme",
+    "theme:check": "shopify theme check --path theme",
+    "catalog:generate": "node scripts/generate-product-catalog.mjs",
+    "catalog:export-shopify": "node scripts/export-shopify-product-import.mjs",
     "build": "npm run build:css",
     "setup:m1": "node scripts/setup-m1.mjs"
   },
