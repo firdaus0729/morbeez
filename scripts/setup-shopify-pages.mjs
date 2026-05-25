@@ -68,6 +68,18 @@ const PAGES = [
     templateSuffix: 'console',
     body: '<p>Redirecting to the Morbeez staff console…</p>',
   },
+  {
+    title: 'Checkout',
+    handle: 'checkout',
+    templateSuffix: 'checkout',
+    body: '<p>Secure Razorpay checkout for Morbeez orders.</p>',
+  },
+  {
+    title: 'Order confirmation',
+    handle: 'checkout-success',
+    templateSuffix: 'checkout-success',
+    body: '<p>Thank you for your order.</p>',
+  },
 ];
 
 const API_BASE =

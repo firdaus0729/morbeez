@@ -31,7 +31,7 @@
       </div>
       <div class="mt-8 flex flex-wrap items-center justify-between gap-4 border-t border-gray-100 pt-6">
         <p class="text-xl font-bold">{{ 'cart.subtotal' | t }}: {%- render 'morbeez-money', amount: cart.total_price -%}</p>
-        <button type="submit" name="checkout" class="morbeez-btn-primary border-0">{{ 'cart.checkout' | t }}</button>
+        <a href="/pages/checkout" class="morbeez-btn-primary inline-flex border-0">{{ 'cart.checkout' | t }}</a>
       </div>
     </form>
   {%- endif -%}

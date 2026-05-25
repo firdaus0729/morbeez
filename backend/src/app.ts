@@ -18,6 +18,7 @@ import { leadsRoutes } from './routes/api/leads.routes.js';
 import { shopifyProxyRoutes } from './routes/proxy/shopify-proxy.routes.js';
 import { advisoryRoutes } from './routes/api/advisory.routes.js';
 import { authRoutes } from './routes/api/auth.routes.js';
+import { checkoutRoutes } from './routes/api/checkout.routes.js';
 import { adminRoutes } from './routes/admin/admin.routes.js';
 import { registerEventHandlers } from './events/registerHandlers.js';
 
@@ -63,6 +64,7 @@ export async function buildApp() {
   await app.register(shiprocketWebhookRoutes);
   await app.register(whatsappWebhookRoutes);
   await app.register(authRoutes);
+  await app.register(checkoutRoutes);
   await app.register(adminRoutes);
 
   const consolePrefix = '/console/';

@@ -1,0 +1,48 @@
+{% comment %}
+  Column-based pack size picker with bulk discount (bigger pack = bigger % off vs smallest pack unit rate).
+{% endcomment %}
+{%- assign current = product.selected_or_first_available_variant -%}
+<div class="morbeez-variant-picker" data-variant-picker>
+  <p class="morbeez-variant-picker__label">{{ 'products.select_variant' | t }}</p>
+  <p class="morbeez-variant-picker__hint">{{ 'products.bulk_discount_hint' | t }}</p>
+  <div class="morbeez-variant-picker__grid" role="listbox" aria-label="{{ 'products.select_variant' | t }}">
+    {%- for variant in product.variants -%}
+      {%- liquid
+        assign is_selected = false
+        if variant.id == current.id
+          assign is_selected = true
+        endif
+      -%}
+      <button
+        type="button"
+        class="morbeez-variant-picker__card{% if is_selected %} is-selected{% endif %}{% unless variant.available %} is-unavailable{% endunless %}"
+        role="option"
+        aria-selected="{% if is_selected %}true{% else %}false{% endif %}"
+        data-variant-picker-card
+        data-variant-id="{{ variant.id }}"
+        data-variant-title="{{ variant.title | escape }}"
+        data-price="{{ variant.price }}"
+        data-compare-at-price="{{ variant.compare_at_price | default: 0 }}"
+        data-available="{% if variant.available %}true{% else %}false{% endif %}"
+        {% if variant.featured_image %}
+          data-image="{{ variant.featured_image | image_url: width: 1080 }}"
+        {% endif %}
+        {% unless variant.available %}disabled{% endunless %}
+      >
+        <span class="morbeez-variant-picker__badge hidden" data-discount-badge></span>
+        <span class="morbeez-variant-picker__size">{{ variant.title }}</span>
+        <span class="morbeez-variant-picker__prices">
+          <s class="morbeez-variant-picker__was hidden" data-was-price></s>
+          <span class="morbeez-variant-picker__price" data-card-price>
+            {%- render 'morbeez-money', amount: variant.price, plain: true -%}
+          </span>
+        </span>
+        <span class="morbeez-variant-picker__unit hidden" data-unit-price></span>
+        {%- unless variant.available -%}
+          <span class="morbeez-variant-picker__sold">{{ 'products.sold_out' | t }}</span>
+        {%- endunless -%}
+      </button>
+    {%- endfor -%}
+  </div>
+  <input type="hidden" name="id" value="{{ current.id }}" data-variant-input>
+</div>

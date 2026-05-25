@@ -47,32 +47,54 @@
           </div>
         {%- endif -%}
 
-        <div class="mt-4 flex items-baseline gap-3">
-          <span class="text-2xl font-bold text-[var(--color-primary)]">{%- render 'morbeez-money', amount: product.selected_or_first_available_variant.price -%}</span>
-          {%- if product.selected_or_first_available_variant.compare_at_price > product.selected_or_first_available_variant.price -%}
-            <s class="text-lg text-[var(--color-muted)]">{%- render 'morbeez-money', amount: product.selected_or_first_available_variant.compare_at_price -%}</s>
-            {%- render 'morbeez-badge', text: 'Sale', variant: 'sale' -%}
-          {%- endif -%}
-        </div>
+        {%- form 'product', product, id: 'product-form', class: 'mt-6', data-product-form: '' -%}
+          <div class="flex flex-wrap items-center justify-between gap-4 border-b border-[var(--color-border)] pb-5">
+            <div data-product-price-wrap>
+              <div class="flex flex-wrap items-baseline gap-3">
+                <span class="text-2xl font-bold text-[var(--color-primary)]" data-product-price>
+                  {%- render 'morbeez-money', amount: product.selected_or_first_available_variant.price -%}
+                </span>
+                <s class="text-lg text-[var(--color-muted)] hidden" data-product-compare-price></s>
+                <span class="morbeez-pack-savings hidden" data-product-savings></span>
+              </div>
+              <p class="mt-1 hidden text-sm text-[var(--color-muted)]" data-product-unit-rate></p>
+              <p class="mt-1 hidden text-xs font-medium text-[var(--color-trust)]" data-product-qty-line></p>
+            </div>
 
-        {%- form 'product', product, id: 'product-form', class: 'mt-6' -%}
+            <div class="morbeez-qty-stepper" data-qty-stepper>
+              <span class="morbeez-qty-stepper__label">{{ 'products.quantity' | t }}</span>
+              <div class="morbeez-qty-stepper__controls">
+                <button type="button" class="morbeez-qty-stepper__btn" data-qty-minus aria-label="Decrease quantity">−</button>
+                <input
+                  type="number"
+                  name="quantity"
+                  value="1"
+                  min="1"
+                  class="morbeez-qty-stepper__input"
+                  data-qty-input
+                  aria-label="{{ 'products.quantity' | t }}"
+                >
+                <button type="button" class="morbeez-qty-stepper__btn" data-qty-plus aria-label="Increase quantity">+</button>
+              </div>
+            </div>
+          </div>
+
           {%- unless product.has_only_default_variant -%}
-            <div class="mb-4">
-              <label class="text-sm font-semibold" for="VariantSelect">{{ 'products.variant' | t }}</label>
-              <select name="id" id="VariantSelect" class="mt-1 w-full rounded-lg border border-gray-200 p-3 text-sm">
-                {%- for variant in product.variants -%}
-                  <option
-                    value="{{ variant.id }}"
-                    {% if variant == product.selected_or_first_available_variant %}selected{% endif %}
-                    {% unless variant.available %}disabled{% endunless %}
-                  >
-                    {{ variant.title }} — {%- render 'morbeez-money', amount: variant.price, plain: true -%}
-                  </option>
-                {%- endfor -%}
-              </select>
+            <div class="mt-5">
+              {%- render 'morbeez-variant-picker', product: product, section_id: section.id -%}
             </div>
           {%- else -%}
-            <input type="hidden" name="id" value="{{ product.selected_or_first_available_variant.id }}">
+            <input
+              type="hidden"
+              name="id"
+              value="{{ product.selected_or_first_available_variant.id }}"
+              data-variant-picker-card
+              data-variant-id="{{ product.selected_or_first_available_variant.id }}"
+              data-variant-title="{{ product.selected_or_first_available_variant.title | escape }}"
+              data-price="{{ product.selected_or_first_available_variant.price }}"
+              data-compare-at-price="{{ product.selected_or_first_available_variant.compare_at_price | default: 0 }}"
+              data-available="{% if product.selected_or_first_available_variant.available %}true{% else %}false{% endif %}"
+            >
           {%- endunless -%}
 
           <button

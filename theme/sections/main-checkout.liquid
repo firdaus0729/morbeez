@@ -1,0 +1,114 @@
+<section class="morbeez-section" id="MorbeezCheckout">
+  <div class="morbeez-container max-w-5xl">
+    {%- render 'morbeez-breadcrumbs' -%}
+    <h1 class="font-heading text-3xl font-bold">{{ 'checkout.title' | t }}</h1>
+    <p class="mt-2 text-sm text-[var(--color-muted)]">{{ 'checkout.razorpay_note' | t }}</p>
+
+    <div id="checkout-empty" class="mt-10 hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-8 text-center">
+      <p>{{ 'cart.empty' | t }}</p>
+      <a href="{{ routes.all_products_collection_url }}" class="morbeez-btn-primary mt-4 inline-flex">{{ 'cart.continue_shopping' | t }}</a>
+    </div>
+
+    <form id="morbeez-checkout-form" class="mt-8 hidden">
+      <div class="grid gap-8 lg:grid-cols-5">
+        <div class="space-y-6 lg:col-span-3">
+          <div class="morbeez-card p-6">
+            <h2 class="text-lg font-bold">{{ 'checkout.contact' | t }}</h2>
+            <div class="mt-4 grid gap-4 sm:grid-cols-2">
+              <div class="field sm:col-span-2">
+                <label for="checkout-email">{{ 'checkout.email' | t }}</label>
+                <input id="checkout-email" name="email" type="email" required autocomplete="email" class="morbeez-input" />
+              </div>
+              <div class="field">
+                <label for="checkout-first">{{ 'checkout.first_name' | t }}</label>
+                <input id="checkout-first" name="firstName" required class="morbeez-input" />
+              </div>
+              <div class="field">
+                <label for="checkout-last">{{ 'checkout.last_name' | t }}</label>
+                <input id="checkout-last" name="lastName" required class="morbeez-input" />
+              </div>
+              <div class="field sm:col-span-2">
+                <label for="checkout-phone">{{ 'checkout.phone' | t }}</label>
+                <input id="checkout-phone" name="phone" type="tel" required placeholder="10-digit mobile" class="morbeez-input" />
+              </div>
+            </div>
+          </div>
+
+          <div class="morbeez-card p-6">
+            <h2 class="text-lg font-bold">{{ 'checkout.delivery' | t }}</h2>
+            <div class="mt-4 grid gap-4 sm:grid-cols-2">
+              <div class="field sm:col-span-2">
+                <label for="checkout-address">{{ 'checkout.address' | t }}</label>
+                <input id="checkout-address" name="address1" required class="morbeez-input" />
+              </div>
+              <div class="field sm:col-span-2">
+                <label for="checkout-address2">{{ 'checkout.address2' | t }}</label>
+                <input id="checkout-address2" name="address2" class="morbeez-input" />
+              </div>
+              <div class="field">
+                <label for="checkout-city">{{ 'checkout.city' | t }}</label>
+                <input id="checkout-city" name="city" required class="morbeez-input" />
+              </div>
+              <div class="field">
+                <label for="checkout-state">{{ 'checkout.state' | t }}</label>
+                <select id="checkout-state" name="province" required class="morbeez-input">
+                  <option value="">{{ 'checkout.select_state' | t }}</option>
+                  {%- assign states = 'Andhra Pradesh,Arunachal Pradesh,Assam,Bihar,Chhattisgarh,Goa,Gujarat,Haryana,Himachal Pradesh,Jharkhand,Karnataka,Kerala,Madhya Pradesh,Maharashtra,Manipur,Meghalaya,Mizoram,Nagaland,Odisha,Punjab,Rajasthan,Sikkim,Tamil Nadu,Telangana,Tripura,Uttar Pradesh,Uttarakhand,West Bengal,Delhi' | split: ',' -%}
+                  {%- for state in states -%}
+                    <option value="{{ state }}">{{ state }}</option>
+                  {%- endfor -%}
+                </select>
+              </div>
+              <div class="field">
+                <label for="checkout-zip">{{ 'checkout.pincode' | t }}</label>
+                <input id="checkout-zip" name="zip" required pattern="[0-9]{6}" class="morbeez-input" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="lg:col-span-2">
+          <div class="morbeez-card sticky top-24 p-6">
+            <h2 class="text-lg font-bold">{{ 'checkout.order_summary' | t }}</h2>
+            <ul id="checkout-lines" class="mt-4 max-h-64 space-y-3 overflow-y-auto text-sm"></ul>
+            <div class="mt-4 border-t border-[var(--color-border)] pt-4">
+              <div class="flex justify-between text-base font-bold">
+                <span>{{ 'checkout.total' | t }}</span>
+                <span id="checkout-total" class="text-[var(--color-primary)]">—</span>
+              </div>
+            </div>
+            <p id="checkout-error" class="mt-3 hidden text-sm text-red-600" role="alert"></p>
+            <button
+              type="submit"
+              id="checkout-pay-btn"
+              class="morbeez-btn-primary mt-6 w-full border-0"
+              data-label="{{ 'checkout.pay_razorpay' | t | escape }}"
+              data-processing="{{ 'checkout.processing' | t | escape }}"
+            >
+              {{ 'checkout.pay_razorpay' | t }}
+            </button>
+            <p class="mt-3 text-center text-xs text-[var(--color-muted)]">{{ 'checkout.secure' | t }}</p>
+          </div>
+        </div>
+      </div>
+    </form>
+  </div>
+</section>
+
+<script>
+  window.MORBEEZ_CHECKOUT = {
+    apiBase: {{ settings.morbeez_api_base_url | default: 'https://morbeez-api.onrender.com' | json }},
+    successUrl: {{ '/pages/checkout-success' | url | json }},
+    cartUrl: {{ routes.cart_url | json }}
+  };
+</script>
+<script src="https://checkout.razorpay.com/v1/checkout.js" defer></script>
+<script src="{{ 'checkout-razorpay.js' | asset_url }}" defer></script>
+
+{% schema %}
+{
+  "name": "Checkout (Razorpay)",
+  "settings": [],
+  "enabled_on": { "templates": ["page"] }
+}
+{% endschema %}

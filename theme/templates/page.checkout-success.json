@@ -1,0 +1,9 @@
+{
+  "sections": {
+    "main": {
+      "type": "main-checkout-success",
+      "settings": {}
+    }
+  },
+  "order": ["main"]
+}

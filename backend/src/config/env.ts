@@ -55,6 +55,11 @@ const envSchema = z.object({
     .string()
     .transform((v) => v === 'true')
     .default('true'),
+  ENABLE_RAZORPAY_CHECKOUT: z
+    .string()
+    .transform((v) => v !== 'false')
+    .default('true'),
+  CHECKOUT_SUCCESS_PATH: z.string().default('/pages/checkout-success'),
   ENABLE_WHATSAPP_AUTO_REPLY: z
     .string()
     .transform((v) => v === 'true')

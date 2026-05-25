@@ -130,6 +130,10 @@
     @apply mb-1.5 block text-sm font-medium text-[var(--color-trust)];
   }
 
+  .field label {
+    @apply mb-1 block text-sm font-semibold text-[var(--color-trust)];
+  }
+
   .morbeez-input {
     @apply w-full rounded-xl border border-[var(--color-border)] bg-white px-4 py-3 text-sm text-[var(--color-trust)];
     @apply transition focus:border-[var(--color-primary)] focus:outline-none focus:ring-2;
@@ -233,6 +237,119 @@
   .morbeez-nav-item:focus-within .morbeez-mega-panel {
     @apply visible opacity-100;
     pointer-events: auto;
+  }
+
+  /* PDP — column variant picker + quantity stepper */
+  .morbeez-variant-picker__label {
+    @apply mb-1 text-sm font-bold text-[var(--color-trust)];
+  }
+
+  .morbeez-variant-picker__hint {
+    @apply mb-3 text-xs text-[var(--color-muted)];
+  }
+
+  .morbeez-variant-picker__badge {
+    @apply mb-1 rounded-md bg-amber-400 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-950;
+  }
+
+  .morbeez-variant-picker__card.is-selected .morbeez-variant-picker__badge {
+    @apply bg-white text-amber-800;
+  }
+
+  .morbeez-variant-picker__card.is-best-value {
+    @apply ring-2 ring-amber-400 ring-offset-1;
+  }
+
+  .morbeez-variant-picker__prices {
+    @apply mt-1 flex flex-wrap items-baseline gap-1.5;
+  }
+
+  .morbeez-variant-picker__was {
+    @apply text-xs text-[var(--color-muted)] line-through;
+  }
+
+  .morbeez-variant-picker__card.is-selected .morbeez-variant-picker__was {
+    @apply text-white/70;
+  }
+
+  .morbeez-variant-picker__unit {
+    @apply mt-0.5 text-[11px] font-medium text-[var(--color-muted)];
+  }
+
+  .morbeez-variant-picker__card.is-selected .morbeez-variant-picker__unit {
+    @apply text-white/80;
+  }
+
+  .morbeez-pack-savings {
+    @apply inline-block rounded-lg bg-amber-100 px-2.5 py-1 text-sm font-bold text-amber-900;
+  }
+
+  .morbeez-variant-picker__grid {
+    @apply grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3;
+  }
+
+  .morbeez-variant-picker__card {
+    @apply flex min-h-[4.5rem] flex-col items-start justify-center rounded-xl border-2 border-[var(--color-border)] bg-white px-3 py-2.5 text-left transition;
+  }
+
+  .morbeez-variant-picker__card:hover:not(:disabled) {
+    @apply border-[var(--color-primary)];
+  }
+
+  .morbeez-variant-picker__card.is-selected {
+    @apply border-[var(--color-primary)] bg-[var(--color-primary)] text-white shadow-md;
+  }
+
+  .morbeez-variant-picker__card.is-unavailable {
+    @apply cursor-not-allowed opacity-50;
+  }
+
+  .morbeez-variant-picker__size {
+    @apply text-sm font-bold leading-tight;
+  }
+
+  .morbeez-variant-picker__card.is-selected .morbeez-variant-picker__size,
+  .morbeez-variant-picker__card.is-selected .morbeez-variant-picker__price {
+    @apply text-white;
+  }
+
+  .morbeez-variant-picker__price {
+    @apply mt-1 text-sm font-semibold text-[var(--color-primary)];
+  }
+
+  .morbeez-variant-picker__card.is-selected .morbeez-variant-picker__price {
+    @apply text-white/95;
+  }
+
+  .morbeez-variant-picker__sold {
+    @apply mt-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--color-muted)];
+  }
+
+  .morbeez-qty-stepper {
+    @apply flex flex-col items-end gap-1.5;
+  }
+
+  .morbeez-qty-stepper__label {
+    @apply text-xs font-semibold text-[var(--color-muted)];
+  }
+
+  .morbeez-qty-stepper__controls {
+    @apply inline-flex items-center gap-2;
+  }
+
+  .morbeez-qty-stepper__btn {
+    @apply flex h-9 w-9 items-center justify-center rounded-full bg-[var(--color-primary)] text-lg font-bold leading-none text-white transition hover:brightness-105;
+  }
+
+  .morbeez-qty-stepper__input {
+    @apply w-10 border-0 bg-transparent text-center text-base font-bold text-[var(--color-trust)] outline-none;
+    -moz-appearance: textfield;
+  }
+
+  .morbeez-qty-stepper__input::-webkit-outer-spin-button,
+  .morbeez-qty-stepper__input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
   }
 
   .morbeez-hero-carousel__arrow {
