@@ -1,0 +1,9 @@
+{
+  "sections": {
+    "main": {
+      "type": "main-admin-redirect",
+      "settings": {}
+    }
+  },
+  "order": ["main"]
+}

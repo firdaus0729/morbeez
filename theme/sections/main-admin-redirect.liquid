@@ -1,0 +1,21 @@
+{% comment %}
+  Redirects to Morbeez staff admin portal (hosted on API server).
+  Create a Shopify page with handle "admin" and template page.admin.
+{% endcomment %}
+{%- assign admin_url = settings.morbeez_api_base_url | default: 'https://morbeez-api.onrender.com' | append: '/admin/' -%}
+<div class="morbeez-container py-16 text-center">
+  <p class="text-[var(--color-muted)]">Redirecting to Morbeez Admin…</p>
+  <p class="mt-4"><a href="{{ admin_url }}" class="font-semibold text-[var(--color-primary)]">Open admin console</a></p>
+</div>
+<script>
+  window.location.replace({{ admin_url | json }});
+</script>
+
+{% schema %}
+{
+  "name": "Admin redirect",
+  "tag": "section",
+  "class": "section-admin-redirect",
+  "settings": []
+}
+{% endschema %}

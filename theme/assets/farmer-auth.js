@@ -177,8 +177,15 @@
         .then(function (r) {
           if (r.ok && r.data.token) {
             setToken(r.data.token);
-            showLoggedIn(r.data.farmer);
-            showMessage(onSuccess.message, false);
+            var done = function () {
+              showLoggedIn(r.data.farmer);
+              showMessage(onSuccess.message, false);
+            };
+            if (window.MorbeezCart) {
+              window.MorbeezCart.syncCartForFarmer(r.data.farmer).then(done);
+            } else {
+              done();
+            }
           } else {
             showMessage(r.data.message || onSuccess.errorMessage, true);
           }
@@ -241,8 +248,15 @@
         .then(function (r) {
           if (r.ok && r.data.token) {
             setToken(r.data.token);
-            showLoggedIn(r.data.farmer);
-            showMessage('Account created successfully.', false);
+            var doneSignup = function () {
+              showLoggedIn(r.data.farmer);
+              showMessage('Account created successfully.', false);
+            };
+            if (window.MorbeezCart) {
+              window.MorbeezCart.syncCartForFarmer(r.data.farmer).then(doneSignup);
+            } else {
+              doneSignup();
+            }
           } else {
             showMessage(r.data.message || 'Sign up failed. This email may already be registered.', true);
           }
@@ -267,6 +281,9 @@
   if (logoutBtn) {
     logoutBtn.addEventListener('click', function () {
       setToken(null);
+      if (window.MorbeezCart) {
+        window.MorbeezCart.onFarmerLogout();
+      }
       showForms();
       hideMessage();
     });

@@ -11,18 +11,23 @@
   endif
 -%}
 {%- if has_children -%}
-  <div class="morbeez-nav-item group relative">
+  <div class="morbeez-nav-item group relative shrink-0 px-1.5">
     <a
       href="{{ link.url }}"
-      class="morbeez-nav-link flex items-center gap-1 py-2 text-sm font-semibold transition {% if variant == 'light' %}text-white/95 hover:text-white{% else %}text-[var(--color-trust)] hover:text-[var(--color-primary)]{% endif %}"
+      class="morbeez-nav-link flex items-center gap-1 whitespace-nowrap py-2 text-sm font-semibold transition {% if variant == 'light' %}text-white/95 hover:text-white{% else %}text-[var(--color-trust)] hover:text-[var(--color-primary)]{% endif %}"
       data-mega-trigger
+      aria-expanded="false"
+      aria-haspopup="true"
     >
       {{ link.title }}
       <span class="text-[10px] opacity-70" aria-hidden="true">▾</span>
     </a>
+    {%- comment -%} Hover bridge — keeps dropdown open when moving from tab to panel {%- endcomment -%}
+    <span class="pointer-events-none absolute left-0 top-full z-[60] hidden h-2 w-full group-hover:block" aria-hidden="true"></span>
     <div
-      class="morbeez-mega-panel pointer-events-none invisible absolute left-0 top-full z-50 min-w-[16rem] rounded-xl border border-gray-100 bg-white p-5 text-left normal-case opacity-0 shadow-xl transition group-hover:pointer-events-auto group-hover:visible group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:visible group-focus-within:opacity-100"
+      class="morbeez-mega-panel pointer-events-none invisible absolute left-0 top-[calc(100%+0.25rem)] z-[60] min-w-[16rem] rounded-xl border border-gray-100 bg-white p-5 text-left normal-case opacity-0 shadow-xl transition duration-150 group-hover:pointer-events-auto group-hover:visible group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:visible group-focus-within:opacity-100"
       data-mega-panel
+      role="menu"
     >
       <ul class="space-y-1" role="list">
         {%- for child in link.links -%}
@@ -52,7 +57,7 @@
 {%- else -%}
   <a
     href="{{ link.url }}"
-    class="morbeez-nav-link py-2 text-sm font-semibold transition {% if variant == 'light' %}text-white/95 hover:text-white{% else %}text-[var(--color-trust)] hover:text-[var(--color-primary)]{% endif %}"
+    class="morbeez-nav-link shrink-0 whitespace-nowrap px-2 py-2 text-sm font-semibold transition {% if variant == 'light' %}text-white/95 hover:text-white{% else %}text-[var(--color-trust)] hover:text-[var(--color-primary)]{% endif %}"
   >
     {{ link.title }}
   </a>

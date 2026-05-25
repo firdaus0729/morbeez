@@ -2,6 +2,9 @@ import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
 import rateLimit from '@fastify/rate-limit';
+import fastifyStatic from '@fastify/static';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { env } from './config/env.js';
 import { logger } from './lib/logger.js';
 import { AppError } from './lib/errors.js';
@@ -15,7 +18,11 @@ import { leadsRoutes } from './routes/api/leads.routes.js';
 import { shopifyProxyRoutes } from './routes/proxy/shopify-proxy.routes.js';
 import { advisoryRoutes } from './routes/api/advisory.routes.js';
 import { authRoutes } from './routes/api/auth.routes.js';
+import { adminRoutes } from './routes/admin/admin.routes.js';
 import { registerEventHandlers } from './events/registerHandlers.js';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const adminStaticRoot = path.join(__dirname, '../../admin');
 
 export async function buildApp() {
   const app = Fastify({
@@ -23,9 +30,12 @@ export async function buildApp() {
     trustProxy: true,
   });
 
-  await app.register(cors, {
-    origin: env.NODE_ENV === 'production' ? [/morbeez\.in$/, /\.myshopify\.com$/] : true,
-  });
+  const corsOrigins =
+    env.NODE_ENV === 'production'
+      ? [/morbeez\.in$/, /\.myshopify\.com$/, /onrender\.com$/]
+      : true;
+
+  await app.register(cors, { origin: corsOrigins });
 
   await app.register(helmet, { contentSecurityPolicy: false });
 
@@ -53,6 +63,19 @@ export async function buildApp() {
   await app.register(shiprocketWebhookRoutes);
   await app.register(whatsappWebhookRoutes);
   await app.register(authRoutes);
+  await app.register(adminRoutes);
+
+  await app.register(fastifyStatic, {
+    root: adminStaticRoot,
+    prefix: '/admin/',
+    index: ['index.html'],
+    decorateReply: false,
+  });
+
+  app.get('/admin', async (_request, reply) => {
+    return reply.redirect('/admin/');
+  });
+
   await app.register(farmersRoutes);
   await app.register(leadsRoutes);
   await app.register(advisoryRoutes);

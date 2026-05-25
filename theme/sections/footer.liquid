@@ -2,17 +2,18 @@
   <div class="morbeez-container">
     <div class="grid gap-10 md:grid-cols-2 lg:grid-cols-12 lg:gap-8">
       <div class="lg:col-span-3">
-        <a href="{{ routes.root_url }}" class="inline-flex items-center gap-2" aria-label="{{ shop.name }}">
-          {%- assign footer_logo = section.settings.footer_logo | default: settings.logo -%}
-          {%- if footer_logo != blank -%}
-            {{ footer_logo | image_url: width: 280 | image_tag: alt: shop.name, class: 'h-10 w-auto max-w-[220px] object-contain' }}
-          {%- else -%}
-            <span class="flex items-center gap-2 font-heading text-xl font-bold">
-              {%- render 'morbeez-icon', name: 'leaf', class: 'h-6 w-6 text-[var(--color-accent)]' -%}
-              {{ shop.name }}
-            </span>
-          {%- endif -%}
-        </a>
+        {%- liquid
+          assign footer_logo_img = section.settings.footer_logo
+          assign footer_on_dark = true
+          if footer_logo_img != blank
+            assign footer_on_dark = false
+          endif
+        -%}
+        {%- render 'morbeez-logo',
+          class: 'morbeez-logo--footer',
+          on_dark: footer_on_dark,
+          logo_override: footer_logo_img
+        -%}
         <p class="mt-3 max-w-sm text-sm leading-relaxed text-white/70">{{ section.settings.tagline }}</p>
         {%- render 'morbeez-social-links',
           facebook: section.settings.social_facebook,

@@ -1,14 +1,24 @@
-<header class="morbeez-site-header sticky top-0 z-40 border-b border-[var(--color-border)] bg-white shadow-sm" role="banner">
+<header class="morbeez-site-header sticky top-0 z-40 overflow-visible border-b border-[var(--color-border)] bg-white shadow-sm" role="banner">
+
   <div class="morbeez-container">
-    <div class="flex h-[4.5rem] items-center gap-4 lg:h-[5rem] lg:gap-8">
-      {%- render 'morbeez-logo' -%}
+
+    {%- comment -%} Logo + nav tabs on one row (desktop); utilities on the right {%- endcomment -%}
+
+    <div class="morbeez-header__top flex items-center gap-3 overflow-visible py-3 lg:gap-4 lg:py-3.5">
+
+      <div class="morbeez-header__logo shrink-0">
+
+        {%- render 'morbeez-logo' -%}
+
+      </div>
 
       <nav
-        class="morbeez-header-nav hidden min-w-0 flex-1 items-center justify-center gap-6 lg:flex xl:gap-8"
+        class="morbeez-header-nav hidden min-w-0 flex-1 items-center gap-0.5 overflow-visible lg:flex"
         aria-label="{{ 'accessibility.main_navigation' | t }}"
       >
         {%- assign nav_menu = linklists[section.settings.menu] -%}
-        {%- if nav_menu.links.size > 0 -%}
+        {%- assign min_nav = section.settings.min_menu_links | default: 6 -%}
+        {%- if nav_menu.links.size >= min_nav -%}
           {%- for link in nav_menu.links -%}
             {%- render 'morbeez-nav-link', link: link, variant: 'brand' -%}
           {%- endfor -%}
@@ -18,108 +28,234 @@
       </nav>
 
       <div class="ml-auto flex shrink-0 items-center gap-2 sm:gap-3">
+
         {%- if section.settings.show_search -%}
+
           <a
+
             href="{{ routes.search_url }}"
+
             class="morbeez-icon-btn hidden text-[var(--color-trust)] hover:text-[var(--color-primary)] sm:flex"
+
             aria-label="{{ 'general.search' | t }}"
+
           >
+
             {%- render 'morbeez-icon', name: 'search', class: 'h-5 w-5' -%}
+
           </a>
+
         {%- endif -%}
+
         {%- if settings.whatsapp_phone != blank -%}
+
           <a
+
             href="https://wa.me/{{ settings.whatsapp_phone | remove: '+' | remove: ' ' }}"
+
             class="morbeez-icon-btn hidden text-[var(--color-primary)] md:flex"
+
             target="_blank"
+
             rel="noopener noreferrer"
+
             aria-label="{{ 'general.whatsapp.label' | t }}"
+
           >
+
             {%- render 'morbeez-icon', name: 'whatsapp', class: 'h-5 w-5' -%}
+
           </a>
+
         {%- endif -%}
+
         <a
+
           href="{{ routes.cart_url }}"
+
           class="relative flex items-center gap-2 rounded-xl border border-[var(--color-border)] px-2.5 py-2 transition hover:border-[var(--color-primary)]"
+
           aria-label="{{ 'general.cart' | t }}"
+
         >
-          <span class="hidden text-xs font-medium text-[var(--color-trust)] lg:block">
+
+          <span class="hidden text-xs font-medium text-[var(--color-trust)] lg:block" data-morbeez-cart-total>
+
             {%- render 'morbeez-money', amount: cart.total_price, plain: true -%}
+
           </span>
+
           <span class="relative flex h-9 w-9 items-center justify-center rounded-lg bg-[var(--color-primary)] text-white">
+
             {%- render 'morbeez-icon', name: 'cart', class: 'h-5 w-5' -%}
-            {%- if cart.item_count > 0 -%}
-              <span class="absolute -right-1.5 -top-1.5 flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-[var(--color-trust)] px-1 text-[9px] font-bold text-white">
-                {{ cart.item_count }}
-              </span>
-            {%- endif -%}
+
+            <span
+
+              class="absolute -right-1.5 -top-1.5 flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-[var(--color-trust)] px-1 text-[9px] font-bold text-white{% if cart.item_count == 0 %} hidden{% endif %}"
+
+              data-morbeez-cart-count
+
+            >
+
+              {{ cart.item_count }}
+
+            </span>
+
           </span>
+
         </a>
+
         {%- if section.settings.show_login -%}
+
           <a
+
             href="{{ section.settings.login_url | default: '/pages/login' }}"
+
             data-morbeez-login-link
+
             data-login-href="{{ section.settings.login_url | default: '/pages/login' }}"
+
             data-login-label="{{ section.settings.login_label | default: 'Login' }}"
-            class="hidden rounded-xl bg-[var(--color-primary)] px-4 py-2.5 text-xs font-bold text-white transition hover:brightness-105 sm:inline-block"
+
+            class="hidden max-w-[9rem] truncate rounded-xl bg-[var(--color-primary)] px-4 py-2.5 text-xs font-bold text-white transition hover:brightness-105 sm:inline-block"
+
           >
+
             {{ section.settings.login_label | default: 'Login' }}
+
           </a>
+
         {%- endif -%}
+
         <button
+
           type="button"
+
           class="morbeez-icon-btn border border-[var(--color-border)] lg:hidden"
+
           data-drawer-open
+
           aria-controls="morbeez-mobile-drawer"
+
           aria-expanded="false"
+
           aria-label="{{ 'accessibility.menu_open' | t }}"
+
         >
+
           {%- render 'morbeez-icon', name: 'menu', class: 'h-5 w-5' -%}
+
         </button>
+
       </div>
+
     </div>
 
     {%- if section.settings.show_search_bar -%}
+
       <div class="border-t border-[var(--color-border)] py-3 lg:hidden">
+
         {%- render 'morbeez-header-search', placeholder: section.settings.search_placeholder -%}
+
       </div>
+
     {%- endif -%}
+
   </div>
 
+
+
   {%- if section.settings.show_search_bar -%}
+
     <div class="hidden border-t border-[var(--color-border)] bg-[var(--color-surface)] py-2.5 lg:block">
+
       <div class="morbeez-container max-w-3xl">
+
         {%- render 'morbeez-header-search', placeholder: section.settings.search_placeholder -%}
+
       </div>
+
     </div>
+
   {%- endif -%}
+
 </header>
 
+
+
 {%- render 'morbeez-mobile-drawer',
+
   menu: section.settings.menu,
+
   utility_menu: section.settings.utility_menu,
+
   show_login: section.settings.show_login,
+
   login_url: section.settings.login_url,
+
   login_label: section.settings.login_label
+
 -%}
 
+
+
 {% schema %}
+
 {
+
   "name": "t:sections.header.name",
+
   "settings": [
+
     { "type": "link_list", "id": "menu", "label": "t:sections.header.settings.menu", "default": "main-menu", "info": "t:sections.header.settings.menu_info" },
-    { "type": "link_list", "id": "utility_menu", "label": "t:sections.header.settings.utility_menu", "info": "t:sections.header.settings.utility_menu_info" },
-    { "type": "checkbox", "id": "show_search", "label": "t:sections.header.settings.show_search", "default": true },
-    { "type": "checkbox", "id": "show_search_bar", "label": "t:sections.header.settings.show_search_bar", "default": true },
+
     {
-      "type": "text",
-      "id": "search_placeholder",
-      "label": "t:sections.header.settings.search_placeholder",
-      "default": "Search Morbeez products…"
+
+      "type": "range",
+
+      "id": "min_menu_links",
+
+      "min": 3,
+
+      "max": 12,
+
+      "step": 1,
+
+      "default": 6,
+
+      "label": "t:sections.header.settings.min_menu_links",
+
+      "info": "t:sections.header.settings.min_menu_links_info"
+
     },
+
+    { "type": "link_list", "id": "utility_menu", "label": "t:sections.header.settings.utility_menu", "info": "t:sections.header.settings.utility_menu_info" },
+
+    { "type": "checkbox", "id": "show_search", "label": "t:sections.header.settings.show_search", "default": true },
+
+    { "type": "checkbox", "id": "show_search_bar", "label": "t:sections.header.settings.show_search_bar", "default": true },
+
+    {
+
+      "type": "text",
+
+      "id": "search_placeholder",
+
+      "label": "t:sections.header.settings.search_placeholder",
+
+      "default": "Search Morbeez products…"
+
+    },
+
     { "type": "checkbox", "id": "show_login", "label": "t:sections.header.settings.show_login", "default": true },
+
     { "type": "url", "id": "login_url", "label": "t:sections.header.settings.login_url" },
+
     { "type": "text", "id": "login_label", "label": "t:sections.header.settings.login_label", "default": "Login" }
+
   ]
+
 }
+
 {% endschema %}
+

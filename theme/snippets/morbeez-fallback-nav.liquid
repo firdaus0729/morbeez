@@ -3,7 +3,7 @@
   @param {string} variant - header | mobile | footer-navigate | footer-categories
 {% endcomment %}
 {%- liquid
-  assign link_class_header = 'morbeez-nav-link text-sm font-semibold text-[var(--color-trust)] hover:text-[var(--color-primary)]'
+  assign link_class_header = 'morbeez-nav-link shrink-0 whitespace-nowrap px-2 py-2 text-sm font-semibold text-[var(--color-trust)] hover:text-[var(--color-primary)]'
   assign link_class_mobile = 'block rounded-lg px-3 py-3 text-sm font-bold uppercase tracking-wide text-[var(--color-trust)] hover:bg-[var(--color-surface)]'
 -%}
 {%- case variant -%}
@@ -15,8 +15,9 @@
     {%- if settings.enable_ai_crop_doctor_cta -%}<a href="/pages/crop-doctor" class="{{ link_class_header }}">Crop Doctor</a>{%- endif -%}
     {%- if settings.enable_dealer_enquiry -%}<a href="/pages/dealer-enquiry" class="{{ link_class_header }}">Dealers</a>{%- endif -%}
     <a href="/pages/about-us" class="{{ link_class_header }}">{{ 'header.menu_about' | t }}</a>
+    <a href="/pages/faq" class="{{ link_class_header }}">{{ 'header.menu_faq' | t }}</a>
     <a href="/pages/contact" class="{{ link_class_header }}">{{ 'header.menu_contact' | t }}</a>
-    <a href="{{ routes.blog_url }}" class="{{ link_class_header }}">{{ 'header.menu_blog' | t }}</a>
+    <a href="/pages/login" class="{{ link_class_header }}">{{ 'header.menu_login' | t }}</a>
 
   {%- when 'mobile' -%}
     <li><a href="{{ routes.root_url }}" class="{{ link_class_mobile }}">{{ 'header.menu_home' | t }}</a></li>

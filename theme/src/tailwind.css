@@ -212,16 +212,27 @@
   }
 
   .morbeez-header-nav {
-    @apply flex items-center gap-6;
+    @apply flex flex-nowrap items-center overflow-visible;
+  }
+
+  .morbeez-site-header .morbeez-container {
+    overflow: visible;
   }
 
   .morbeez-nav-link:hover,
-  .morbeez-nav-item:hover > .morbeez-nav-link {
+  .morbeez-nav-item:hover > .morbeez-nav-link,
+  .morbeez-nav-item:focus-within > .morbeez-nav-link {
     @apply text-[var(--color-primary)];
   }
 
   .morbeez-nav-item .morbeez-mega-panel {
     @apply tracking-normal;
+  }
+
+  .morbeez-nav-item:hover .morbeez-mega-panel,
+  .morbeez-nav-item:focus-within .morbeez-mega-panel {
+    @apply visible opacity-100;
+    pointer-events: auto;
   }
 
   .morbeez-hero-carousel__arrow {

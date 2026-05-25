@@ -34,7 +34,8 @@
       <p class="mb-2 px-2 text-[10px] font-bold uppercase tracking-wider text-[var(--color-muted)]">{{ 'header.menu_main' | t }}</p>
       <ul class="space-y-0.5" role="list">
         {%- assign nav_menu = linklists[menu] -%}
-        {%- if nav_menu.links.size > 0 -%}
+        {%- assign min_nav = 6 -%}
+        {%- if nav_menu.links.size >= min_nav -%}
           {%- for link in nav_menu.links -%}
             <li>
               {%- if link.links.size > 0 -%}

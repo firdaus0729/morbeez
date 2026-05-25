@@ -58,7 +58,9 @@
       "name": "Header",
       "settings": {
         "menu": "Main navigation menu",
-        "menu_info": "Create in Admin → Content → Menus (Products, Crop Doctor, Dealers, About, Contact, etc.).",
+        "menu_info": "Create in Admin → Content → Menus. Pages alone do not appear here — add each page as a menu link, or run npm run setup:menu.",
+        "min_menu_links": "Minimum menu links before using Admin menu",
+        "min_menu_links_info": "If main-menu has fewer links, theme shows built-in Morbeez navigation (all pages). Set to 3 to always use Admin menu.",
         "show_search": "Show search icon (desktop)",
         "show_search_bar": "Show expandable search bar below header",
         "utility_menu": "Secondary menu (mobile)",
@@ -111,8 +113,8 @@
     "footer": {
       "name": "Footer",
       "settings": {
-        "footer_logo": "Footer logo",
-        "footer_logo_info": "Optional. Use a light/white logo for the dark footer. If empty, uses Theme settings → Brand → Logo.",
+        "footer_logo": "Footer logo (white version)",
+        "footer_logo_info": "Leave empty to use theme asset morbeez-logo-on-dark.png. Upload a white/light logo for the dark footer, or use Theme settings → Brand only for the header logo.",
         "tagline": "Tagline",
         "contact_header": "Contact column",
         "show_contact_column": "Show contact column",

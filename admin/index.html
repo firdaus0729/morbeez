@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Morbeez Admin</title>
+    <link rel="stylesheet" href="/admin/css/admin.css" />
+  </head>
+  <body>
+    <div id="view-login" class="login-page">
+      <div class="login-card">
+        <div class="login-brand">
+          <span>Morbeez</span>
+        </div>
+        <h1>Staff sign in</h1>
+        <p class="subtitle">Manage products and registered farmers</p>
+        <div id="login-alert" class="alert alert-error hidden" role="alert"></div>
+        <form id="login-form">
+          <div class="field">
+            <label for="login-email">Email</label>
+            <input id="login-email" name="email" type="email" autocomplete="username" required />
+          </div>
+          <div class="field">
+            <label for="login-password">Password</label>
+            <input id="login-password" name="password" type="password" autocomplete="current-password" required />
+          </div>
+          <button type="submit" class="btn btn-primary" id="login-submit">Sign in</button>
+        </form>
+      </div>
+    </div>
+
+    <div id="view-app" class="app-shell hidden">
+      <aside class="sidebar">
+        <div class="sidebar-brand">
+          <strong>Morbeez</strong>
+          <small>Operations console</small>
+        </div>
+        <ul class="sidebar-nav">
+          <li><a href="#dashboard" data-nav="dashboard">Dashboard</a></li>
+          <li><a href="#products" data-nav="products">Products</a></li>
+          <li><a href="#farmers" data-nav="farmers">Farmers</a></li>
+        </ul>
+        <div class="sidebar-footer">
+          <div class="user" id="sidebar-user"></div>
+          <button type="button" class="btn btn-secondary btn-sm" id="btn-logout" style="width: 100%">Sign out</button>
+        </div>
+      </aside>
+
+      <div class="main">
+        <header class="topbar">
+          <h2 id="page-title">Dashboard</h2>
+          <div id="topbar-actions"></div>
+        </header>
+        <div class="content" id="main-content"></div>
+      </div>
+    </div>
+
+    <div id="toast" class="toast hidden" role="status"></div>
+    <div id="modal-root"></div>
+
+    <script src="/admin/js/admin.js" type="module"></script>
+  </body>
+</html>

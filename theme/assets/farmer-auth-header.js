@@ -39,6 +39,9 @@
           return;
         }
         var f = r.data.farmer;
+        if (window.MorbeezCart) {
+          window.MorbeezCart.syncCartForFarmer(f);
+        }
         var label = [f.firstName, f.lastName].filter(Boolean).join(' ') || f.name || 'Account';
         links.forEach(function (a) {
           a.textContent = label;

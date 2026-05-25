@@ -15,7 +15,11 @@
     "catalog:export-shopify": "node scripts/export-shopify-product-import.mjs",
     "build": "npm run build:css",
     "setup:m1": "node scripts/setup-m1.mjs",
-    "setup:pages": "node scripts/setup-shopify-pages.mjs"
+    "setup:pages": "node scripts/setup-shopify-pages.mjs",
+    "setup:menu": "node scripts/setup-shopify-menu.mjs",
+    "verify:api": "node scripts/verify-render-api.mjs",
+    "prepare:logos": "python scripts/prepare-logos.py",
+    "admin:create-user": "node scripts/create-admin-user.mjs"
   },
   "devDependencies": {
     "@shopify/prettier-plugin-liquid": "^1.5.0",
