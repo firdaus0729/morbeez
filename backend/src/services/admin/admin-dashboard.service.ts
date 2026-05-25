@@ -303,10 +303,10 @@ export const adminDashboardService = {
         };
       }),
       roadmap: {
-        offers: false,
-        combos: false,
-        flashSales: false,
-        aiAdvisory: false,
+        offers: true,
+        combos: true,
+        flashSales: true,
+        aiAdvisory: true,
         whatsapp: false,
         analytics: false,
       },

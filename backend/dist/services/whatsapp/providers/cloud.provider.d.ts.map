@@ -1,0 +1,1 @@
+{"version":3,"file":"cloud.provider.d.ts","sourceRoot":"","sources":["../../../../src/services/whatsapp/providers/cloud.provider.ts"],"names":[],"mappings":"AAKA,eAAO,MAAM,qBAAqB;iBACb,MAAM,QAAQ,MAAM,GAAG,OAAO,CAAC,IAAI,CAAC;qBA2BjD,MAAM,gBACI,MAAM,UACZ;QAAE,IAAI,EAAE,MAAM,EAAE,CAAA;KAAE,GACzB,OAAO,CAAC,IAAI,CAAC;CAkCjB,CAAC"}

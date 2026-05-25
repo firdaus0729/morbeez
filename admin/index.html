@@ -3,24 +3,26 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Morbeez Operations Console</title>
+    <title>Morbeez Agriculture — Console</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="/console/css/admin.css" />
   </head>
   <body>
     <div id="view-login" class="login-page">
       <div class="login-card">
-        <div class="login-brand">
-          <div class="login-logo">M</div>
+        <div class="login-brand-row">
+          <div class="logo-mark" aria-hidden="true">
+            <svg viewBox="0 0 40 40" fill="none"><circle cx="20" cy="20" r="18" fill="#1a5c38"/><path d="M20 8c-4 8-8 10-8 14a8 8 0 1016 0c0-4-4-6-8-14z" fill="#7dd87a"/><circle cx="20" cy="22" r="3" fill="#fff"/></svg>
+          </div>
           <div>
-            <strong>Morbeez</strong>
-            <small>Operations console</small>
+            <div class="logo-title">Morbeez</div>
+            <div class="logo-sub">AGRICULTURE</div>
           </div>
         </div>
         <h1>Staff sign in</h1>
-        <p class="subtitle">Agriculture commerce control center — products, farmers, orders & intelligence</p>
+        <p class="subtitle">Operations console for products, orders & farmer intelligence</p>
         <div id="login-alert" class="alert alert-error hidden" role="alert"></div>
         <form id="login-form">
           <div class="field">
@@ -31,33 +33,61 @@
             <label for="login-password">Password</label>
             <input id="login-password" class="input" name="password" type="password" autocomplete="current-password" required />
           </div>
-          <button type="submit" class="btn btn-primary" id="login-submit">Sign in</button>
+          <button type="submit" class="btn btn-primary btn-block" id="login-submit">Sign in</button>
         </form>
       </div>
     </div>
 
     <div id="view-app" class="app-shell hidden">
       <aside class="sidebar" id="sidebar">
-        <div class="sidebar-brand">
-          <div class="brand-mark">M</div>
-          <div>
-            <strong>Morbeez</strong>
-            <small>Agri commerce ERP</small>
+        <div class="sidebar-logo">
+          <div class="logo-mark" aria-hidden="true">
+            <svg viewBox="0 0 40 40" fill="none"><circle cx="20" cy="20" r="18" fill="rgba(255,255,255,0.15)"/><path d="M20 8c-4 8-8 10-8 14a8 8 0 1016 0c0-4-4-6-8-14z" fill="#7dd87a"/><circle cx="20" cy="22" r="3" fill="#fff"/></svg>
+          </div>
+          <div class="sidebar-logo-text">
+            <span class="logo-title">Morbeez</span>
+            <span class="logo-sub">AGRICULTURE</span>
           </div>
         </div>
-        <nav id="sidebar-nav" class="sidebar-nav" aria-label="Main"></nav>
-        <div class="sidebar-footer">
-          <div class="user" id="sidebar-user"></div>
-          <button type="button" class="btn btn-ghost btn-sm" id="btn-logout">Sign out</button>
+
+        <nav id="sidebar-nav" class="sidebar-nav" aria-label="Main navigation"></nav>
+
+        <div class="sidebar-bottom">
+          <a href="#settings" class="sidebar-support">
+            <span class="support-dot"></span>
+            Live Support
+          </a>
+          <button type="button" class="sidebar-profile" id="sidebar-profile-btn">
+            <span class="avatar" id="sidebar-avatar">A</span>
+            <span class="profile-text">
+              <strong id="sidebar-user-name">Admin</strong>
+              <small id="sidebar-user-role">Super Admin</small>
+            </span>
+            <span class="profile-chevron" aria-hidden="true">▾</span>
+          </button>
+          <button type="button" class="btn-signout hidden" id="btn-logout">Sign out</button>
         </div>
       </aside>
 
       <div class="main">
         <header class="topbar">
-          <button type="button" class="btn-icon" id="btn-sidebar" aria-label="Menu">☰</button>
-          <div class="topbar-titles">
-            <p class="topbar-eyebrow">Morbeez console</p>
-            <h2 id="page-title">Dashboard</h2>
+          <button type="button" class="btn-menu" id="btn-sidebar" aria-label="Open menu">
+            <span></span><span></span><span></span>
+          </button>
+          <h1 class="page-heading" id="page-title">Dashboard</h1>
+          <div class="topbar-tools">
+            <div class="date-pill" id="topbar-date">
+              <span class="date-pill-icon" aria-hidden="true">📅</span>
+              <span id="topbar-date-text"></span>
+            </div>
+            <button type="button" class="tool-btn" id="btn-search" aria-label="Search">${''}</button>
+            <button type="button" class="tool-btn tool-btn-bell" id="btn-notify" aria-label="Notifications">
+              <span class="bell-dot"></span>
+            </button>
+            <div class="topbar-avatar-wrap">
+              <span class="avatar avatar-sm" id="topbar-avatar">A</span>
+              <span class="topbar-admin-label" id="topbar-admin-label">Admin</span>
+            </div>
           </div>
           <div id="topbar-actions" class="topbar-actions"></div>
         </header>
@@ -66,7 +96,7 @@
     </div>
 
     <div id="toast" class="toast hidden" role="status"></div>
-    <div id="modal-root"></div>
+    <div id="modal-root" class="hidden"></div>
 
     <script src="/console/js/app.js" type="module"></script>
   </body>

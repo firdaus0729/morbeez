@@ -1,0 +1,1 @@
+{"version":3,"file":"supabase-errors.d.ts","sourceRoot":"","sources":["../../src/lib/supabase-errors.ts"],"names":[],"mappings":"AAAA,OAAO,KAAK,EAAE,cAAc,EAAE,MAAM,uBAAuB,CAAC;AAG5D,wBAAgB,oBAAoB,CAAC,KAAK,EAAE,cAAc,GAAG,IAAI,EAAE,OAAO,EAAE,MAAM,GAAG,IAAI,CA2BxF"}

@@ -1,0 +1,1 @@
+{"version":3,"file":"recommendation.service.d.ts","sourceRoot":"","sources":["../../../src/services/ai/recommendation.service.ts"],"names":[],"mappings":"AAGA,OAAO,KAAK,EAAE,qBAAqB,EAAE,kBAAkB,EAAE,MAAM,YAAY,CAAC;AA6D5E,eAAO,MAAM,qBAAqB;wBACZ,MAAM,YAAY,kBAAkB,GAAG,qBAAqB,EAAE;CAyCnF,CAAC"}

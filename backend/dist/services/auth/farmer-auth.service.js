@@ -1,0 +1,93 @@
+import { supabase } from '../../lib/supabase.js';
+import { throwIfSupabaseError } from '../../lib/supabase-errors.js';
+import { ConflictError, UnauthorizedError, ValidationError } from '../../lib/errors.js';
+import { hashPassword, verifyPassword } from '../../lib/password.js';
+import { createFarmerToken } from '../../lib/jwt.js';
+import { eventBus } from '../../events/bus.js';
+function normalizeEmail(email) {
+    return email.trim().toLowerCase();
+}
+function publicFarmer(row) {
+    return {
+        id: row.id,
+        email: row.email,
+        firstName: row.first_name,
+        lastName: row.last_name,
+        name: row.name,
+        phone: row.phone,
+        district: row.district,
+        state: row.state,
+        newsletterSubscribed: row.newsletter_subscribed,
+        createdAt: row.created_at,
+    };
+}
+export const farmerAuthService = {
+    async signup(input) {
+        const email = normalizeEmail(input.email);
+        if (!input.acceptTerms) {
+            throw new ValidationError('You must accept the Terms of Service and Privacy Policy');
+        }
+        if (input.password.length < 8) {
+            throw new ValidationError('Password must be at least 8 characters');
+        }
+        const { data: existing, error: existingErr } = await supabase
+            .from('farmers')
+            .select('id')
+            .eq('email', email)
+            .maybeSingle();
+        throwIfSupabaseError(existingErr, 'Could not check existing account');
+        if (existing)
+            throw new ConflictError('An account with this email already exists');
+        const fullName = `${input.firstName.trim()} ${input.lastName.trim()}`.trim();
+        const now = new Date().toISOString();
+        const { data, error } = await supabase
+            .from('farmers')
+            .insert({
+            email,
+            first_name: input.firstName.trim(),
+            last_name: input.lastName.trim(),
+            name: fullName,
+            password_hash: hashPassword(input.password),
+            terms_accepted_at: now,
+            newsletter_subscribed: input.newsletter,
+            preferred_language: 'en',
+            source: 'website',
+            metadata: { signup_channel: 'website' },
+            last_login_at: now,
+        })
+            .select()
+            .single();
+        throwIfSupabaseError(error, 'Could not create farmer account');
+        try {
+            await eventBus.publish('farmer.upserted', { farmerId: data.id, email, source: 'website' }, 'farmer-auth');
+        }
+        catch {
+            /* signup succeeds even if outbox write fails */
+        }
+        const token = createFarmerToken(data.id, email);
+        return { token, farmer: publicFarmer(data) };
+    },
+    async login(input) {
+        const email = normalizeEmail(input.email);
+        const { data, error } = await supabase.from('farmers').select('*').eq('email', email).maybeSingle();
+        throwIfSupabaseError(error, 'Could not load account');
+        if (!data?.password_hash)
+            throw new UnauthorizedError('Invalid email or password');
+        if (!verifyPassword(input.password, data.password_hash)) {
+            throw new UnauthorizedError('Invalid email or password');
+        }
+        const now = new Date().toISOString();
+        await supabase.from('farmers').update({ last_login_at: now, updated_at: now }).eq('id', data.id);
+        const token = createFarmerToken(data.id, email);
+        return { token, farmer: publicFarmer({ ...data, last_login_at: now }) };
+    },
+    async me(farmerId) {
+        const { data, error } = await supabase.from('farmers').select('*').eq('id', farmerId).single();
+        if (error || !data)
+            throw new UnauthorizedError('Session invalid');
+        if (!data.email)
+            throw new UnauthorizedError('Session invalid');
+        return publicFarmer(data);
+    },
+};
+//# sourceMappingURL=farmer-auth.service.js.map

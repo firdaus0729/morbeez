@@ -5,14 +5,18 @@ export interface ProductListQuery {
   page?: number;
   limit?: number;
   search?: string;
+  category?: string;
+  status?: string;
 }
 
 interface ShopifyVariant {
   id: number;
   title: string;
   price: string;
+  compare_at_price?: string | null;
   sku: string | null;
   inventory_quantity: number;
+  option1?: string | null;
 }
 
 interface ShopifyImage {
@@ -60,11 +64,16 @@ function clearProductListCache() {
   productListCache = null;
 }
 
+function totalInventory(p: ShopifyProduct): number {
+  return (p.variants ?? []).reduce((sum, v) => sum + (v.inventory_quantity ?? 0), 0);
+}
+
 function mapProduct(p: ShopifyProduct) {
   const v = p.variants?.[0];
   const images: ShopifyImage[] = [...(p.images ?? [])];
   if (!images.length && p.image) images.push(p.image);
   const sorted = images.sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
+  const inventory = totalInventory(p);
 
   return {
     id: String(p.id),
@@ -73,11 +82,13 @@ function mapProduct(p: ShopifyProduct) {
     status: p.status,
     vendor: p.vendor,
     productType: p.product_type,
+    category: p.product_type?.trim() || 'Uncategorized',
     tags: p.tags,
     bodyHtml: p.body_html ?? '',
     price: v?.price ?? null,
     sku: v?.sku ?? null,
-    inventory: v?.inventory_quantity ?? 0,
+    inventory,
+    variantCount: p.variants?.length ?? 1,
     imageUrl: sorted[0]?.src ?? null,
     images: sorted.map((img) => ({
       id: String(img.id),
@@ -85,9 +96,48 @@ function mapProduct(p: ShopifyProduct) {
       alt: img.alt,
       position: img.position,
     })),
+    variants: (p.variants ?? []).map((v) => mapVariant(v)),
     createdAt: p.created_at,
     updatedAt: p.updated_at,
   };
+}
+
+function mapVariant(v: ShopifyVariant) {
+  const opt = v.option1 || v.title || '';
+  const match = opt.match(/^([\d.]+)\s*(\w+)?$/);
+  return {
+    id: String(v.id),
+    title: v.title,
+    option1: opt,
+    packSize: match?.[1] ?? opt,
+    unit: match?.[2] ?? 'ml',
+    price: v.price,
+    mrp: v.compare_at_price ?? v.price,
+    sku: v.sku ?? '',
+    inventory: v.inventory_quantity ?? 0,
+  };
+}
+
+export interface WizardVariantInput {
+  id?: string;
+  packSize: string;
+  unit: string;
+  mrp: string;
+  sellingPrice: string;
+  dealerPrice?: string;
+  stock: number;
+  sku?: string;
+}
+
+export interface WizardProductSaveInput {
+  title: string;
+  bodyHtml?: string;
+  vendor?: string;
+  productType?: string;
+  tags?: string;
+  status?: 'active' | 'draft' | 'archived';
+  variants: WizardVariantInput[];
+  skuPrefix?: string;
 }
 
 /** Fetch all products from Shopify (cursor pagination, max 250/page). */
@@ -128,25 +178,74 @@ async function fetchAllProducts(search?: string): Promise<ShopifyProduct[]> {
   });
 }
 
+function applyListFilters(products: ShopifyProduct[], query: ProductListQuery): ShopifyProduct[] {
+  let list = products;
+  if (query.category?.trim()) {
+    const cat = query.category.trim().toLowerCase();
+    list = list.filter((p) => (p.product_type?.trim() || 'Uncategorized').toLowerCase() === cat);
+  }
+  if (query.status?.trim()) {
+    list = list.filter((p) => p.status === query.status?.trim());
+  }
+  return list;
+}
+
+function computeStats(products: ShopifyProduct[]) {
+  let active = 0;
+  let lowStock = 0;
+  let outOfStock = 0;
+  for (const p of products) {
+    const inv = totalInventory(p);
+    if (p.status === 'active') active++;
+    if (inv === 0) outOfStock++;
+    else if (inv <= 10) lowStock++;
+  }
+  return {
+    total: products.length,
+    active,
+    lowStock,
+    outOfStock,
+  };
+}
+
+function uniqueCategories(products: ShopifyProduct[]): string[] {
+  const set = new Set<string>();
+  for (const p of products) {
+    set.add(p.product_type?.trim() || 'Uncategorized');
+  }
+  return [...set].sort((a, b) => a.localeCompare(b));
+}
+
 export const shopifyProductsService = {
   async count(): Promise<number> {
     const res = await shopifyAdmin<CountResponse>('/products/count.json');
     return res.count ?? 0;
   },
 
+  /** All products with every variant — for inventory grid (uses product list cache). */
+  async getInventoryCatalog(search?: string) {
+    const all = await fetchAllProducts(search);
+    return all.map(mapProduct);
+  },
+
   async list(query: ProductListQuery) {
-    const limit = Math.min(100, Math.max(10, query.limit ?? 50));
+    const limit = Math.min(100, Math.max(8, query.limit ?? 8));
     const page = Math.max(1, query.page ?? 1);
 
-    const all = await fetchAllProducts(query.search);
-    const total = all.length;
+    const catalog = await fetchAllProducts(query.search);
+    const stats = computeStats(catalog);
+    const categories = uniqueCategories(catalog);
+    const filtered = applyListFilters(catalog, query);
+    const total = filtered.length;
     const pages = Math.max(1, Math.ceil(total / limit));
     const safePage = Math.min(page, pages);
     const start = (safePage - 1) * limit;
-    const slice = all.slice(start, start + limit);
+    const slice = filtered.slice(start, start + limit);
 
     return {
       products: slice.map(mapProduct),
+      stats,
+      categories,
       pagination: {
         page: safePage,
         limit,
@@ -163,6 +262,74 @@ export const shopifyProductsService = {
     } catch {
       throw new NotFoundError('Product not found');
     }
+  },
+
+  async saveWizard(id: string | null, input: WizardProductSaveInput) {
+    if (!input.title?.trim()) throw new ValidationError('Product title is required');
+    if (!input.variants?.length) throw new ValidationError('At least one variant is required');
+
+    const variantRows = input.variants.map((v) => {
+      const label = `${v.packSize} ${v.unit}`.trim();
+      const sku =
+        v.sku ||
+        (input.skuPrefix
+          ? `${input.skuPrefix}-${v.packSize}${v.unit}`.replace(/\s+/g, '')
+          : undefined);
+      return {
+        option1: label,
+        price: String(v.sellingPrice || '0'),
+        compare_at_price: String(v.mrp || v.sellingPrice || '0'),
+        sku,
+        inventory_quantity: Math.max(0, Number(v.stock) || 0),
+        id: v.id ? Number(v.id) : undefined,
+      };
+    });
+
+    const optionValues = variantRows.map((v) => v.option1);
+
+    if (!id) {
+      const product: Record<string, unknown> = {
+        title: input.title.trim(),
+        body_html: input.bodyHtml ?? '',
+        vendor: input.vendor ?? 'Morbeez',
+        product_type: input.productType ?? '',
+        tags: input.tags ?? '',
+        status: input.status ?? 'draft',
+        options: [{ name: 'Pack Size', values: optionValues }],
+        variants: variantRows.map(({ id: _id, ...rest }) => rest),
+      };
+      const res = await shopifyAdmin<ProductResponse>('/products.json', {
+        method: 'POST',
+        body: JSON.stringify({ product }),
+      });
+      clearProductListCache();
+      return mapProduct(res.product);
+    }
+
+    const existing = await shopifyAdmin<ProductResponse>(`/products/${id}.json`);
+    const p = existing.product;
+
+    const product: Record<string, unknown> = {
+      id: Number(id),
+      title: input.title.trim(),
+      body_html: input.bodyHtml ?? p.body_html,
+      vendor: input.vendor ?? p.vendor,
+      product_type: input.productType ?? p.product_type,
+      tags: input.tags ?? p.tags,
+      status: input.status ?? p.status,
+      options: [{ name: 'Pack Size', values: optionValues }],
+      variants: variantRows.map((row, i) => {
+        const existingId = row.id ?? p.variants?.[i]?.id;
+        return existingId ? { ...row, id: existingId } : row;
+      }),
+    };
+
+    const res = await shopifyAdmin<ProductResponse>(`/products/${id}.json`, {
+      method: 'PUT',
+      body: JSON.stringify({ product }),
+    });
+    clearProductListCache();
+    return mapProduct(res.product);
   },
 
   async create(input: {

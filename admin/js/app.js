@@ -1,22 +1,58 @@
-import { TOKEN_KEY, $, api, state, logout, canEdit } from './core.js';
-import { renderSidebarNav, ROUTE_TITLES } from './nav.js';
+import { TOKEN_KEY, $, api, state, logout, initials, dateRangeLabel, canEdit } from './core.js';
+import { renderSidebarNav, ROUTE_TITLES, roleLabel } from './nav.js';
 import { icon } from './icons.js';
 import { renderDashboard } from './views/dashboard.js';
-import { renderProducts, renderProductForm, renderInventory } from './views/products.js';
-import { renderFarmers } from './views/farmers.js';
+import { renderProducts } from './views/products.js';
+import { renderInventory } from './views/inventory.js';
+import { renderProductWizard } from './views/product-wizard.js';
+import { renderFarmers, bindFarmersTopbar } from './views/farmers.js';
 import { renderOrders } from './views/orders.js';
+import { renderOrderDetail, bindOrderDetailTopbar } from './views/order-detail.js';
+import { renderOffers, bindOffersTopbar } from './views/offers.js';
+import { renderCombos, bindCombosTopbar } from './views/combos.js';
+import { renderFlashSales, bindFlashSalesTopbar, teardownFlashSales } from './views/flash-sales.js';
+import { renderAiAdvisory, bindAiAdvisoryTopbar, teardownAiAdvisory } from './views/ai-advisory.js';
+import { renderAiMapping, bindAiMappingTopbar } from './views/ai-mapping.js';
 import { renderStaff } from './views/staff.js';
 import { renderModulePlaceholder, renderSettings } from './views/placeholder.js';
 
 const PLACEHOLDER_ROUTES = new Set([
-  'offers',
-  'combos',
-  'flash-sales',
-  'ai-advisory',
   'whatsapp',
   'content',
   'analytics',
 ]);
+
+function injectTopbarIcons() {
+  const search = $('#btn-search');
+  const bell = $('#btn-notify');
+  if (search && !search.innerHTML.trim()) search.innerHTML = icon('search', 'icon-tool');
+  if (bell && !bell.querySelector('svg')) {
+    bell.innerHTML = icon('bell', 'icon-tool') + '<span class="bell-dot"></span>';
+  }
+}
+
+function updateUserChrome() {
+  const admin = state.admin;
+  if (!admin) return;
+  const name = admin.fullName || admin.email?.split('@')[0] || 'Admin';
+  const ini = initials(name);
+  const role = roleLabel(admin.role);
+
+  const set = (id, text) => {
+    const el = $(id);
+    if (el) el.textContent = text;
+  };
+
+  set('#sidebar-user-name', name);
+  set('#sidebar-user-role', role);
+  set('#topbar-admin-label', name.split(' ')[0]);
+  set('#topbar-date-text', dateRangeLabel());
+
+  ['#sidebar-avatar', '#topbar-avatar'].forEach((sel) => {
+    const el = $(sel);
+    if (el) el.textContent = ini;
+  });
+}
 
 function updateSidebar(route) {
   const nav = $('#sidebar-nav');
@@ -27,6 +63,8 @@ function updateSidebar(route) {
 }
 
 function navigate(route, params = {}) {
+  if (state.route === 'flash-sales' && route !== 'flash-sales') teardownFlashSales();
+  if (state.route === 'ai-advisory' && route !== 'ai-advisory') teardownAiAdvisory();
   state.route = route;
   state.routeParams = params;
 
@@ -43,24 +81,77 @@ function navigate(route, params = {}) {
 
   $('#view-login').classList.add('hidden');
   $('#view-app').classList.remove('hidden');
+  document.body.classList.toggle('route-dashboard', route === 'dashboard');
+  document.body.classList.toggle('route-products', route === 'products');
+  document.body.classList.toggle('route-inventory', route === 'inventory');
+  document.body.classList.toggle('route-orders', route === 'orders' || route === 'orders/detail');
+  document.body.classList.toggle('route-order-detail', route === 'orders/detail');
+  document.body.classList.toggle('route-offers', route === 'offers');
+  document.body.classList.toggle('route-combos', route === 'combos');
+  document.body.classList.toggle('route-flash-sales', route === 'flash-sales');
+  document.body.classList.toggle('route-ai-advisory', route === 'ai-advisory');
+  document.body.classList.toggle('route-ai-mapping', route === 'ai-mapping');
+  document.body.classList.toggle('route-farmers', route === 'farmers');
+  document.body.classList.toggle(
+    'route-product-wizard',
+    route === 'products/new' || route === 'products/edit'
+  );
   updateSidebar(route);
+  updateUserChrome();
+  injectTopbarIcons();
 
   const base = route.split('/')[0];
   let titleKey = route;
   if (route.startsWith('products/edit')) titleKey = 'products/edit';
   if (route.startsWith('products/new')) titleKey = 'products/new';
+  if (route.startsWith('orders/detail')) titleKey = 'orders/detail';
 
   $('#page-title').textContent = ROUTE_TITLES[titleKey] || ROUTE_TITLES[base] || 'Console';
   $('#topbar-actions').innerHTML = '';
   $('#main-content').innerHTML = '';
 
   if (route === 'dashboard') renderDashboard();
-  else if (route === 'products') renderProducts();
-  else if (route === 'products/new') renderProductForm();
-  else if (route === 'products/edit') renderProductForm(params.id);
+  else if (route === 'products') {
+    if (canEdit()) {
+      $('#topbar-actions').innerHTML =
+        '<a href="#products/new" class="btn btn-primary btn-sm btn-add-product">' +
+        icon('plus', 'icon-btn') +
+        ' Add Product</a>';
+    }
+    renderProducts();
+  }
+  else if (route === 'products/new') renderProductWizard();
+  else if (route === 'products/edit') renderProductWizard(params.id);
   else if (route === 'inventory') renderInventory();
-  else if (route === 'farmers') renderFarmers();
+  else if (route === 'farmers') {
+    bindFarmersTopbar();
+    renderFarmers();
+  }
   else if (route === 'orders') renderOrders();
+  else if (route === 'orders/detail') {
+    bindOrderDetailTopbar();
+    renderOrderDetail(params.id);
+  }
+  else if (route === 'offers') {
+    bindOffersTopbar();
+    renderOffers();
+  }
+  else if (route === 'combos') {
+    bindCombosTopbar();
+    renderCombos();
+  }
+  else if (route === 'flash-sales') {
+    bindFlashSalesTopbar();
+    renderFlashSales();
+  }
+  else if (route === 'ai-advisory') {
+    bindAiAdvisoryTopbar();
+    renderAiAdvisory();
+  }
+  else if (route === 'ai-mapping') {
+    bindAiMappingTopbar();
+    renderAiMapping();
+  }
   else if (route === 'staff') renderStaff();
   else if (route === 'settings') $('#main-content').innerHTML = renderSettings();
   else if (PLACEHOLDER_ROUTES.has(base)) {
@@ -79,10 +170,6 @@ async function initSession() {
   try {
     const data = await api('/console/api/v1/auth/me');
     state.admin = data.admin;
-    const u = $('#sidebar-user');
-    if (u) {
-      u.innerHTML = `<strong>${data.admin.fullName || data.admin.email}</strong><span>${data.admin.role}</span>`;
-    }
     onHashChange();
   } catch {
     navigate('login');
@@ -128,20 +215,27 @@ function onHashChange() {
     navigate('products/edit', { id: hash.split('/')[2] });
   } else if (hash === 'products/new') {
     navigate('products/new');
+  } else if (hash.startsWith('orders/detail/')) {
+    navigate('orders/detail', { id: hash.split('/')[2] });
   } else {
     navigate(hash);
   }
 }
 
-function toggleSidebar() {
-  document.body.classList.toggle('sidebar-open');
-}
+$('#sidebar-profile-btn')?.addEventListener('click', () => {
+  $('#btn-logout')?.classList.toggle('hidden');
+});
 
 $('#login-form')?.addEventListener('submit', handleLogin);
-$('#btn-logout')?.addEventListener('click', logout);
-$('#btn-sidebar')?.addEventListener('click', toggleSidebar);
+$('#btn-logout')?.addEventListener('click', () => {
+  logout();
+  $('#btn-logout')?.classList.add('hidden');
+});
+$('#btn-sidebar')?.addEventListener('click', () => document.body.classList.toggle('sidebar-open'));
 window.addEventListener('hashchange', onHashChange);
 window.addEventListener('morbeez:navigate', (e) => navigate(e.detail.route));
+
+injectTopbarIcons();
 
 if (localStorage.getItem(TOKEN_KEY)) {
   initSession();

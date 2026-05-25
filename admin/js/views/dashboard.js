@@ -1,139 +1,201 @@
-import { $, api, escapeHtml, formatDate, formatInr } from '../core.js';
+import {
+  $,
+  api,
+  escapeHtml,
+  formatInr,
+  formatInrFull,
+  formatTrend,
+} from '../core.js';
 import { icon } from '../icons.js';
+
+let salesChartInstance = null;
+
+function loadChartJs() {
+  return new Promise((resolve, reject) => {
+    if (window.Chart) {
+      resolve(window.Chart);
+      return;
+    }
+    const s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js';
+    s.async = true;
+    s.onload = () => resolve(window.Chart);
+    s.onerror = reject;
+    document.head.appendChild(s);
+  });
+}
+
+function statCard(label, value, trendPct, compareLabel, iconName, iconClass, href) {
+  const t = formatTrend(trendPct);
+  const inner = `
+      <div class="stat-card-head">
+        <span class="stat-label">${escapeHtml(label)}</span>
+        <span class="stat-icon ${iconClass}">${icon(iconName, 'icon-stat')}</span>
+      </div>
+      <div class="stat-value">${escapeHtml(value)}</div>
+      <div class="stat-trend ${t.up ? 'trend-up' : 'trend-down'}">
+        <span class="trend-pct">${escapeHtml(t.text)}</span>
+        <span class="trend-vs">vs ${escapeHtml(compareLabel)}</span>
+      </div>`;
+  if (href) {
+    return `<a href="${href}" class="stat-card stat-card-link">${inner}</a>`;
+  }
+  return `<article class="stat-card">${inner}</article>`;
+}
+
+function topProductRows(products) {
+  if (!products?.length) {
+    return `<div class="top-product-empty muted">No sales data yet — orders will appear here.</div>`;
+  }
+  return products
+    .map(
+      (p, i) => `
+    <div class="top-product-row">
+      <span class="top-product-rank">${i + 1}</span>
+      ${
+        p.imageUrl
+          ? `<img class="top-product-img" src="${escapeHtml(p.imageUrl)}" alt="" loading="lazy" />`
+          : '<span class="top-product-img top-product-img--ph"></span>'
+      }
+      <div class="top-product-info">
+        <span class="top-product-name">${escapeHtml(p.title)}</span>
+      </div>
+      <span class="top-product-sales">${formatInrFull(p.revenue)}</span>
+    </div>`
+    )
+    .join('');
+}
+
+function alertCard(label, count, tone, href) {
+  const inner = `<span class="alert-card-label">${escapeHtml(label)}</span>
+     <span class="alert-card-value alert-${tone}">${count}</span>
+     <span class="alert-card-unit">${label.includes('Order') ? 'Orders' : 'Products'}</span>`;
+  return href
+    ? `<a href="${href}" class="alert-card">${inner}</a>`
+    : `<div class="alert-card">${inner}</div>`;
+}
+
+async function renderSalesChart(chartData) {
+  const canvas = $('#sales-chart');
+  if (!canvas) return;
+
+  try {
+    const Chart = await loadChartJs();
+    if (salesChartInstance) {
+      salesChartInstance.destroy();
+      salesChartInstance = null;
+    }
+
+    const max = Math.max(...chartData.values, 1);
+    salesChartInstance = new Chart(canvas, {
+      type: 'line',
+      data: {
+        labels: chartData.labels,
+        datasets: [
+          {
+            label: 'Sales (₹)',
+            data: chartData.values,
+            borderColor: '#34b35e',
+            backgroundColor: 'rgba(52, 179, 94, 0.08)',
+            borderWidth: 2.5,
+            fill: true,
+            tension: 0.35,
+            pointRadius: 4,
+            pointBackgroundColor: '#34b35e',
+            pointBorderColor: '#fff',
+            pointBorderWidth: 2,
+            pointHoverRadius: 6,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: (ctx) => '₹' + Number(ctx.raw).toLocaleString('en-IN'),
+            },
+          },
+        },
+        scales: {
+          x: {
+            grid: { display: false },
+            ticks: { color: '#94a3a8', font: { size: 11 } },
+          },
+          y: {
+            beginAtZero: true,
+            suggestedMax: max * 1.1,
+            ticks: {
+              color: '#94a3a8',
+              font: { size: 11 },
+              callback: (v) => (v >= 1000 ? v / 1000 + 'K' : v),
+            },
+            grid: { color: '#eef2ef' },
+          },
+        },
+      },
+    });
+  } catch {
+    canvas.parentElement.innerHTML =
+      '<p class="muted" style="padding:40px;text-align:center">Chart unavailable</p>';
+  }
+}
 
 export async function renderDashboard() {
   const el = $('#main-content');
-  el.innerHTML = '<p class="loading">Loading dashboard…</p>';
+  el.innerHTML = '<div class="dash-loading"><div class="spinner"></div><p>Loading dashboard…</p></div>';
+
   try {
     const data = await api('/console/api/v1/dashboard');
     const k = data.kpis;
+    const a = data.alerts;
+    const compare = k.compareLabel || 'previous period';
 
     el.innerHTML = `
-      <div class="kpi-grid">
-        ${kpiCard('Revenue (Razorpay)', formatInr(k.revenueInr), 'Paid checkout sessions', 'analytics')}
-        ${kpiCard('Orders', String(k.orders + k.paidCheckouts), `${k.paidCheckouts} Razorpay · ${k.orders} Shopify sync`, 'orders')}
-        ${kpiCard('Farmers', String(k.farmers), `+${k.farmersThisWeek} this week`, 'farmers')}
-        ${kpiCard('Products', String(k.products), 'Shopify catalog', 'products')}
+      <div class="stat-grid">
+        ${statCard('Total Sales', formatInrFull(k.revenueInr), k.revenueTrend, compare, 'sales', 'stat-icon-green')}
+        ${statCard('Orders', Number(k.orders).toLocaleString('en-IN'), k.ordersTrend, compare, 'cart', 'stat-icon-blue')}
+        ${statCard('Farmers', Number(k.farmers).toLocaleString('en-IN'), k.farmersTrend, compare, 'users', 'stat-icon-teal', '#farmers')}
+        ${statCard('Conversion Rate', k.conversionRate + '%', k.conversionTrend, compare, 'trend', 'stat-icon-purple')}
+        ${statCard('AI Diagnoses', Number(k.aiDiagnoses).toLocaleString('en-IN'), k.aiTrend, compare, 'ai', 'stat-icon-orange')}
+        ${statCard('Avg. Order Value', formatInr(k.avgOrderValue), k.avgOrderTrend, compare, 'sales', 'stat-icon-green')}
       </div>
 
-      <div class="dash-grid">
-        <div class="panel">
-          <div class="panel-header">
-            <h3>Recent orders</h3>
-            <a href="#orders" class="btn btn-secondary btn-sm">View all</a>
+      <div class="dash-main-grid">
+        <section class="card card-chart">
+          <div class="card-head">
+            <h3>Sales Overview</h3>
+            <select class="card-select" id="chart-range" aria-label="Chart range">
+              <option value="week" selected>This Week</option>
+              <option value="month">This Month</option>
+            </select>
           </div>
-          <div class="table-wrap">
-            <table class="table-compact">
-              <thead><tr><th>Order</th><th>Customer</th><th>Amount</th><th>Date</th></tr></thead>
-              <tbody>${orderRows(data.recentCheckouts, data.recentOrders)}</tbody>
-            </table>
+          <div class="chart-wrap">
+            <canvas id="sales-chart" height="280"></canvas>
           </div>
-        </div>
+        </section>
 
-        <div class="panel">
-          <div class="panel-header">
-            <h3>New farmers</h3>
-            <a href="#farmers" class="btn btn-secondary btn-sm">CRM</a>
+        <section class="card card-top-products">
+          <div class="card-head">
+            <h3>Top Products</h3>
           </div>
-          <div class="table-wrap">
-            <table class="table-compact">
-              <thead><tr><th>Name</th><th>Phone</th><th>District</th><th>Joined</th></tr></thead>
-              <tbody>${farmerRows(data.recentFarmers)}</tbody>
-            </table>
+          <div class="top-products-list">
+            ${topProductRows(data.topProducts)}
           </div>
-        </div>
+        </section>
       </div>
 
-      <div class="dash-grid">
-        <div class="panel">
-          <div class="panel-header">
-            <h3>${icon('inventory', 'icon-sm')} Low stock alert</h3>
-            <a href="#inventory" class="btn btn-secondary btn-sm">Inventory</a>
-          </div>
-          <div class="panel-body">
-            ${
-              data.lowStock?.length
-                ? `<ul class="alert-list">${data.lowStock
-                    .map(
-                      (p) =>
-                        `<li><a href="#products/edit/${p.id}">${escapeHtml(p.title)}</a> <span class="badge badge-warn">${p.inventory} left</span></li>`
-                    )
-                    .join('')}</ul>`
-                : '<p class="muted">No low-stock products (threshold ≤10 units).</p>'
-            }
-          </div>
-        </div>
-
-        <div class="panel">
-          <div class="panel-header"><h3>${icon('ai', 'icon-sm')} AI commerce roadmap</h3></div>
-          <div class="panel-body">
-            <div class="roadmap">
-              <div class="roadmap-item done"><span>Product intelligence fields</span><em>Live</em></div>
-              <div class="roadmap-item done"><span>Razorpay checkout</span><em>Live</em></div>
-              <div class="roadmap-item"><span>Offers & combos</span><em>Planned</em></div>
-              <div class="roadmap-item"><span>AI diagnosis engine</span><em>Planned</em></div>
-              <div class="roadmap-item"><span>WhatsApp campaigns</span><em>Planned</em></div>
-            </div>
-            <div class="quick-actions mt-4">
-              <a href="#products/new" class="btn btn-primary btn-sm">+ Add product</a>
-              <a href="#products" class="btn btn-secondary btn-sm">Catalog</a>
-              <a href="#ai-advisory" class="btn btn-secondary btn-sm">AI panel</a>
-            </div>
-          </div>
-        </div>
+      <div class="alert-grid">
+        ${alertCard('Low Stock Alerts', a.lowStock, 'warn', '#inventory')}
+        ${alertCard('Out of Stock', a.outOfStock, 'danger', '#inventory')}
+        ${alertCard('Expiring Soon', a.expiringSoon, 'neutral', '#inventory')}
+        ${alertCard('Pending Orders', a.pendingOrders, 'success', '#orders')}
       </div>`;
+
+    await renderSalesChart(data.salesChart);
   } catch (err) {
     el.innerHTML = `<div class="alert alert-error">${escapeHtml(err.message)}</div>`;
   }
-}
-
-function kpiCard(title, value, sub, iconName) {
-  return `<div class="kpi-card">
-    <div class="kpi-icon">${icon(iconName, 'icon-lg')}</div>
-    <div class="kpi-body">
-      <div class="kpi-label">${escapeHtml(title)}</div>
-      <div class="kpi-value">${escapeHtml(value)}</div>
-      <div class="kpi-sub">${escapeHtml(sub)}</div>
-    </div>
-  </div>`;
-}
-
-function orderRows(checkouts, commerce) {
-  const rows = [];
-  for (const c of checkouts || []) {
-    rows.push(
-      `<tr>
-        <td><strong>${escapeHtml(c.orderName || '—')}</strong><br><small class="muted">Razorpay</small></td>
-        <td>${escapeHtml(c.customerName || c.email || '—')}</td>
-        <td>${formatInr(c.amountInr)}</td>
-        <td>${formatDate(c.createdAt)}</td>
-      </tr>`
-    );
-  }
-  for (const o of commerce || []) {
-    rows.push(
-      `<tr>
-        <td><strong>${escapeHtml(o.orderName || '—')}</strong><br><small class="muted">Shopify</small></td>
-        <td>${escapeHtml(o.email || o.phone || '—')}</td>
-        <td>${formatInr(o.totalAmount)}</td>
-        <td>${formatDate(o.createdAt)}</td>
-      </tr>`
-    );
-  }
-  return rows.length ? rows.join('') : '<tr><td colspan="4" class="empty-state">No orders yet</td></tr>';
-}
-
-function farmerRows(farmers) {
-  if (!farmers?.length) return '<tr><td colspan="4" class="empty-state">No farmers yet</td></tr>';
-  return farmers
-    .map(
-      (f) =>
-        `<tr>
-          <td><strong>${escapeHtml(f.name)}</strong></td>
-          <td>${escapeHtml(f.phone || '—')}</td>
-          <td>${escapeHtml(f.district || '—')}</td>
-          <td>${formatDate(f.createdAt)}</td>
-        </tr>`
-    )
-    .join('');
 }

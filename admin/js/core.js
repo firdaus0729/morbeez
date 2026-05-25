@@ -6,9 +6,23 @@ export const state = {
   admin: null,
   route: 'login',
   routeParams: {},
-  farmers: { page: 1, search: '' },
-  products: { page: 1, limit: 50, search: '' },
-  orders: { page: 1, search: '' },
+  farmers: {
+    page: 1,
+    limit: 8,
+    search: '',
+    status: 'all',
+    state: '',
+    filtersOpen: false,
+    states: [],
+  },
+  products: { page: 1, limit: 8, search: '', category: '', status: '' },
+  inventory: { page: 1, limit: 8, search: '', status: 'all', filtersOpen: false },
+  orders: { page: 1, limit: 8, search: '', status: 'all', payment: '', filtersOpen: false },
+  offers: { tab: 'all' },
+  combos: { page: 1, limit: 7, search: '', status: 'all', filtersOpen: false },
+  flashSales: { tab: 'all', page: 1, viewAll: false },
+  aiAdvisory: { showLogs: false, logsPage: 1 },
+  aiMapping: { tab: 'crop', page: 1, limit: 7, search: '', filter: '', filtersOpen: false },
 };
 
 export function $(sel, root = document) {
@@ -37,6 +51,37 @@ export function formatInr(amount) {
   const n = Number(amount);
   if (Number.isNaN(n)) return '—';
   return '₹' + n.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+}
+
+/** Indian grouping e.g. ₹24,58,320 */
+export function formatInrFull(amount) {
+  const n = Number(amount);
+  if (Number.isNaN(n)) return '—';
+  return '₹' + n.toLocaleString('en-IN', { maximumFractionDigits: 0 });
+}
+
+export function formatTrend(pct) {
+  const n = Number(pct);
+  if (Number.isNaN(n)) return { text: '—', up: true };
+  const up = n >= 0;
+  return { text: `${up ? '+' : ''}${n}%`, up };
+}
+
+export function initials(name) {
+  if (!name) return 'A';
+  const parts = String(name).trim().split(/\s+/);
+  return parts.length >= 2
+    ? (parts[0][0] + parts[1][0]).toUpperCase()
+    : (parts[0].slice(0, 2) || 'A').toUpperCase();
+}
+
+export function dateRangeLabel() {
+  const end = new Date();
+  const start = new Date();
+  start.setDate(start.getDate() - 6);
+  const fmt = (d) =>
+    d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+  return `${fmt(start)} – ${fmt(end)}`;
 }
 
 export function canEdit() {
