@@ -87,6 +87,18 @@
     ]
   },
   {
+    "name": "t:settings.api.name",
+    "settings": [
+      {
+        "type": "text",
+        "id": "morbeez_api_base_url",
+        "label": "t:settings.api.base_url",
+        "default": "https://morbeez-api.onrender.com",
+        "info": "t:settings.api.base_url_info"
+      }
+    ]
+  },
+  {
     "name": "t:settings.features.name",
     "settings": [
       {

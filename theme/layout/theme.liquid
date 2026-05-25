@@ -14,6 +14,12 @@
     {{ content_for_header }}
 
     {{ 'theme.css' | asset_url | stylesheet_tag: preload: true }}
+    <script>
+      window.MORBEEZ_AUTH = {
+        apiBase: {{ settings.morbeez_api_base_url | default: 'https://morbeez-api.onrender.com' | json }},
+        proxyBase: '/apps/morbeez/auth'
+      };
+    </script>
     <script src="{{ 'theme.js' | asset_url }}" defer></script>
     <script src="{{ 'farmer-auth-header.js' | asset_url }}" defer></script>
   </head>

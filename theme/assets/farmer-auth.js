@@ -1,6 +1,8 @@
 (function () {
   var STORAGE_KEY = 'morbeez_farmer_token';
-  var PROXY = '/apps/morbeez/auth';
+  var config = window.MORBEEZ_AUTH || {};
+  var API_BASE = (config.apiBase || 'https://morbeez-api.onrender.com').replace(/\/$/, '');
+  var PROXY_BASE = (config.proxyBase || '/apps/morbeez/auth').replace(/\/$/, '');
 
   var card = document.querySelector('.morbeez-auth-card');
   if (!card) return;
@@ -73,14 +75,50 @@
     });
   });
 
-  function api(path, options) {
-    var headers = { 'Content-Type': 'application/json', Accept: 'application/json' };
-    var token = getToken();
-    if (token) headers.Authorization = 'Bearer ' + token;
-    return fetch(PROXY + path, Object.assign({ headers: headers }, options || {})).then(function (res) {
+  function parseResponse(res) {
+    var ct = res.headers.get('content-type') || '';
+    if (ct.indexOf('application/json') >= 0) {
       return res.json().then(function (data) {
         return { ok: res.ok, status: res.status, data: data };
       });
+    }
+    return res.text().then(function (text) {
+      return {
+        ok: false,
+        status: res.status,
+        data: {
+          message:
+            res.status === 302 || text.indexOf('password') >= 0
+              ? 'Store is password-protected. Disable it in Shopify Admin → Online Store → Preferences, or enter the store password first.'
+              : 'Server returned an unexpected response. Check API URL in Theme settings.',
+        },
+      };
+    });
+  }
+
+  function request(url, options) {
+    var headers = { 'Content-Type': 'application/json', Accept: 'application/json' };
+    var token = getToken();
+    if (token) headers.Authorization = 'Bearer ' + token;
+    return fetch(url, Object.assign({ headers: headers, credentials: 'omit' }, options || {})).then(parseResponse);
+  }
+
+  /** Map /signup → direct API /api/v1/auth/signup or proxy /proxy/auth/signup */
+  function apiPaths(suffix) {
+    var path = suffix.replace(/^\//, '');
+    return {
+      direct: API_BASE + '/api/v1/auth/' + path,
+      proxy: PROXY_BASE + '/' + path,
+    };
+  }
+
+  function api(suffix, options) {
+    var urls = apiPaths(suffix);
+    return request(urls.direct, options).then(function (result) {
+      if (result.ok || (result.status !== 404 && result.status !== 502 && result.status !== 503)) {
+        return result;
+      }
+      return request(urls.proxy, options);
     });
   }
 
@@ -115,7 +153,6 @@
     api('/me', { method: 'GET' })
       .then(function (r) {
         if (r.ok && r.data.farmer) {
-          setToken(getToken());
           showLoggedIn(r.data.farmer);
         } else {
           setToken(null);
@@ -126,41 +163,49 @@
       });
   }
 
-  if (loginForm) {
-    loginForm.addEventListener('submit', function (e) {
+  function handleAuthSubmit(form, endpoint, loadingLabel, doneLabel, onSuccess) {
+    form.addEventListener('submit', function (e) {
       e.preventDefault();
       hideMessage();
-      var fd = new FormData(loginForm);
-      var btn = loginForm.querySelector('[type="submit"]');
+      var fd = new FormData(form);
+      var btn = form.querySelector('[type="submit"]');
       if (btn) {
         btn.disabled = true;
-        btn.textContent = 'Signing in…';
+        btn.textContent = loadingLabel;
       }
-      api('/login', {
-        method: 'POST',
-        body: JSON.stringify({
-          email: fd.get('email'),
-          password: fd.get('password'),
-        }),
-      })
+      api(endpoint, { method: 'POST', body: JSON.stringify(onSuccess.payload(fd)) })
         .then(function (r) {
           if (r.ok && r.data.token) {
             setToken(r.data.token);
             showLoggedIn(r.data.farmer);
-            showMessage('Welcome back!', false);
+            showMessage(onSuccess.message, false);
           } else {
-            showMessage(r.data.message || 'Login failed. Check your email and password.', true);
+            showMessage(r.data.message || onSuccess.errorMessage, true);
           }
         })
-        .catch(function () {
-          showMessage('Unable to connect. Please try again later.', true);
+        .catch(function (err) {
+          console.error('Morbeez auth error', err);
+          showMessage(
+            'Cannot reach Morbeez API. Confirm https://morbeez-api.onrender.com is running and redeployed with auth routes.',
+            true
+          );
         })
         .finally(function () {
           if (btn) {
             btn.disabled = false;
-            btn.textContent = 'Login';
+            btn.textContent = doneLabel;
           }
         });
+    });
+  }
+
+  if (loginForm) {
+    handleAuthSubmit(loginForm, '/login', 'Signing in…', 'Login', {
+      payload: function (fd) {
+        return { email: fd.get('email'), password: fd.get('password') };
+      },
+      message: 'Welcome back!',
+      errorMessage: 'Login failed. Check your email and password.',
     });
   }
 
@@ -202,8 +247,12 @@
             showMessage(r.data.message || 'Sign up failed. This email may already be registered.', true);
           }
         })
-        .catch(function () {
-          showMessage('Unable to connect. Please try again later.', true);
+        .catch(function (err) {
+          console.error('Morbeez auth error', err);
+          showMessage(
+            'Cannot reach Morbeez API. Redeploy the backend on Render, then try again.',
+            true
+          );
         })
         .finally(function () {
           if (btn) {

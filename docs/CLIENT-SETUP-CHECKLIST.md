@@ -51,8 +51,11 @@ See also: [SHOPIFY-NAVIGATION-SETUP.md](./SHOPIFY-NAVIGATION-SETUP.md)
 1. Run Supabase migration: `supabase/migrations/20260524000000_farmer_website_auth.sql`
 2. Set `FARMER_JWT_SECRET` in backend `.env` (min 32 characters)
 3. Create page **Login** with handle `login` and template `page.login`
-4. App proxy must route `/apps/morbeez/*` to your API (same as Crop Doctor)
-5. Header **Login** button points to `/pages/login` — farmer data is stored in the `farmers` table (email, name, terms, newsletter, password hash)
+4. **Deploy backend** to Render (or your API host) after auth code changes — theme calls `https://morbeez-api.onrender.com/api/v1/auth/signup` directly.
+5. In Render env, set `FARMER_JWT_SECRET` (32+ chars) and correct `SUPABASE_SERVICE_ROLE_KEY` (JWT role must be `service_role`, not `anon`). Run `node scripts/check-supabase-env.mjs` locally to verify.
+6. Optional: Shopify app proxy `/apps/morbeez` → API (fallback if direct API fails).
+7. If sign-up shows “password-protected”, disable **Online Store → Preferences → Password protection** for testing.
+8. Header **Login** → `/pages/login`; farmer records stored in Supabase `farmers` table.
 
 ## 5. Pages
 

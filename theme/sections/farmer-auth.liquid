@@ -1,3 +1,10 @@
+<script>
+  window.MORBEEZ_AUTH = {
+    apiBase: {{ settings.morbeez_api_base_url | default: 'https://morbeez-api.onrender.com' | json }},
+    proxyBase: '/apps/morbeez/auth'
+  };
+</script>
+
 <section class="morbeez-section" id="MorbeezFarmerAuth">
   <div class="morbeez-container flex justify-center">
     <div class="morbeez-auth-card w-full max-w-lg overflow-hidden rounded-2xl border border-[var(--color-border)] bg-white shadow-lg">

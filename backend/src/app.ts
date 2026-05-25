@@ -14,6 +14,7 @@ import { farmersRoutes } from './routes/api/farmers.routes.js';
 import { leadsRoutes } from './routes/api/leads.routes.js';
 import { shopifyProxyRoutes } from './routes/proxy/shopify-proxy.routes.js';
 import { advisoryRoutes } from './routes/api/advisory.routes.js';
+import { authRoutes } from './routes/api/auth.routes.js';
 import { registerEventHandlers } from './events/registerHandlers.js';
 
 export async function buildApp() {
@@ -51,6 +52,7 @@ export async function buildApp() {
   await app.register(razorpayWebhookRoutes);
   await app.register(shiprocketWebhookRoutes);
   await app.register(whatsappWebhookRoutes);
+  await app.register(authRoutes);
   await app.register(farmersRoutes);
   await app.register(leadsRoutes);
   await app.register(advisoryRoutes);
