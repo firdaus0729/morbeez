@@ -1,0 +1,230 @@
+(function () {
+  var STORAGE_KEY = 'morbeez_farmer_token';
+  var PROXY = '/apps/morbeez/auth';
+
+  var card = document.querySelector('.morbeez-auth-card');
+  if (!card) return;
+
+  var tabs = card.querySelectorAll('[data-auth-tab]');
+  var panels = card.querySelectorAll('[data-auth-panel]');
+  var loginForm = document.getElementById('morbeez-auth-login');
+  var signupForm = document.getElementById('morbeez-auth-signup');
+  var loggedIn = document.getElementById('morbeez-auth-logged-in');
+  var messageEl = document.getElementById('morbeez-auth-message');
+  var tabsRow = card.querySelector('.morbeez-auth-tabs');
+
+  function getToken() {
+    try {
+      return localStorage.getItem(STORAGE_KEY);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function setToken(token) {
+    try {
+      if (token) localStorage.setItem(STORAGE_KEY, token);
+      else localStorage.removeItem(STORAGE_KEY);
+    } catch (e) {}
+    document.dispatchEvent(new CustomEvent('morbeez:auth-changed'));
+  }
+
+  function showMessage(text, isError) {
+    if (!messageEl) return;
+    messageEl.textContent = text;
+    messageEl.classList.remove('hidden', 'bg-green-50', 'text-green-800', 'bg-red-50', 'text-red-800');
+    messageEl.classList.add(isError ? 'bg-red-50' : 'bg-green-50', isError ? 'text-red-800' : 'text-green-800');
+    messageEl.hidden = false;
+  }
+
+  function hideMessage() {
+    if (messageEl) {
+      messageEl.hidden = true;
+      messageEl.classList.add('hidden');
+    }
+  }
+
+  function setTab(name) {
+    tabs.forEach(function (tab) {
+      var active = tab.getAttribute('data-auth-tab') === name;
+      tab.classList.toggle('morbeez-auth-tab--active', active);
+      tab.setAttribute('aria-selected', active ? 'true' : 'false');
+    });
+    panels.forEach(function (panel) {
+      var show = panel.getAttribute('data-auth-panel') === name;
+      panel.classList.toggle('hidden', !show);
+    });
+    hideMessage();
+  }
+
+  tabs.forEach(function (tab) {
+    tab.addEventListener('click', function () {
+      setTab(tab.getAttribute('data-auth-tab'));
+    });
+  });
+
+  card.querySelectorAll('[data-toggle-pw]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var input = btn.closest('.morbeez-auth-field')?.querySelector('input');
+      if (!input) return;
+      var show = input.type === 'password';
+      input.type = show ? 'text' : 'password';
+      btn.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
+    });
+  });
+
+  function api(path, options) {
+    var headers = { 'Content-Type': 'application/json', Accept: 'application/json' };
+    var token = getToken();
+    if (token) headers.Authorization = 'Bearer ' + token;
+    return fetch(PROXY + path, Object.assign({ headers: headers }, options || {})).then(function (res) {
+      return res.json().then(function (data) {
+        return { ok: res.ok, status: res.status, data: data };
+      });
+    });
+  }
+
+  function showLoggedIn(farmer) {
+    if (tabsRow) tabsRow.classList.add('hidden');
+    loginForm?.classList.add('hidden');
+    signupForm?.classList.add('hidden');
+    if (loggedIn) {
+      loggedIn.classList.remove('hidden');
+      loggedIn.hidden = false;
+      var nameEl = loggedIn.querySelector('[data-auth-user-name]');
+      var emailEl = loggedIn.querySelector('[data-auth-user-email]');
+      if (nameEl) {
+        nameEl.textContent =
+          [farmer.firstName, farmer.lastName].filter(Boolean).join(' ') || farmer.name || farmer.email;
+      }
+      if (emailEl) emailEl.textContent = farmer.email || '';
+    }
+  }
+
+  function showForms() {
+    if (tabsRow) tabsRow.classList.remove('hidden');
+    if (loggedIn) {
+      loggedIn.classList.add('hidden');
+      loggedIn.hidden = true;
+    }
+    setTab('signup');
+  }
+
+  function checkSession() {
+    if (!getToken()) return;
+    api('/me', { method: 'GET' })
+      .then(function (r) {
+        if (r.ok && r.data.farmer) {
+          setToken(getToken());
+          showLoggedIn(r.data.farmer);
+        } else {
+          setToken(null);
+        }
+      })
+      .catch(function () {
+        setToken(null);
+      });
+  }
+
+  if (loginForm) {
+    loginForm.addEventListener('submit', function (e) {
+      e.preventDefault();
+      hideMessage();
+      var fd = new FormData(loginForm);
+      var btn = loginForm.querySelector('[type="submit"]');
+      if (btn) {
+        btn.disabled = true;
+        btn.textContent = 'Signing in…';
+      }
+      api('/login', {
+        method: 'POST',
+        body: JSON.stringify({
+          email: fd.get('email'),
+          password: fd.get('password'),
+        }),
+      })
+        .then(function (r) {
+          if (r.ok && r.data.token) {
+            setToken(r.data.token);
+            showLoggedIn(r.data.farmer);
+            showMessage('Welcome back!', false);
+          } else {
+            showMessage(r.data.message || 'Login failed. Check your email and password.', true);
+          }
+        })
+        .catch(function () {
+          showMessage('Unable to connect. Please try again later.', true);
+        })
+        .finally(function () {
+          if (btn) {
+            btn.disabled = false;
+            btn.textContent = 'Login';
+          }
+        });
+    });
+  }
+
+  if (signupForm) {
+    signupForm.addEventListener('submit', function (e) {
+      e.preventDefault();
+      hideMessage();
+      var fd = new FormData(signupForm);
+      if (fd.get('password') !== fd.get('confirmPassword')) {
+        showMessage('Passwords do not match.', true);
+        return;
+      }
+      if (!fd.get('acceptTerms')) {
+        showMessage('Please accept the Terms of Service and Privacy Policy.', true);
+        return;
+      }
+      var btn = signupForm.querySelector('[type="submit"]');
+      if (btn) {
+        btn.disabled = true;
+        btn.textContent = 'Creating account…';
+      }
+      api('/signup', {
+        method: 'POST',
+        body: JSON.stringify({
+          email: fd.get('email'),
+          firstName: fd.get('firstName'),
+          lastName: fd.get('lastName'),
+          password: fd.get('password'),
+          acceptTerms: true,
+          newsletter: !!fd.get('newsletter'),
+        }),
+      })
+        .then(function (r) {
+          if (r.ok && r.data.token) {
+            setToken(r.data.token);
+            showLoggedIn(r.data.farmer);
+            showMessage('Account created successfully.', false);
+          } else {
+            showMessage(r.data.message || 'Sign up failed. This email may already be registered.', true);
+          }
+        })
+        .catch(function () {
+          showMessage('Unable to connect. Please try again later.', true);
+        })
+        .finally(function () {
+          if (btn) {
+            btn.disabled = false;
+            btn.textContent = 'Sign Up';
+          }
+        });
+    });
+  }
+
+  var logoutBtn = card.querySelector('[data-auth-logout]');
+  if (logoutBtn) {
+    logoutBtn.addEventListener('click', function () {
+      setToken(null);
+      showForms();
+      hideMessage();
+    });
+  }
+
+  var params = new URLSearchParams(window.location.search);
+  if (params.get('tab') === 'login') setTab('login');
+
+  checkSession();
+})();

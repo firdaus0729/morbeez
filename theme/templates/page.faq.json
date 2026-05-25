@@ -1,0 +1,15 @@
+{
+  "sections": {
+    "main": {
+      "type": "main-page",
+      "settings": {}
+    },
+    "faq": {
+      "type": "faq-accordion",
+      "settings": {
+        "heading": "Help & FAQ"
+      }
+    }
+  },
+  "order": ["main", "faq"]
+}

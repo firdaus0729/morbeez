@@ -1,0 +1,62 @@
+{% comment %}
+  Default navigation when Shopify menus are empty or sparse.
+  @param {string} variant - header | mobile | footer-navigate | footer-categories
+{% endcomment %}
+{%- liquid
+  assign link_class_header = 'morbeez-nav-link text-sm font-semibold text-[var(--color-trust)] hover:text-[var(--color-primary)]'
+  assign link_class_mobile = 'block rounded-lg px-3 py-3 text-sm font-bold uppercase tracking-wide text-[var(--color-trust)] hover:bg-[var(--color-surface)]'
+-%}
+{%- case variant -%}
+  {%- when 'header' -%}
+    <a href="{{ routes.root_url }}" class="{{ link_class_header }}">{{ 'header.menu_home' | t }}</a>
+    <a href="{{ routes.all_products_collection_url }}" class="{{ link_class_header }}">{{ 'header.menu_products' | t }}</a>
+    {%- if collections['bio-fertilizers'] != blank -%}<a href="{{ collections['bio-fertilizers'].url }}" class="{{ link_class_header }}">Bio Fertilizers</a>{%- endif -%}
+    {%- if collections['bio-pesticides'] != blank -%}<a href="{{ collections['bio-pesticides'].url }}" class="{{ link_class_header }}">Bio Pesticides</a>{%- endif -%}
+    {%- if settings.enable_ai_crop_doctor_cta -%}<a href="/pages/crop-doctor" class="{{ link_class_header }}">Crop Doctor</a>{%- endif -%}
+    {%- if settings.enable_dealer_enquiry -%}<a href="/pages/dealer-enquiry" class="{{ link_class_header }}">Dealers</a>{%- endif -%}
+    <a href="/pages/about-us" class="{{ link_class_header }}">{{ 'header.menu_about' | t }}</a>
+    <a href="/pages/contact" class="{{ link_class_header }}">{{ 'header.menu_contact' | t }}</a>
+    <a href="{{ routes.blog_url }}" class="{{ link_class_header }}">{{ 'header.menu_blog' | t }}</a>
+
+  {%- when 'mobile' -%}
+    <li><a href="{{ routes.root_url }}" class="{{ link_class_mobile }}">{{ 'header.menu_home' | t }}</a></li>
+    <li><a href="{{ routes.all_products_collection_url }}" class="{{ link_class_mobile }}">{{ 'header.menu_products' | t }}</a></li>
+    {%- if collections['bio-fertilizers'] != blank -%}<li><a href="{{ collections['bio-fertilizers'].url }}" class="{{ link_class_mobile }}">Bio Fertilizers</a></li>{%- endif -%}
+    {%- if collections['bio-pesticides'] != blank -%}<li><a href="{{ collections['bio-pesticides'].url }}" class="{{ link_class_mobile }}">Bio Pesticides</a></li>{%- endif -%}
+    {%- if settings.enable_ai_crop_doctor_cta -%}<li><a href="/pages/crop-doctor" class="{{ link_class_mobile }}">Crop Doctor</a></li>{%- endif -%}
+    {%- if settings.enable_dealer_enquiry -%}<li><a href="/pages/dealer-enquiry" class="{{ link_class_mobile }}">Dealers</a></li>{%- endif -%}
+    <li><a href="/pages/about-us" class="{{ link_class_mobile }}">{{ 'header.menu_about' | t }}</a></li>
+    <li><a href="/pages/contact" class="{{ link_class_mobile }}">{{ 'header.menu_contact' | t }}</a></li>
+    <li><a href="/pages/faq" class="{{ link_class_mobile }}">{{ 'header.menu_faq' | t }}</a></li>
+    <li><a href="{{ routes.blog_url }}" class="{{ link_class_mobile }}">{{ 'header.menu_blog' | t }}</a></li>
+
+  {%- when 'footer-navigate' -%}
+    <ul class="mt-4 space-y-2.5" role="list">
+      <li><a href="/pages/contact" class="text-sm text-white/80 transition hover:text-[var(--color-accent)]">{{ 'header.menu_contact' | t }}</a></li>
+      <li><a href="/pages/about-us" class="text-sm text-white/80 transition hover:text-[var(--color-accent)]">{{ 'header.menu_about' | t }}</a></li>
+      <li><a href="/pages/faq" class="text-sm text-white/80 transition hover:text-[var(--color-accent)]">{{ 'header.menu_faq' | t }}</a></li>
+      <li><a href="{{ routes.blog_url }}" class="text-sm text-white/80 transition hover:text-[var(--color-accent)]">{{ 'header.menu_blog' | t }}</a></li>
+      <li><a href="/pages/careers" class="text-sm text-white/80 transition hover:text-[var(--color-accent)]">Careers</a></li>
+      <li><a href="/pages/initiatives" class="text-sm text-white/80 transition hover:text-[var(--color-accent)]">Initiatives</a></li>
+      {%- if settings.enable_dealer_enquiry -%}<li><a href="/pages/dealer-enquiry" class="text-sm text-white/80 transition hover:text-[var(--color-accent)]">Dealer enquiry</a></li>{%- endif -%}
+      {%- if settings.enable_ai_crop_doctor_cta -%}<li><a href="/pages/crop-doctor" class="text-sm text-white/80 transition hover:text-[var(--color-accent)]">Crop Doctor</a></li>{%- endif -%}
+      <li><a href="/policies/privacy-policy" class="text-sm text-white/80 transition hover:text-[var(--color-accent)]">Privacy policy</a></li>
+      <li><a href="/policies/terms-of-service" class="text-sm text-white/80 transition hover:text-[var(--color-accent)]">Terms of service</a></li>
+    </ul>
+
+  {%- when 'footer-categories' -%}
+    <ul class="mt-4 space-y-2.5" role="list">
+      {%- assign category_handles = 'bio-fertilizers,bio-pesticides,organic-inputs,micronutrients,plant-growth-regulators,combo-offers' | split: ',' -%}
+      {%- assign category_labels = 'Bio Fertilizers,Bio Pesticides,Organic Inputs,Micronutrients,Plant Growth Regulators,Combo Offers' | split: ',' -%}
+      {%- for handle in category_handles -%}
+        {%- assign idx = forloop.index0 -%}
+        {%- assign col = collections[handle] -%}
+        {%- if col != blank -%}
+          <li><a href="{{ col.url }}" class="text-sm text-white/80 transition hover:text-[var(--color-accent)]">{{ col.title }}</a></li>
+        {%- else -%}
+          <li><a href="/collections/{{ handle }}" class="text-sm text-white/80 transition hover:text-[var(--color-accent)]">{{ category_labels[idx] }}</a></li>
+        {%- endif -%}
+      {%- endfor -%}
+      <li><a href="{{ routes.all_products_collection_url }}" class="text-sm text-white/80 transition hover:text-[var(--color-accent)]">All products</a></li>
+    </ul>
+{%- endcase -%}

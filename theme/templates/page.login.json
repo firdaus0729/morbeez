@@ -1,0 +1,9 @@
+{
+  "sections": {
+    "auth": {
+      "type": "farmer-auth",
+      "settings": {}
+    }
+  },
+  "order": ["auth"]
+}

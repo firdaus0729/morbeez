@@ -2,6 +2,9 @@ import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { verifyShopifyAppProxy } from '../../middleware/webhookVerify.js';
 import { leadService } from '../../services/crm/lead.service.js';
+import { farmerAuthService } from '../../services/auth/farmer-auth.service.js';
+import { getBearerToken, verifyFarmerToken } from '../../lib/jwt.js';
+import { UnauthorizedError } from '../../lib/errors.js';
 
 const leadBodySchema = z.object({
   name: z.string().min(1).max(120),
@@ -70,4 +73,38 @@ export async function shopifyProxyRoutes(app: FastifyInstance): Promise<void> {
   });
 
   app.get('/proxy/health', async () => ({ ok: true, proxy: 'morbeez' }));
+
+  const signupSchema = z.object({
+    email: z.string().email().max(255),
+    firstName: z.string().min(1).max(80),
+    lastName: z.string().min(1).max(80),
+    password: z.string().min(8).max(128),
+    acceptTerms: z.literal(true),
+    newsletter: z.boolean().default(false),
+  });
+
+  const loginSchema = z.object({
+    email: z.string().email().max(255),
+    password: z.string().min(1).max(128),
+  });
+
+  app.post('/proxy/auth/signup', async (request, reply) => {
+    const body = signupSchema.parse(request.body);
+    const result = await farmerAuthService.signup(body);
+    return reply.code(201).send({ ok: true, ...result });
+  });
+
+  app.post('/proxy/auth/login', async (request, reply) => {
+    const body = loginSchema.parse(request.body);
+    const result = await farmerAuthService.login(body);
+    return reply.send({ ok: true, ...result });
+  });
+
+  app.get('/proxy/auth/me', async (request, reply) => {
+    const token = getBearerToken(request.headers.authorization);
+    if (!token) throw new UnauthorizedError('Not signed in');
+    const payload = verifyFarmerToken(token);
+    const farmer = await farmerAuthService.me(payload.sub);
+    return reply.send({ ok: true, farmer });
+  });
 }

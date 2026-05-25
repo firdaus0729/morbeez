@@ -1,0 +1,49 @@
+<section class="morbeez-section morbeez-section--tight" id="MorbeezFaq-{{ section.id }}">
+  <div class="morbeez-container max-w-3xl">
+    {%- if section.settings.heading != blank -%}
+      <h2 class="font-heading text-2xl font-bold text-center">{{ section.settings.heading }}</h2>
+    {%- endif -%}
+    <div class="mt-8 divide-y divide-[var(--color-border)] rounded-2xl border border-[var(--color-border)] bg-white">
+      {%- for block in section.blocks -%}
+        <details class="group px-5 py-4" {{ block.shopify_attributes }}>
+          <summary class="flex cursor-pointer list-none items-center justify-between gap-4 text-sm font-semibold text-[var(--color-trust)]">
+            {{ block.settings.question }}
+            {%- render 'morbeez-icon', name: 'chevron-down', class: 'h-4 w-4 shrink-0 transition group-open:rotate-180' -%}
+          </summary>
+          <div class="mt-3 pb-2 text-sm leading-relaxed text-[var(--color-muted)]">{{ block.settings.answer }}</div>
+        </details>
+      {%- endfor -%}
+    </div>
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "t:sections.faq_accordion.name",
+  "tag": "section",
+  "settings": [
+    { "type": "text", "id": "heading", "label": "t:sections.faq_accordion.settings.heading", "default": "Frequently asked questions" }
+  ],
+  "blocks": [
+    {
+      "type": "faq",
+      "name": "t:sections.faq_accordion.blocks.faq.name",
+      "settings": [
+        { "type": "text", "id": "question", "label": "t:sections.faq_accordion.blocks.faq.settings.question", "default": "How do I choose the right product?" },
+        { "type": "richtext", "id": "answer", "label": "t:sections.faq_accordion.blocks.faq.settings.answer", "default": "<p>Use Crop Doctor or contact our agronomy team on WhatsApp with crop photos and symptoms.</p>" }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:sections.faq_accordion.presets.default",
+      "blocks": [
+        { "type": "faq", "settings": { "question": "How do I choose the right product?", "answer": "<p>Describe your crop and problem in Crop Doctor or WhatsApp — we recommend science-backed Morbeez programs.</p>" } },
+        { "type": "faq", "settings": { "question": "Do you ship across India?", "answer": "<p>Yes. Orders ship pan-India; delivery times depend on your pin code and carrier.</p>" } },
+        { "type": "faq", "settings": { "question": "What payment methods are accepted?", "answer": "<p>Pay securely at checkout via UPI, cards, net banking, and wallets (as enabled in your Shopify store).</p>" } },
+        { "type": "faq", "settings": { "question": "How can I become a dealer?", "answer": "<p>Submit the dealer enquiry form — our team will contact you about territory and wholesale terms.</p>" } }
+      ]
+    }
+  ]
+}
+{% endschema %}

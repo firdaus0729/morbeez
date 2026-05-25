@@ -15,7 +15,18 @@ cd theme
 shopify theme dev
 ```
 
-**Do not** run `shopify theme dev` from repo root without `--path theme` — the CLI will look in the wrong folder and show delete errors for `layout/theme.liquid`, `gift_card.liquid`, and config files.
+**Do not** run `shopify theme dev` or `shopify theme push` from repo root without `--path theme` — the CLI treats the repo root as the theme, then tries to **delete** every file on the remote that is not in that empty folder.
+
+## Push commands
+
+| Command | Target | When |
+|---------|--------|------|
+| `npm run theme:push` | Development `#157069279431` | Daily work (preview URL) |
+| `npm run theme:push:live` | Live Morbeez `#157075734727` | Only when publishing to the live store |
+
+Both use `--path theme` and `--nodelete` so Shopify will not try to remove remote-only files.
+
+Avoid the interactive `shopify theme push` menu that asks “Push to live theme Morbeez?” unless you intend to update production.
 
 ## M1 implementation status
 

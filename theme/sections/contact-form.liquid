@@ -1,0 +1,96 @@
+<section class="morbeez-section morbeez-section--tight" id="MorbeezContact-{{ section.id }}">
+  <div class="morbeez-container">
+    <div class="grid gap-10 lg:grid-cols-2">
+      <div>
+        <h2 class="font-heading text-xl font-bold">{{ section.settings.heading }}</h2>
+        <p class="mt-2 text-sm text-[var(--color-muted)]">{{ section.settings.subheading }}</p>
+        <ul class="mt-6 space-y-4 text-sm">
+          {%- assign phone = section.settings.phone | default: settings.store_phone -%}
+          {%- assign email = section.settings.email | default: settings.store_email -%}
+          {%- assign address = section.settings.address | default: settings.store_address -%}
+          {%- if address != blank -%}
+            <li class="flex gap-3">
+              {%- render 'morbeez-icon', name: 'map-pin', class: 'h-5 w-5 shrink-0 text-[var(--color-primary)]' -%}
+              <span>{{ address }}</span>
+            </li>
+          {%- endif -%}
+          {%- if phone != blank -%}
+            <li class="flex gap-3">
+              {%- render 'morbeez-icon', name: 'phone', class: 'h-5 w-5 shrink-0 text-[var(--color-primary)]' -%}
+              <a href="tel:{{ phone | remove: ' ' }}" class="hover:text-[var(--color-primary)]">{{ phone }}</a>
+            </li>
+          {%- endif -%}
+          {%- if email != blank -%}
+            <li class="flex gap-3">
+              <span class="font-medium text-[var(--color-trust)]">Email:</span>
+              <a href="mailto:{{ email }}" class="hover:text-[var(--color-primary)]">{{ email }}</a>
+            </li>
+          {%- endif -%}
+          {%- if settings.whatsapp_phone != blank -%}
+            <li>
+              <a
+                href="https://wa.me/{{ settings.whatsapp_phone | remove: '+' | remove: ' ' }}"
+                class="morbeez-btn-primary inline-flex border-0"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                {%- render 'morbeez-icon', name: 'whatsapp', class: 'h-5 w-5' -%}
+                {{ 'general.whatsapp.contact' | t }}
+              </a>
+            </li>
+          {%- endif -%}
+        </ul>
+        <div class="mt-6">
+          {%- render 'morbeez-social-links' -%}
+        </div>
+      </div>
+
+      <div class="rounded-2xl border border-[var(--color-border)] bg-white p-6 shadow-sm">
+        {%- form 'contact', id: 'MorbeezContactForm' -%}
+          {%- if form.posted_successfully? -%}
+            <p class="rounded-lg bg-green-50 px-4 py-3 text-sm text-green-800">{{ 'sections.contact_form.success' | t }}</p>
+          {%- else -%}
+            <div class="space-y-4">
+              <div>
+                <label class="text-sm font-semibold" for="ContactName">{{ 'forms.name' | t }}</label>
+                <input type="text" id="ContactName" name="contact[name]" class="mt-1 w-full rounded-lg border border-[var(--color-border)] p-3 text-sm" required>
+              </div>
+              <div>
+                <label class="text-sm font-semibold" for="ContactEmail">Email</label>
+                <input type="email" id="ContactEmail" name="contact[email]" class="mt-1 w-full rounded-lg border border-[var(--color-border)] p-3 text-sm" required>
+              </div>
+              <div>
+                <label class="text-sm font-semibold" for="ContactPhone">{{ 'forms.phone' | t }}</label>
+                <input type="tel" id="ContactPhone" name="contact[phone]" class="mt-1 w-full rounded-lg border border-[var(--color-border)] p-3 text-sm">
+              </div>
+              <div>
+                <label class="text-sm font-semibold" for="ContactBody">{{ 'forms.notes' | t }}</label>
+                <textarea id="ContactBody" name="contact[body]" rows="4" class="mt-1 w-full rounded-lg border border-[var(--color-border)] p-3 text-sm" required></textarea>
+              </div>
+              <button type="submit" class="morbeez-btn-primary w-full border-0">{{ section.settings.submit_label }}</button>
+            </div>
+            {%- if form.errors -%}
+              <p class="mt-3 text-sm text-red-600">{{ form.errors | default_errors }}</p>
+            {%- endif -%}
+          {%- endif -%}
+        {%- endform -%}
+      </div>
+    </div>
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "t:sections.contact_form.name",
+  "tag": "section",
+  "settings": [
+    { "type": "text", "id": "heading", "label": "t:sections.contact_form.settings.heading", "default": "Get in touch" },
+    { "type": "text", "id": "subheading", "label": "t:sections.contact_form.settings.subheading", "default": "Our team responds within one business day." },
+    { "type": "text", "id": "phone", "label": "t:sections.contact_form.settings.phone" },
+    { "type": "text", "id": "email", "label": "t:sections.contact_form.settings.email" },
+    { "type": "textarea", "id": "address", "label": "t:sections.contact_form.settings.address" },
+    { "type": "text", "id": "submit_label", "label": "t:sections.contact_form.settings.submit_label", "default": "Send message" }
+  ],
+  "presets": [{ "name": "t:sections.contact_form.presets.default" }]
+}
+{% endschema %}

@@ -211,9 +211,39 @@
     @apply opacity-100;
   }
 
-  /* Header nav: flex + space-around across middle bar (logo | nav | actions) */
   .morbeez-header-nav {
-    @apply flex w-full items-center justify-around;
+    @apply flex items-center gap-6;
+  }
+
+  .morbeez-nav-link:hover,
+  .morbeez-nav-item:hover > .morbeez-nav-link {
+    @apply text-[var(--color-primary)];
+  }
+
+  .morbeez-nav-item .morbeez-mega-panel {
+    @apply tracking-normal;
+  }
+
+  .morbeez-hero-carousel__arrow {
+    @apply absolute top-1/2 z-20 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full bg-white/15 text-white backdrop-blur-sm transition hover:bg-white/30;
+  }
+
+  .morbeez-hero-carousel__arrow--prev {
+    @apply left-3 md:left-6;
+  }
+
+  .morbeez-hero-carousel__arrow--next {
+    @apply right-3 md:right-6;
+  }
+
+  .morbeez-floating-cart {
+    @apply hidden;
+  }
+
+  @media (max-width: 1023px) {
+    .morbeez-floating-cart {
+      @apply flex;
+    }
   }
 
   .morbeez-money__symbol {
@@ -238,5 +268,41 @@
 
   .morbeez-pagination__ellipsis {
     @apply min-w-8 border-transparent bg-transparent px-1;
+  }
+
+  .morbeez-auth-tab {
+    @apply bg-[#e8ebe8] text-[var(--color-trust)];
+  }
+
+  .morbeez-auth-tab--active {
+    @apply bg-[var(--color-primary)] text-white;
+  }
+
+  .morbeez-auth-field {
+    @apply flex items-stretch overflow-hidden rounded-lg border border-[var(--color-border)] bg-white;
+  }
+
+  .morbeez-auth-field-icon {
+    @apply flex w-11 shrink-0 items-center justify-center bg-[#eef0ee] text-sm font-semibold text-[var(--color-muted)];
+  }
+
+  .morbeez-auth-input {
+    @apply min-w-0 flex-1 border-0 bg-transparent px-3 py-3 text-sm text-[var(--color-trust)] outline-none placeholder:text-[var(--color-muted)];
+  }
+
+  .morbeez-auth-input--password {
+    @apply pr-10;
+  }
+
+  .morbeez-auth-toggle-pw {
+    @apply absolute right-2 top-1/2 -translate-y-1/2 text-[var(--color-muted)] hover:text-[var(--color-primary)];
+  }
+
+  .morbeez-auth-field:has(.morbeez-auth-input--password) {
+    @apply relative;
+  }
+
+  .morbeez-auth-submit {
+    @apply rounded-lg bg-[var(--color-primary)] py-3.5 text-sm font-bold uppercase tracking-wide text-white transition hover:brightness-105 disabled:opacity-60;
   }
 }

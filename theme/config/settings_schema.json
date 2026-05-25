@@ -10,10 +10,10 @@
   {
     "name": "t:settings.brand.name",
     "settings": [
-      { "type": "color", "id": "color_primary", "label": "t:settings.brand.color_primary", "default": "#0d4f2b" },
-      { "type": "color", "id": "color_accent", "label": "t:settings.brand.color_accent", "default": "#c9a227" },
-      { "type": "color", "id": "color_trust", "label": "t:settings.brand.color_trust", "default": "#0f172a" },
-      { "type": "color", "id": "color_surface", "label": "t:settings.brand.color_surface", "default": "#f4f7f2" },
+      { "type": "color", "id": "color_primary", "label": "t:settings.brand.color_primary", "default": "#34B35E", "info": "Logo green — buttons, links, accents" },
+      { "type": "color", "id": "color_accent", "label": "t:settings.brand.color_accent", "default": "#2A9D4E", "info": "Darker green for hover states" },
+      { "type": "color", "id": "color_trust", "label": "t:settings.brand.color_trust", "default": "#111111", "info": "Logo black — headings and body text" },
+      { "type": "color", "id": "color_surface", "label": "t:settings.brand.color_surface", "default": "#f7f8f7" },
       { "type": "color", "id": "color_muted", "label": "t:settings.brand.color_muted", "default": "#5c6b7a" },
       { "type": "image_picker", "id": "logo", "label": "t:settings.brand.logo" },
       { "type": "image_picker", "id": "default_og_image", "label": "t:settings.brand.default_og_image" }
@@ -67,6 +67,23 @@
         "type": "paragraph",
         "content": "t:settings.regional.currency_admin_note"
       }
+    ]
+  },
+  {
+    "name": "t:settings.store_contact.name",
+    "settings": [
+      { "type": "textarea", "id": "store_address", "label": "t:settings.store_contact.address" },
+      { "type": "text", "id": "store_phone", "label": "t:settings.store_contact.phone" },
+      { "type": "text", "id": "store_email", "label": "t:settings.store_contact.email" },
+      {
+        "type": "header",
+        "content": "t:settings.store_contact.social_header"
+      },
+      { "type": "url", "id": "social_facebook", "label": "Facebook" },
+      { "type": "url", "id": "social_instagram", "label": "Instagram" },
+      { "type": "url", "id": "social_youtube", "label": "YouTube" },
+      { "type": "url", "id": "social_linkedin", "label": "LinkedIn" },
+      { "type": "url", "id": "social_twitter", "label": "X (Twitter)" }
     ]
   },
   {

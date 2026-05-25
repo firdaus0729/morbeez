@@ -37,6 +37,7 @@
           <p class="text-sm font-medium text-[var(--color-muted)]">{{ product.vendor }}</p>
         {%- endif -%}
         <h1 class="mt-1 font-heading text-2xl font-bold md:text-3xl">{{ product.title }}</h1>
+        {%- render 'morbeez-rating-stars', product: product, class: 'mt-2' -%}
 
         {%- if product.metafields.morbeez.target_crops.value.size > 0 -%}
           <div class="mt-3 flex flex-wrap gap-2">
@@ -98,6 +99,12 @@
 
     <div class="mt-12 border-t border-gray-100 pt-8">
       {%- render 'morbeez-product-tabs' -%}
+    </div>
+
+    <div class="mt-10" id="product-reviews">
+      {%- for block in section.blocks -%}
+        {%- render block -%}
+      {%- endfor -%}
     </div>
   </div>
 </section>

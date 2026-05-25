@@ -7,11 +7,11 @@
   {%- endunless -%}
 
   :root {
-    --color-primary: {{ settings.color_primary | default: '#0d4f2b' }};
+    --color-primary: {{ settings.color_primary | default: '#34B35E' }};
     --color-primary-dark: color-mix(in srgb, var(--color-primary) 85%, #000);
-    --color-accent: {{ settings.color_accent | default: '#c9a227' }};
-    --color-trust: {{ settings.color_trust | default: '#0f172a' }};
-    --color-surface: {{ settings.color_surface | default: '#f4f7f2' }};
+    --color-accent: {{ settings.color_accent | default: '#2A9D4E' }};
+    --color-trust: {{ settings.color_trust | default: '#111111' }};
+    --color-surface: {{ settings.color_surface | default: '#f7f8f7' }};
     --color-surface-elevated: #ffffff;
     --color-muted: {{ settings.color_muted | default: '#5c6b7a' }};
     --color-border: color-mix(in srgb, var(--color-trust) 10%, transparent);

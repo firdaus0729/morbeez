@@ -1,0 +1,65 @@
+<section class="border-b border-[var(--color-border)] bg-white py-3 shadow-sm" aria-label="{{ 'sections.quick_category_bar.name' | t }}">
+  <div class="morbeez-container">
+    <div class="flex gap-2 overflow-x-auto pb-1 scrollbar-thin" role="list">
+      {%- if section.blocks.size > 0 -%}
+        {%- for block in section.blocks -%}
+          <a
+            href="{{ block.settings.url | default: '#' }}"
+            class="inline-flex shrink-0 items-center gap-2 rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-2 text-xs font-semibold text-[var(--color-trust)] transition hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] sm:text-sm"
+            {{ block.shopify_attributes }}
+          >
+            {%- if block.settings.icon != blank -%}
+              {{ block.settings.icon | image_url: width: 32 | image_tag: class: 'h-6 w-6 rounded-full object-cover' }}
+            {%- else -%}
+              {%- render 'morbeez-icon', name: 'leaf', class: 'h-4 w-4 text-[var(--color-primary)]' -%}
+            {%- endif -%}
+            {{ block.settings.label }}
+          </a>
+        {%- endfor -%}
+      {%- else -%}
+        {%- assign quick_collections = 'bio-fertilizers,bio-pesticides,organic-inputs,plant-growth-regulators,micronutrients' | split: ',' -%}
+        {%- for handle in quick_collections -%}
+          {%- assign coll = collections[handle] -%}
+          {%- if coll != blank -%}
+            <a href="{{ coll.url }}" class="inline-flex shrink-0 items-center gap-2 rounded-full border border-[var(--color-border)] px-4 py-2 text-xs font-semibold hover:border-[var(--color-primary)] sm:text-sm">
+              {%- render 'morbeez-icon', name: 'leaf', class: 'h-4 w-4 text-[var(--color-primary)]' -%}
+              {{ coll.title }}
+            </a>
+          {%- endif -%}
+        {%- endfor -%}
+        <a href="{{ routes.all_products_collection_url }}" class="inline-flex shrink-0 items-center rounded-full bg-[var(--color-primary)] px-4 py-2 text-xs font-semibold text-white sm:text-sm">
+          {{ 'general.view_all' | t }} →
+        </a>
+      {%- endif -%}
+    </div>
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "t:sections.quick_category_bar.name",
+  "settings": [],
+  "blocks": [
+    {
+      "type": "chip",
+      "name": "t:sections.quick_category_bar.blocks.chip.name",
+      "settings": [
+        { "type": "text", "id": "label", "label": "t:sections.quick_category_bar.blocks.chip.settings.label", "default": "Category" },
+        { "type": "url", "id": "url", "label": "t:sections.quick_category_bar.blocks.chip.settings.url" },
+        { "type": "image_picker", "id": "icon", "label": "t:sections.quick_category_bar.blocks.chip.settings.icon" }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:sections.quick_category_bar.presets.default",
+      "blocks": [
+        { "type": "chip", "settings": { "label": "Bio Fertilizers", "url": "/collections/bio-fertilizers" } },
+        { "type": "chip", "settings": { "label": "Bio Pesticides", "url": "/collections/bio-pesticides" } },
+        { "type": "chip", "settings": { "label": "Organic Inputs", "url": "/collections/organic-inputs" } },
+        { "type": "chip", "settings": { "label": "Shop All", "url": "/collections/all" } }
+      ]
+    }
+  ]
+}
+{% endschema %}

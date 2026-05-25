@@ -1,0 +1,13 @@
+{
+  "sections": {
+    "main": {
+      "type": "main-page",
+      "settings": {}
+    },
+    "trust": {
+      "type": "trust-features",
+      "settings": {}
+    }
+  },
+  "order": ["main", "trust"]
+}

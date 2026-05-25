@@ -47,6 +47,20 @@
       "admin_link_html": "Are you the store owner? <a href=\"/admin\">Log in here</a>"
     }
   },
+  "header": {
+    "tagline": "Grow with Experts",
+    "search_category": "Category",
+    "all_categories": "All categories",
+    "cart_items": "items",
+    "menu_home": "Home",
+    "menu_products": "Products",
+    "menu_about": "About us",
+    "menu_contact": "Contact",
+    "menu_blog": "Blog",
+    "menu_faq": "FAQ / Help",
+    "menu_main": "Main menu",
+    "menu_more": "More links"
+  },
   "accessibility": {
     "skip_to_content": "Skip to content",
     "main_navigation": "Main navigation",
@@ -197,6 +211,17 @@
       },
       "presets": { "default": "Featured collection" },
       "empty": "Select a collection with products to display."
+    },
+    "bestsellers": {
+      "empty": "Add products or assign a bestsellers collection to show this section."
+    },
+    "newsletter": {
+      "email_label": "Email address",
+      "subscribe": "Subscribe",
+      "success": "Thanks for subscribing!"
+    },
+    "contact_form": {
+      "success": "Thank you — we will get back to you shortly."
     },
     "combo_offer": {
       "name": "Combo offers",

@@ -1,0 +1,24 @@
+{% comment %}
+  Morbeez brand lockup. Prefer Theme settings → Brand → Logo; else theme/assets/morbeez-logo.png
+{% endcomment %}
+<a href="{{ routes.root_url }}" class="morbeez-logo inline-flex shrink-0 {{ class }}" aria-label="{{ shop.name }}">
+  {%- if settings.logo != blank -%}
+    {{
+      settings.logo
+      | image_url: width: 280
+      | image_tag:
+        alt: shop.name,
+        class: 'h-auto w-auto max-h-12 max-w-[220px] object-contain object-left sm:max-h-14 sm:max-w-[260px]',
+        widths: '140, 200, 280'
+    }}
+  {%- else -%}
+    <img
+      src="{{ 'morbeez-logo.png' | asset_url }}"
+      alt="{{ shop.name }}"
+      width="260"
+      height="60"
+      class="h-auto w-auto max-h-12 max-w-[220px] object-contain object-left sm:max-h-14 sm:max-w-[260px]"
+      loading="eager"
+    >
+  {%- endif -%}
+</a>

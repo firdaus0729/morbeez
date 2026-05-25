@@ -1,0 +1,51 @@
+<section class="morbeez-section morbeez-section--tight bg-[var(--color-trust)] text-white" id="MorbeezNewsletter-{{ section.id }}">
+  <div class="morbeez-container">
+    <div class="mx-auto max-w-2xl text-center">
+      {%- if section.settings.heading != blank -%}
+        <h2 class="font-heading text-2xl font-bold md:text-3xl">{{ section.settings.heading }}</h2>
+      {%- endif -%}
+      {%- if section.settings.subheading != blank -%}
+        <p class="mt-2 text-sm text-white/70">{{ section.settings.subheading }}</p>
+      {%- endif -%}
+
+      {%- form 'customer', id: 'MorbeezNewsletterForm', class: 'mt-6' -%}
+        <input type="hidden" name="contact[tags]" value="newsletter">
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-stretch">
+          <label class="sr-only" for="NewsletterEmail-{{ section.id }}">{{ 'sections.newsletter.email_label' | t }}</label>
+          <input
+            id="NewsletterEmail-{{ section.id }}"
+            type="email"
+            name="contact[email]"
+            value="{{ form.email }}"
+            placeholder="{{ section.settings.placeholder | default: 'Your email address' }}"
+            class="min-w-0 flex-1 rounded-xl border-0 bg-white/10 px-4 py-3 text-sm text-white placeholder:text-white/50 focus:ring-2 focus:ring-[var(--color-primary)]"
+            required
+            autocomplete="email"
+          >
+          <button type="submit" class="shrink-0 rounded-xl bg-[var(--color-primary)] px-6 py-3 text-sm font-bold text-white transition hover:brightness-105">
+            {{ section.settings.button_label | default: 'Subscribe' }}
+          </button>
+        </div>
+        {%- if form.posted_successfully? -%}
+          <p class="mt-3 text-sm text-[var(--color-accent)]">{{ 'sections.newsletter.success' | t }}</p>
+        {%- elsif form.errors -%}
+          <p class="mt-3 text-sm text-red-300">{{ form.errors | default_errors }}</p>
+        {%- endif -%}
+      {%- endform -%}
+    </div>
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "t:sections.newsletter.name",
+  "tag": "section",
+  "settings": [
+    { "type": "text", "id": "heading", "label": "t:sections.newsletter.settings.heading", "default": "Stay updated with Morbeez" },
+    { "type": "text", "id": "subheading", "label": "t:sections.newsletter.settings.subheading", "default": "Crop tips, offers & new product launches" },
+    { "type": "text", "id": "placeholder", "label": "t:sections.newsletter.settings.placeholder", "default": "Enter your email" },
+    { "type": "text", "id": "button_label", "label": "t:sections.newsletter.settings.button_label", "default": "Subscribe" }
+  ],
+  "presets": [{ "name": "t:sections.newsletter.presets.default" }]
+}
+{% endschema %}

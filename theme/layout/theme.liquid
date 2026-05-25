@@ -15,6 +15,7 @@
 
     {{ 'theme.css' | asset_url | stylesheet_tag: preload: true }}
     <script src="{{ 'theme.js' | asset_url }}" defer></script>
+    <script src="{{ 'farmer-auth-header.js' | asset_url }}" defer></script>
   </head>
 
   <body class="template-{{ template.name }}">
@@ -28,6 +29,7 @@
 
     {% sections 'footer-group' %}
 
+    {%- render 'morbeez-floating-cart' -%}
     {% section 'sticky-whatsapp-cta' %}
 
     {%- if settings.enable_organization_schema -%}

@@ -1,0 +1,44 @@
+{%- assign collection = collections[section.settings.collection] -%}
+
+<section class="morbeez-section bg-[var(--color-surface)]" id="MorbeezBestsellers-{{ section.id }}">
+  <div class="morbeez-container">
+    {%- render 'morbeez-section-header',
+      eyebrow: section.settings.eyebrow,
+      heading: section.settings.heading,
+      subheading: section.settings.subheading,
+      link_url: collection.url,
+      link_label: section.settings.view_all_label
+    -%}
+
+    {%- if collection != blank and collection.products_count > 0 -%}
+      <div class="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4 lg:gap-6">
+        {%- for product in collection.products limit: section.settings.products_to_show -%}
+          {%- render 'morbeez-product-card', product: product -%}
+        {%- endfor -%}
+      </div>
+    {%- else -%}
+      <p class="text-center text-[var(--color-muted)]">{{ 'sections.bestsellers.empty' | t }}</p>
+    {%- endif -%}
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "t:sections.bestsellers.name",
+  "tag": "section",
+  "settings": [
+    { "type": "text", "id": "eyebrow", "label": "t:sections.bestsellers.settings.eyebrow", "default": "Popular" },
+    { "type": "text", "id": "heading", "label": "t:sections.bestsellers.settings.heading", "default": "Our bestsellers" },
+    { "type": "text", "id": "subheading", "label": "t:sections.bestsellers.settings.subheading", "default": "Top-rated picks from Morbeez" },
+    {
+      "type": "collection",
+      "id": "collection",
+      "label": "t:sections.bestsellers.settings.collection",
+      "info": "t:sections.bestsellers.settings.collection_info"
+    },
+    { "type": "range", "id": "products_to_show", "min": 4, "max": 12, "step": 1, "default": 8, "label": "t:sections.bestsellers.settings.products_to_show" },
+    { "type": "text", "id": "view_all_label", "label": "t:sections.bestsellers.settings.view_all_label", "default": "View all" }
+  ],
+  "presets": [{ "name": "t:sections.bestsellers.presets.default" }]
+}
+{% endschema %}

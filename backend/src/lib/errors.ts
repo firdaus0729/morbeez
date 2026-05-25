@@ -28,6 +28,12 @@ export class NotFoundError extends AppError {
   }
 }
 
+export class ConflictError extends AppError {
+  constructor(message: string) {
+    super(message, 409, 'CONFLICT');
+  }
+}
+
 export class WebhookVerificationError extends AppError {
   constructor(provider: string) {
     super(`Invalid ${provider} webhook signature`, 401, 'WEBHOOK_VERIFICATION_FAILED');

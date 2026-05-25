@@ -41,6 +41,7 @@ const envSchema = z.object({
   PLANT_ID_API_KEY: z.string().optional(),
 
   INTERNAL_API_KEY: z.string().min(16),
+  FARMER_JWT_SECRET: z.string().min(32),
   RATE_LIMIT_MAX: z.coerce.number().default(100),
   RATE_LIMIT_WINDOW_MS: z.coerce.number().default(60_000),
 

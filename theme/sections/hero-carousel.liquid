@@ -1,0 +1,151 @@
+{%- if section.blocks.size > 0 -%}
+  <section
+    class="morbeez-hero-carousel relative overflow-hidden bg-[var(--color-trust)]"
+    id="MorbeezHeroCarousel-{{ section.id }}"
+    data-hero-carousel
+    data-autoplay="{{ section.settings.autoplay }}"
+    data-interval="{{ section.settings.autoplay_speed | times: 1000 }}"
+    aria-label="{{ 'sections.hero_carousel.name' | t }}"
+  >
+    <div class="morbeez-hero-carousel__track relative aspect-[21/9] min-h-[280px] sm:min-h-[360px] md:aspect-[21/8] lg:min-h-[420px]" data-hero-track>
+      {%- for block in section.blocks -%}
+        <div
+          class="morbeez-hero-carousel__slide absolute inset-0 transition-opacity duration-700 {% if forloop.first %}opacity-100 z-10{% else %}opacity-0 z-0{% endif %}"
+          data-hero-slide
+          data-index="{{ forloop.index0 }}"
+          {{ block.shopify_attributes }}
+        >
+          {%- if block.settings.image != blank -%}
+            {%- if forloop.first -%}
+              {{
+                block.settings.image
+                | image_url: width: 1920
+                | image_tag: class: 'h-full w-full object-cover', loading: 'eager', fetchpriority: 'high', sizes: '100vw', alt: block.settings.heading_line_2
+              }}
+            {%- else -%}
+              {{
+                block.settings.image
+                | image_url: width: 1920
+                | image_tag: class: 'h-full w-full object-cover', loading: 'lazy', sizes: '100vw', alt: block.settings.heading_line_2
+              }}
+            {%- endif -%}
+          {%- else -%}
+            <div class="h-full w-full bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-trust)]"></div>
+          {%- endif -%}
+          <div
+            class="absolute inset-0"
+            style="background: linear-gradient(to right, rgba(15,23,42,{{ block.settings.overlay | divided_by: 100.0 }}), rgba(15,23,42,{{ block.settings.overlay | times: 0.4 | divided_by: 100.0 }}));"
+            aria-hidden="true"
+          ></div>
+          <div class="absolute inset-0 flex items-center">
+            <div class="morbeez-container w-full text-center text-white lg:text-left">
+              {%- if block.settings.eyebrow != blank -%}
+                <p class="text-sm font-semibold uppercase tracking-[0.2em] text-white/90 md:text-base">{{ block.settings.eyebrow }}</p>
+              {%- endif -%}
+              {%- if block.settings.heading_line_1 != blank -%}
+                <p class="mt-2 font-heading text-2xl font-medium text-white/95 sm:text-3xl md:text-4xl">{{ block.settings.heading_line_1 }}</p>
+              {%- endif -%}
+              {%- if block.settings.heading_highlight != blank -%}
+                <p class="mt-1 font-heading text-4xl font-extrabold leading-none sm:text-5xl md:text-6xl lg:text-7xl" style="color: {{ block.settings.highlight_color }}; text-shadow: 2px 2px 0 #fff, -1px -1px 0 rgba(0,0,0,0.2);">
+                  {{ block.settings.heading_highlight }}
+                </p>
+              {%- endif -%}
+              {%- if block.settings.heading_line_2 != blank -%}
+                <p class="mt-1 font-heading text-3xl font-bold uppercase tracking-wide sm:text-4xl md:text-5xl lg:text-6xl">{{ block.settings.heading_line_2 }}</p>
+              {%- endif -%}
+              {%- if block.settings.button_label != blank and block.settings.button_url != blank -%}
+                <div class="mt-8">
+                  {%- render 'morbeez-button', url: block.settings.button_url, label: block.settings.button_label, style: 'primary', show_arrow: true -%}
+                </div>
+              {%- endif -%}
+            </div>
+          </div>
+        </div>
+      {%- endfor -%}
+    </div>
+
+    {%- if section.blocks.size > 1 -%}
+      <button type="button" class="morbeez-hero-carousel__arrow morbeez-hero-carousel__arrow--prev" data-hero-prev aria-label="{{ 'general.pagination_previous' | t }}">
+        {%- render 'morbeez-icon', name: 'chevron-left', class: 'h-8 w-8' -%}
+      </button>
+      <button type="button" class="morbeez-hero-carousel__arrow morbeez-hero-carousel__arrow--next" data-hero-next aria-label="{{ 'general.pagination_next' | t }}">
+        {%- render 'morbeez-icon', name: 'chevron-right', class: 'h-8 w-8' -%}
+      </button>
+      <div class="absolute bottom-4 left-0 right-0 z-20 flex justify-center gap-2" data-hero-dots>
+        {%- for block in section.blocks -%}
+          <button
+            type="button"
+            class="h-2.5 w-2.5 rounded-full bg-white/40 transition hover:bg-white/70 {% if forloop.first %}!w-8 bg-white{% endif %}"
+            data-hero-dot="{{ forloop.index0 }}"
+            aria-label="Slide {{ forloop.index }}"
+          ></button>
+        {%- endfor -%}
+      </div>
+    {%- endif -%}
+  </section>
+{%- endif -%}
+
+{% schema %}
+{
+  "name": "t:sections.hero_carousel.name",
+  "tag": "section",
+  "max_blocks": 6,
+  "settings": [
+    { "type": "checkbox", "id": "autoplay", "label": "t:sections.hero_carousel.settings.autoplay", "default": true },
+    {
+      "type": "range",
+      "id": "autoplay_speed",
+      "min": 3,
+      "max": 10,
+      "step": 1,
+      "unit": "s",
+      "label": "t:sections.hero_carousel.settings.autoplay_speed",
+      "default": 5
+    }
+  ],
+  "blocks": [
+    {
+      "type": "slide",
+      "name": "t:sections.hero_carousel.blocks.slide.name",
+      "settings": [
+        { "type": "image_picker", "id": "image", "label": "t:sections.hero_carousel.blocks.slide.settings.image" },
+        { "type": "text", "id": "eyebrow", "label": "t:sections.hero_carousel.blocks.slide.settings.eyebrow", "default": "Proven success by serving" },
+        { "type": "text", "id": "heading_line_1", "label": "t:sections.hero_carousel.blocks.slide.settings.heading_line_1" },
+        { "type": "text", "id": "heading_highlight", "label": "t:sections.hero_carousel.blocks.slide.settings.heading_highlight", "default": "1 MILLION" },
+        { "type": "color", "id": "highlight_color", "label": "t:sections.hero_carousel.blocks.slide.settings.highlight_color", "default": "#dc2626" },
+        { "type": "text", "id": "heading_line_2", "label": "t:sections.hero_carousel.blocks.slide.settings.heading_line_2", "default": "HAPPY FARMERS" },
+        { "type": "range", "id": "overlay", "min": 20, "max": 80, "step": 5, "unit": "%", "label": "t:sections.hero_carousel.blocks.slide.settings.overlay", "default": 45 },
+        { "type": "text", "id": "button_label", "label": "t:sections.hero_carousel.blocks.slide.settings.button_label", "default": "Shop now" },
+        { "type": "url", "id": "button_url", "label": "t:sections.hero_carousel.blocks.slide.settings.button_url" }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:sections.hero_carousel.presets.default",
+      "blocks": [
+        {
+          "type": "slide",
+          "settings": {
+            "eyebrow": "Proven success by serving",
+            "heading_highlight": "1 MILLION",
+            "heading_line_2": "HAPPY FARMERS",
+            "button_label": "Explore products"
+          }
+        },
+        {
+          "type": "slide",
+          "settings": {
+            "eyebrow": "Morbeez Agri Inputs",
+            "heading_line_1": "Science-backed",
+            "heading_highlight": "CROP CARE",
+            "heading_line_2": "for every season",
+            "highlight_color": "#c9a227",
+            "button_label": "Shop by crop"
+          }
+        }
+      ]
+    }
+  ]
+}
+{% endschema %}

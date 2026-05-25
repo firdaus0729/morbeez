@@ -2,8 +2,13 @@
 #   npm run theme:dev
 #   npm run theme:push
 #
-# Pinned theme: Development (157069279431) — not the separate "Morbeez" copy.
+# Pinned theme: Development (157069279431) — safe for daily pushes.
+# Live published theme "Morbeez" is #157075734727 — use npm run theme:push:live only when intentional.
 
 [environments.development]
 store = "morbeez.myshopify.com"
 theme = "157069279431"
+
+[environments.live]
+store = "morbeez.myshopify.com"
+theme = "157075734727"

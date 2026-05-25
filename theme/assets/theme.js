@@ -104,4 +104,69 @@
     tick();
     setInterval(tick, 1000);
   });
+
+  /* Header search — category dropdown jumps to collection */
+  var catSelect = document.querySelector('[data-header-collection-select]');
+  if (catSelect) {
+    catSelect.addEventListener('change', function () {
+      if (catSelect.value) window.location.href = catSelect.value;
+    });
+  }
+
+  /* Hero carousel */
+  document.querySelectorAll('[data-hero-carousel]').forEach(function (root) {
+    var slides = root.querySelectorAll('[data-hero-slide]');
+    if (slides.length < 2) return;
+
+    var index = 0;
+    var autoplay = root.getAttribute('data-autoplay') === 'true';
+    var interval = parseInt(root.getAttribute('data-interval'), 10) || 5000;
+    var timer;
+
+    function show(i) {
+      index = (i + slides.length) % slides.length;
+      slides.forEach(function (slide, n) {
+        var active = n === index;
+        slide.classList.toggle('opacity-100', active);
+        slide.classList.toggle('z-10', active);
+        slide.classList.toggle('opacity-0', !active);
+        slide.classList.toggle('z-0', !active);
+      });
+      root.querySelectorAll('[data-hero-dot]').forEach(function (dot, n) {
+        dot.classList.toggle('!w-8', n === index);
+        dot.classList.toggle('bg-white', n === index);
+        dot.classList.toggle('bg-white/40', n !== index);
+      });
+    }
+
+    function next() {
+      show(index + 1);
+    }
+    function prev() {
+      show(index - 1);
+    }
+
+    var nextBtn = root.querySelector('[data-hero-next]');
+    var prevBtn = root.querySelector('[data-hero-prev]');
+    if (nextBtn) nextBtn.addEventListener('click', next);
+    if (prevBtn) prevBtn.addEventListener('click', prev);
+
+    root.querySelectorAll('[data-hero-dot]').forEach(function (dot) {
+      dot.addEventListener('click', function () {
+        show(parseInt(dot.getAttribute('data-hero-dot'), 10));
+      });
+    });
+
+    function startAutoplay() {
+      if (!autoplay) return;
+      timer = setInterval(next, interval);
+    }
+    function stopAutoplay() {
+      if (timer) clearInterval(timer);
+    }
+
+    root.addEventListener('mouseenter', stopAutoplay);
+    root.addEventListener('mouseleave', startAutoplay);
+    startAutoplay();
+  });
 })();

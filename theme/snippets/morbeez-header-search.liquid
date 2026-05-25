@@ -1,0 +1,45 @@
+{% comment %}
+  Header search bar with optional category jump (Katyayani-style).
+  @param {string} [placeholder]
+{% endcomment %}
+<form
+  action="{{ routes.search_url }}"
+  method="get"
+  role="search"
+  class="morbeez-header-search flex w-full max-w-3xl flex-1"
+>
+  <input type="hidden" name="type" value="product">
+  <div class="flex w-full overflow-hidden rounded-lg border-2 border-[var(--color-border)] bg-white shadow-sm focus-within:border-[var(--color-primary)]">
+    <label class="sr-only" for="HeaderSearchCategory">{{ 'header.search_category' | t }}</label>
+    <select
+      id="HeaderSearchCategory"
+      class="hidden max-w-[9rem] shrink-0 border-r border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2.5 text-xs font-semibold text-[var(--color-trust)] sm:block sm:max-w-[11rem] sm:text-sm"
+      data-header-collection-select
+      aria-label="{{ 'header.search_category' | t }}"
+    >
+      <option value="">{{ 'header.all_categories' | t }}</option>
+      {%- for collection in collections -%}
+        {%- unless collection.handle == 'frontpage' -%}
+          <option value="{{ collection.url }}">{{ collection.title }}</option>
+        {%- endunless -%}
+      {%- endfor -%}
+    </select>
+    <label class="sr-only" for="HeaderSearchQuery">{{ 'general.search' | t }}</label>
+    <input
+      id="HeaderSearchQuery"
+      type="search"
+      name="q"
+      value="{{ search.terms | escape }}"
+      placeholder="{{ placeholder | default: 'Search products, crops, solutions…' }}"
+      class="min-w-0 flex-1 border-0 bg-transparent px-3 py-2.5 text-sm text-[var(--color-trust)] placeholder:text-[var(--color-muted)] focus:outline-none focus:ring-0 sm:px-4"
+      autocomplete="off"
+    >
+    <button
+      type="submit"
+      class="flex shrink-0 items-center justify-center bg-[var(--color-primary)] px-4 text-white transition hover:brightness-110"
+      aria-label="{{ 'search.submit' | t }}"
+    >
+      {%- render 'morbeez-icon', name: 'search', class: 'h-5 w-5' -%}
+    </button>
+  </div>
+</form>

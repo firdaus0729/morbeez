@@ -1,9 +1,9 @@
 {
   "current": {
-    "color_primary": "#1b5e3b",
-    "color_accent": "#c9a227",
-    "color_trust": "#1e293b",
-    "color_surface": "#f8faf6",
+    "color_primary": "#34B35E",
+    "color_accent": "#2A9D4E",
+    "color_trust": "#111111",
+    "color_surface": "#f7f8f7",
     "color_muted": "#64748b",
     "enable_ai_crop_doctor_cta": true,
     "enable_dealer_enquiry": true,
@@ -35,8 +35,21 @@
           "footer": {
             "type": "footer",
             "settings": {
-              "tagline": "Premium agriculture solutions for Indian farmers"
-            }
+              "tagline": "Premium agriculture solutions for Indian farmers — Grow with Experts",
+              "show_contact_column": true,
+              "contact_heading": "Contact us"
+            },
+            "blocks": {
+              "menu_navigate": {
+                "type": "menu",
+                "settings": { "heading": "Navigate", "menu": "footer", "fallback": "navigate" }
+              },
+              "menu_categories": {
+                "type": "menu",
+                "settings": { "heading": "Product categories", "menu": "", "fallback": "categories" }
+              }
+            },
+            "block_order": ["menu_navigate", "menu_categories"]
           }
         },
         "settings": {}

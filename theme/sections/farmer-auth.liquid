@@ -1,0 +1,103 @@
+<section class="morbeez-section" id="MorbeezFarmerAuth">
+  <div class="morbeez-container flex justify-center">
+    <div class="morbeez-auth-card w-full max-w-lg overflow-hidden rounded-2xl border border-[var(--color-border)] bg-white shadow-lg">
+      <div class="morbeez-auth-tabs grid grid-cols-2" role="tablist">
+        <button
+          type="button"
+          class="morbeez-auth-tab py-3.5 text-sm font-bold uppercase tracking-wide transition"
+          data-auth-tab="login"
+          role="tab"
+          aria-selected="false"
+          aria-controls="morbeez-auth-login"
+        >
+          Login
+        </button>
+        <button
+          type="button"
+          class="morbeez-auth-tab morbeez-auth-tab--active py-3.5 text-sm font-bold uppercase tracking-wide transition"
+          data-auth-tab="signup"
+          role="tab"
+          aria-selected="true"
+          aria-controls="morbeez-auth-signup"
+        >
+          Sign Up
+        </button>
+      </div>
+
+      <div id="morbeez-auth-logged-in" class="hidden p-6 text-center" hidden>
+        <p class="text-sm text-[var(--color-muted)]">Signed in as</p>
+        <p class="mt-1 font-heading text-xl font-bold text-[var(--color-trust)]" data-auth-user-name></p>
+        <p class="mt-1 text-sm text-[var(--color-muted)]" data-auth-user-email></p>
+        <button type="button" class="morbeez-btn-secondary mt-6 w-full justify-center" data-auth-logout>Log out</button>
+        <a href="{{ routes.root_url }}" class="mt-3 inline-block text-sm font-semibold text-[var(--color-primary)]">Continue shopping</a>
+      </div>
+
+      <div id="morbeez-auth-message" class="hidden mx-6 mt-4 rounded-lg px-4 py-3 text-sm" role="alert" hidden></div>
+
+      <form id="morbeez-auth-login" class="morbeez-auth-panel hidden p-6" data-auth-panel="login" aria-labelledby="morbeez-auth-login-tab">
+        <div class="morbeez-auth-field">
+          <span class="morbeez-auth-field-icon" aria-hidden="true">@</span>
+          <input type="email" name="email" placeholder="Email" autocomplete="email" required class="morbeez-auth-input">
+        </div>
+        <div class="morbeez-auth-field mt-3">
+          <span class="morbeez-auth-field-icon" aria-hidden="true">{%- render 'morbeez-icon', name: 'key', class: 'h-4 w-4' -%}</span>
+          <input type="password" name="password" placeholder="Password" autocomplete="current-password" required class="morbeez-auth-input morbeez-auth-input--password">
+          <button type="button" class="morbeez-auth-toggle-pw" data-toggle-pw aria-label="Show password">{%- render 'morbeez-icon', name: 'eye', class: 'h-5 w-5' -%}</button>
+        </div>
+        <button type="submit" class="morbeez-auth-submit mt-6 w-full">Login</button>
+      </form>
+
+      <form id="morbeez-auth-signup" class="morbeez-auth-panel p-6" data-auth-panel="signup" aria-labelledby="morbeez-auth-signup-tab">
+        <div class="morbeez-auth-field">
+          <span class="morbeez-auth-field-icon" aria-hidden="true">@</span>
+          <input type="email" name="email" placeholder="Email" autocomplete="email" required class="morbeez-auth-input">
+        </div>
+        <div class="mt-3 grid grid-cols-2 gap-3">
+          <div class="morbeez-auth-field">
+            <span class="morbeez-auth-field-icon" aria-hidden="true">{%- render 'morbeez-icon', name: 'user', class: 'h-4 w-4' -%}</span>
+            <input type="text" name="firstName" placeholder="First Name" autocomplete="given-name" required class="morbeez-auth-input">
+          </div>
+          <div class="morbeez-auth-field">
+            <span class="morbeez-auth-field-icon" aria-hidden="true">{%- render 'morbeez-icon', name: 'user', class: 'h-4 w-4' -%}</span>
+            <input type="text" name="lastName" placeholder="Last Name" autocomplete="family-name" required class="morbeez-auth-input">
+          </div>
+        </div>
+        <div class="morbeez-auth-field mt-3">
+          <span class="morbeez-auth-field-icon" aria-hidden="true">{%- render 'morbeez-icon', name: 'key', class: 'h-4 w-4' -%}</span>
+          <input type="password" name="password" placeholder="Password" autocomplete="new-password" required minlength="8" class="morbeez-auth-input morbeez-auth-input--password">
+          <button type="button" class="morbeez-auth-toggle-pw" data-toggle-pw aria-label="Show password">{%- render 'morbeez-icon', name: 'eye', class: 'h-5 w-5' -%}</button>
+        </div>
+        <div class="morbeez-auth-field mt-3">
+          <span class="morbeez-auth-field-icon" aria-hidden="true">{%- render 'morbeez-icon', name: 'key', class: 'h-4 w-4' -%}</span>
+          <input type="password" name="confirmPassword" placeholder="Confirm Password" autocomplete="new-password" required minlength="8" class="morbeez-auth-input morbeez-auth-input--password">
+          <button type="button" class="morbeez-auth-toggle-pw" data-toggle-pw aria-label="Show password">{%- render 'morbeez-icon', name: 'eye', class: 'h-5 w-5' -%}</button>
+        </div>
+        <label class="mt-4 flex cursor-pointer items-start gap-2.5 text-sm text-[var(--color-trust)]">
+          <input type="checkbox" name="acceptTerms" required class="mt-0.5 h-4 w-4 rounded border-gray-300 text-[var(--color-primary)]">
+          <span>I accept the <a href="/policies/terms-of-service" class="font-medium text-[var(--color-primary)] hover:underline">Terms of Service</a> and <a href="/policies/privacy-policy" class="font-medium text-[var(--color-primary)] hover:underline">Privacy Policy</a></span>
+        </label>
+        <label class="mt-3 flex cursor-pointer items-start gap-2.5 text-sm text-[var(--color-trust)]">
+          <input type="checkbox" name="newsletter" class="mt-0.5 h-4 w-4 rounded border-gray-300 text-[var(--color-primary)]">
+          <span>Subscribe to our newsletter</span>
+        </label>
+        <button type="submit" class="morbeez-auth-submit mt-6 w-full">Sign Up</button>
+      </form>
+    </div>
+  </div>
+</section>
+
+<script src="{{ 'farmer-auth.js' | asset_url }}" defer></script>
+
+{% schema %}
+{
+  "name": "Farmer login / sign up",
+  "tag": "section",
+  "settings": [
+    {
+      "type": "paragraph",
+      "content": "Website farmer accounts stored in Morbeez archives (Supabase). Not Shopify Customer Accounts."
+    }
+  ],
+  "presets": [{ "name": "Farmer login / sign up" }]
+}
+{% endschema %}

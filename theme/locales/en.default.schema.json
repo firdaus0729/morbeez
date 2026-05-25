@@ -15,6 +15,13 @@
       "type_header_font": "Heading font",
       "type_body_font": "Body font"
     },
+    "store_contact": {
+      "name": "Store contact & social",
+      "address": "Business address",
+      "phone": "Phone number",
+      "email": "Email address",
+      "social_header": "Social profiles (used in footer & contact page)"
+    },
     "regional": {
       "name": "India / currency",
       "display_prices_inr": "Show prices with ₹ (Indian Rupee)",
@@ -45,22 +52,84 @@
     "header": {
       "name": "Header",
       "settings": {
-        "menu": "Menu"
+        "menu": "Main navigation menu",
+        "menu_info": "Create in Admin → Content → Menus (Products, Crop Doctor, Dealers, About, Contact, etc.).",
+        "show_search": "Show search icon (desktop)",
+        "show_search_bar": "Show expandable search bar below header",
+        "utility_menu": "Secondary menu (mobile)",
+        "utility_menu_info": "Careers, Initiatives, Dealer, etc. Shown below main links on mobile.",
+        "search_placeholder": "Search placeholder",
+        "show_login": "Show login button",
+        "login_url": "Farmer login page URL",
+        "login_url_info": "Use /pages/login for Morbeez website accounts (not Shopify Customer Accounts).",
+        "login_label": "Login button label"
       }
+    },
+    "hero_carousel": {
+      "name": "Hero carousel",
+      "settings": {
+        "autoplay": "Auto-rotate slides",
+        "autoplay_speed": "Seconds per slide"
+      },
+      "blocks": {
+        "slide": {
+          "name": "Slide",
+          "settings": {
+            "image": "Background image",
+            "eyebrow": "Top line",
+            "heading_line_1": "Heading line 1",
+            "heading_highlight": "Highlight text (large)",
+            "highlight_color": "Highlight color",
+            "heading_line_2": "Heading line 2",
+            "overlay": "Dark overlay",
+            "button_label": "Button label",
+            "button_url": "Button link"
+          }
+        }
+      },
+      "presets": { "default": "Hero carousel" }
+    },
+    "quick_category_bar": {
+      "name": "Quick category bar",
+      "blocks": {
+        "chip": {
+          "name": "Category chip",
+          "settings": {
+            "label": "Label",
+            "url": "Link",
+            "icon": "Icon"
+          }
+        }
+      },
+      "presets": { "default": "Quick categories" }
     },
     "footer": {
       "name": "Footer",
       "settings": {
         "footer_logo": "Footer logo",
         "footer_logo_info": "Optional. Use a light/white logo for the dark footer. If empty, uses Theme settings → Brand → Logo.",
-        "tagline": "Tagline"
+        "tagline": "Tagline",
+        "contact_header": "Contact column",
+        "show_contact_column": "Show contact column",
+        "contact_heading": "Contact heading",
+        "contact_address": "Address (overrides theme setting)",
+        "contact_phone": "Phone (overrides theme setting)",
+        "contact_email": "Email (overrides theme setting)",
+        "social_header": "Social links (footer-specific overrides)",
+        "newsletter_header": "Newsletter in footer",
+        "show_newsletter": "Show newsletter signup in footer",
+        "newsletter_heading": "Newsletter heading",
+        "show_app_promo": "Show app promo text",
+        "app_promo_text": "App promo message"
       },
       "blocks": {
         "menu": {
           "name": "Menu",
           "settings": {
             "heading": "Heading",
-            "menu": "Menu"
+            "menu": "Menu",
+            "fallback": "Fallback links when menu is empty",
+            "fallback_info": "Built-in Morbeez links for Navigate or Product categories"
           }
         }
       },
@@ -367,6 +436,69 @@
     },
     "main_password": {
       "name": "Password page"
+    },
+    "trust_features": {
+      "name": "Trust / USP bar",
+      "blocks": {
+        "feature": {
+          "name": "Feature",
+          "settings": {
+            "icon": "Icon",
+            "title": "Title",
+            "text": "Description"
+          }
+        }
+      },
+      "presets": { "default": "Trust features" }
+    },
+    "bestsellers": {
+      "name": "Bestsellers",
+      "settings": {
+        "eyebrow": "Eyebrow",
+        "heading": "Heading",
+        "subheading": "Subheading",
+        "collection": "Collection",
+        "collection_info": "Create a Smart collection sorted by best-selling, or use All products until then.",
+        "products_to_show": "Products to show",
+        "view_all_label": "View all label"
+      },
+      "presets": { "default": "Bestsellers" }
+    },
+    "newsletter": {
+      "name": "Newsletter signup",
+      "settings": {
+        "heading": "Heading",
+        "subheading": "Subheading",
+        "placeholder": "Email placeholder",
+        "button_label": "Button label"
+      },
+      "presets": { "default": "Newsletter" }
+    },
+    "contact_form": {
+      "name": "Contact form",
+      "settings": {
+        "heading": "Heading",
+        "subheading": "Subheading",
+        "phone": "Phone override",
+        "email": "Email override",
+        "address": "Address override",
+        "submit_label": "Submit button"
+      },
+      "presets": { "default": "Contact form" }
+    },
+    "faq_accordion": {
+      "name": "FAQ accordion",
+      "settings": { "heading": "Heading" },
+      "blocks": {
+        "faq": {
+          "name": "Question",
+          "settings": {
+            "question": "Question",
+            "answer": "Answer"
+          }
+        }
+      },
+      "presets": { "default": "FAQ" }
     }
   }
 }
