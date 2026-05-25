@@ -3,26 +3,33 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Morbeez Admin</title>
+    <title>Morbeez Operations Console</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="/console/css/admin.css" />
   </head>
   <body>
     <div id="view-login" class="login-page">
       <div class="login-card">
         <div class="login-brand">
-          <span>Morbeez</span>
+          <div class="login-logo">M</div>
+          <div>
+            <strong>Morbeez</strong>
+            <small>Operations console</small>
+          </div>
         </div>
         <h1>Staff sign in</h1>
-        <p class="subtitle">Manage products and registered farmers</p>
+        <p class="subtitle">Agriculture commerce control center — products, farmers, orders & intelligence</p>
         <div id="login-alert" class="alert alert-error hidden" role="alert"></div>
         <form id="login-form">
           <div class="field">
             <label for="login-email">Email</label>
-            <input id="login-email" name="email" type="email" autocomplete="username" required />
+            <input id="login-email" class="input" name="email" type="email" autocomplete="username" required />
           </div>
           <div class="field">
             <label for="login-password">Password</label>
-            <input id="login-password" name="password" type="password" autocomplete="current-password" required />
+            <input id="login-password" class="input" name="password" type="password" autocomplete="current-password" required />
           </div>
           <button type="submit" class="btn btn-primary" id="login-submit">Sign in</button>
         </form>
@@ -30,26 +37,29 @@
     </div>
 
     <div id="view-app" class="app-shell hidden">
-      <aside class="sidebar">
+      <aside class="sidebar" id="sidebar">
         <div class="sidebar-brand">
-          <strong>Morbeez</strong>
-          <small>Operations console</small>
+          <div class="brand-mark">M</div>
+          <div>
+            <strong>Morbeez</strong>
+            <small>Agri commerce ERP</small>
+          </div>
         </div>
-        <ul class="sidebar-nav">
-          <li><a href="#dashboard" data-nav="dashboard">Dashboard</a></li>
-          <li><a href="#products" data-nav="products">Products</a></li>
-          <li><a href="#farmers" data-nav="farmers">Farmers</a></li>
-        </ul>
+        <nav id="sidebar-nav" class="sidebar-nav" aria-label="Main"></nav>
         <div class="sidebar-footer">
           <div class="user" id="sidebar-user"></div>
-          <button type="button" class="btn btn-secondary btn-sm" id="btn-logout" style="width: 100%">Sign out</button>
+          <button type="button" class="btn btn-ghost btn-sm" id="btn-logout">Sign out</button>
         </div>
       </aside>
 
       <div class="main">
         <header class="topbar">
-          <h2 id="page-title">Dashboard</h2>
-          <div id="topbar-actions"></div>
+          <button type="button" class="btn-icon" id="btn-sidebar" aria-label="Menu">☰</button>
+          <div class="topbar-titles">
+            <p class="topbar-eyebrow">Morbeez console</p>
+            <h2 id="page-title">Dashboard</h2>
+          </div>
+          <div id="topbar-actions" class="topbar-actions"></div>
         </header>
         <div class="content" id="main-content"></div>
       </div>
@@ -58,6 +68,6 @@
     <div id="toast" class="toast hidden" role="status"></div>
     <div id="modal-root"></div>
 
-    <script src="/console/js/admin.js" type="module"></script>
+    <script src="/console/js/app.js" type="module"></script>
   </body>
 </html>

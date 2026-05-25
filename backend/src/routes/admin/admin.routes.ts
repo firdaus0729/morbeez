@@ -1,9 +1,14 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { adminAuthService } from '../../services/auth/admin-auth.service.js';
+import { adminDashboardService } from '../../services/admin/admin-dashboard.service.js';
 import { farmersAdminService } from '../../services/admin/farmers-admin.service.js';
+import { ordersAdminService } from '../../services/admin/orders-admin.service.js';
+import { productIntelligenceService } from '../../services/admin/product-intelligence.service.js';
 import { shopifyProductsService } from '../../services/shopify/shopify.products.service.js';
 import { requireAdmin, requireAdminRole } from '../../middleware/adminAuth.js';
+import { supabase } from '../../lib/supabase.js';
+import { throwIfSupabaseError } from '../../lib/supabase-errors.js';
 
 const loginSchema = z.object({
   email: z.string().email().max(255),
@@ -39,6 +44,16 @@ const imageUploadSchema = z.object({
   alt: z.string().max(255).optional(),
 });
 
+const jsonSection = z.record(z.unknown()).optional();
+
+const intelligenceSchema = z.object({
+  basic: jsonSection,
+  agriculture: jsonSection,
+  aiMapping: jsonSection,
+  seo: jsonSection,
+  crossSell: jsonSection,
+});
+
 export async function adminRoutes(app: FastifyInstance): Promise<void> {
   const api = '/console/api/v1';
 
@@ -56,16 +71,49 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
 
   app.get(`${api}/stats`, async (request, reply) => {
     requireAdmin(request);
-    const [farmers, productCount] = await Promise.all([
-      farmersAdminService.list({ page: 1, limit: 1 }),
-      shopifyProductsService.count(),
-    ]);
+    const overview = await adminDashboardService.getOverview();
     return reply.send({
       ok: true,
-      stats: {
-        farmers: farmers.pagination.total,
-        products: productCount,
-      },
+      stats: overview.kpis,
+      overview,
+    });
+  });
+
+  app.get(`${api}/dashboard`, async (request, reply) => {
+    requireAdmin(request);
+    const overview = await adminDashboardService.getOverview();
+    return reply.send({ ok: true, ...overview });
+  });
+
+  app.get(`${api}/orders`, async (request, reply) => {
+    requireAdmin(request);
+    const q = request.query as { page?: string; limit?: string; search?: string };
+    const result = await ordersAdminService.list({
+      page: q.page ? Number(q.page) : 1,
+      limit: q.limit ? Number(q.limit) : 25,
+      search: q.search,
+    });
+    return reply.send({ ok: true, ...result });
+  });
+
+  app.get(`${api}/staff`, async (request, reply) => {
+    requireAdminRole(request, 'admin');
+    const { data, error } = await supabase
+      .from('admin_users')
+      .select('id, email, full_name, role, active, last_login_at, created_at')
+      .order('created_at', { ascending: false });
+    throwIfSupabaseError(error, 'Could not load staff');
+    return reply.send({
+      ok: true,
+      staff: (data ?? []).map((u) => ({
+        id: u.id,
+        email: u.email,
+        fullName: u.full_name,
+        role: u.role,
+        active: u.active,
+        lastLoginAt: u.last_login_at,
+        createdAt: u.created_at,
+      })),
     });
   });
 
@@ -141,5 +189,31 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
     const { id, imageId } = request.params as { id: string; imageId: string };
     await shopifyProductsService.deleteImage(id, imageId);
     return reply.send({ ok: true });
+  });
+
+  app.get(`${api}/products/:id/intelligence`, async (request, reply) => {
+    requireAdmin(request);
+    const { id } = request.params as { id: string };
+    const intelligence = await productIntelligenceService.get(id);
+    return reply.send({ ok: true, intelligence });
+  });
+
+  app.put(`${api}/products/:id/intelligence`, async (request, reply) => {
+    requireAdminRole(request, 'admin', 'manager');
+    const admin = requireAdmin(request);
+    const { id } = request.params as { id: string };
+    const body = intelligenceSchema.parse(request.body);
+    const intelligence = await productIntelligenceService.upsert(
+      id,
+      {
+        basic: body.basic,
+        agriculture: body.agriculture,
+        ai_mapping: body.aiMapping,
+        seo: body.seo,
+        cross_sell: body.crossSell,
+      },
+      admin.id
+    );
+    return reply.send({ ok: true, intelligence });
   });
 }

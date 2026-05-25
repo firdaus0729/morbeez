@@ -1,66 +1,106 @@
-# Morbeez Staff Console
+# Morbeez Operations Console
 
-Staff portal for managing **Shopify products** and **registered farmers** — separate from the public storefront and farmer login.
+Enterprise-style **agriculture commerce control center** — products, farmers, orders, and extended product intelligence (agri + AI + SEO). Served as a static SPA from the Fastify API at `/console/`.
 
-> **Do not use `/admin` in the URL.** Shopify redirects store owners from paths containing “admin” to [admin.shopify.com](https://admin.shopify.com). Use **`/console`** instead.
+> **Do not use `/admin` in the URL.** Shopify redirects paths containing “admin” to Shopify Admin. Use **`/console`**.
 
 ## URLs
 
-| Environment | Staff console URL |
-|-------------|-------------------|
-| Production (Render) | **https://morbeez-api.onrender.com/console/** |
-| Local API | `http://localhost:10000/console/` |
+| Environment | Console |
+|-------------|---------|
+| Production | **https://morbeez-api.onrender.com/console/** |
+| Local | `http://localhost:10000/console/` |
 
-### Professional options (recommended later)
+## Modules
 
-| Style | Example | Notes |
-|-------|---------|--------|
-| **Path (current)** | `morbeez-api.onrender.com/console/` | Works now after deploy |
-| **Subdomain** | `console.morbeez.in` | Point CNAME to Render; best for staff bookmarks |
-| **Short path** | `…/staff` or `…/manage` | Alternative if you prefer different wording |
+| Module | Status | Description |
+|--------|--------|-------------|
+| **Dashboard** | Live | KPIs, recent orders/farmers, low stock, roadmap |
+| **Products** | Live | Full Shopify catalog, pagination, images |
+| **Product intelligence** | Live | Tabs: Basic, Agriculture, AI mapping, SEO, Cross-sell (Supabase) |
+| **Low stock** | Live | Products with ≤10 units |
+| **Orders** | Live | Razorpay checkout sessions + Shopify `commerce_orders` |
+| **Farmer CRM** | Live | Search, edit profiles |
+| **Staff** | Live | List admin users (admin role only) |
+| **Settings** | Live | Integrations overview |
+| Offers, Combos, Flash sales | Planned | UI placeholders |
+| AI advisory rules | Planned | Symptom/crop logic panel |
+| WhatsApp campaigns | Planned | Uses existing backend webhooks |
+| Content CMS, Analytics | Planned | |
 
-Optional Shopify page: handle `staff-console` with template `page.console` → redirects to API `/console/`.
+## Setup
 
-## First-time setup
-
-### 1. Database migration
+### 1. Migrations
 
 ```powershell
 supabase db push
 ```
 
-### 2. Environment (`backend/.env` + Render)
+Includes: `admin_users`, `checkout_sessions`, `product_intelligence`.
+
+### 2. Environment
 
 ```env
 ADMIN_JWT_SECRET=<openssl rand -hex 32>
-SHOPIFY_ADMIN_API_ACCESS_TOKEN=<Admin API token with product read/write>
+SHOPIFY_ADMIN_API_ACCESS_TOKEN=<write_products, read_products, write_orders>
 ```
 
-### 3. Create staff account
+### 3. Staff account
 
 ```powershell
-npm run admin:create-user -- --email admin@morbeez.in --password "YourSecurePass123" --name "Store Admin"
+npm run admin:create-user -- --email admin@morbeez.in --password "YourSecurePass123" --name "Store Admin" --role admin
 ```
 
-### 4. Run API & sign in
+### 4. Run locally
 
 ```powershell
-cd backend
-npm run dev
+cd backend && npm run dev
 ```
 
 Open **http://localhost:10000/console/**
+
+## Product import / intelligence columns
+
+Extended fields from your master import sheet are stored in **`product_intelligence`** (JSONB per section), edited under **Edit product** tabs:
+
+- **Basic** — HSN, GST, barcode, manufacturer, short description  
+- **Agriculture** — active ingredient, pests, crops, dose, PHI, compatibility  
+- **AI mapping** — symptoms, keywords, severity, SPAD, weather, priority  
+- **SEO & content** — meta, benefits, usage/safety copy  
+- **Cross-sell** — tank mix, combos, rotation, adjuvants  
+
+Shopify fields (title, price, SKU, tags, HTML description, images) remain on the **Shopify & pricing** tab.
+
+Future: CSV import script → `product_intelligence` + Shopify Admin API.
+
+## API (staff JWT)
+
+| Method | Path |
+|--------|------|
+| POST | `/console/api/v1/auth/login` |
+| GET | `/console/api/v1/auth/me` |
+| GET | `/console/api/v1/dashboard` |
+| GET | `/console/api/v1/stats` |
+| GET/POST/PUT | `/console/api/v1/products` … |
+| GET/PUT | `/console/api/v1/products/:id/intelligence` |
+| GET | `/console/api/v1/orders` |
+| GET/PATCH | `/console/api/v1/farmers` … |
+| GET | `/console/api/v1/staff` (admin only) |
 
 ## Roles
 
 | Role | Access |
 |------|--------|
-| `admin` | Full access |
-| `manager` | Edit products & farmers |
-| `viewer` | Read-only |
+| `admin` | Full + staff list |
+| `manager` | Products, farmers, orders, intelligence |
+| `viewer` | Read-only (enforce in API — coming soon) |
+
+## Frontend stack (unchanged)
+
+- Static HTML + **ES modules** (`admin/js/app.js`)
+- CSS (`admin/css/admin.css`)
+- No Next.js — same deployment as API static files
 
 ## Deploy
 
-Redeploy Render, then use **https://morbeez-api.onrender.com/console/**
-
-Legacy `/admin` and `/admin/` redirect to `/console/` on the API server.
+Redeploy Render after backend + migration updates. Console assets live in repo `admin/` folder.
