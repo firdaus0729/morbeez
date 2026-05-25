@@ -2,7 +2,9 @@
   "sections": {
     "main": {
       "type": "main-search",
-      "settings": {}
+      "settings": {
+        "results_per_page": 24
+      }
     }
   },
   "order": ["main"]

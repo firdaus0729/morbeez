@@ -20,6 +20,10 @@
     "pagination": "Pagination",
     "pagination_previous": "Previous",
     "pagination_next": "Next",
+    "pagination_showing": "Showing {{ from }}–{{ to }} of {{ total }} {{ label }}",
+    "pagination_products": "products",
+    "pagination_results": "results",
+    "pagination_page": "Page {{ page }}",
     "language": "Language",
     "breadcrumbs": {
       "label": "Breadcrumb",
@@ -343,7 +347,10 @@
     "main_404": { "name": "404 page" },
     "main_list_collections": { "name": "Collections list" },
     "main_password": { "name": "Password page" },
-    "main_search": { "name": "Search results" },
+    "main_search": {
+      "name": "Search results",
+      "settings": { "results_per_page": "Results per page" }
+    },
     "subcollection_nav": {
       "name": "Subcollection navigation",
       "settings": {

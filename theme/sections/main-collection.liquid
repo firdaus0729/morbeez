@@ -3,29 +3,20 @@
     {%- if collection.products.size == 0 -%}
       <p class="py-12 text-center text-[var(--color-muted)]">{{ 'collections.empty' | t }}</p>
     {%- else -%}
+      <p class="mb-6 text-sm text-[var(--color-muted)]">
+        {{ collection.products_count }} {{ 'collections.products_count' | t }}
+        {%- if paginate.pages > 1 -%}
+          · {{ 'general.pagination.page' | t: page: paginate.current_page }} / {{ paginate.pages }}
+        {%- endif -%}
+      </p>
+
       <div class="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4 lg:gap-6">
         {%- for product in collection.products -%}
           {%- render 'morbeez-product-card', product: product -%}
         {%- endfor -%}
       </div>
 
-      {%- if paginate.pages > 1 -%}
-        {%- if paginate.previous -%}
-          <link rel="prev" href="{{ paginate.previous.url }}">
-        {%- endif -%}
-        {%- if paginate.next -%}
-          <link rel="next" href="{{ paginate.next.url }}">
-        {%- endif -%}
-        <nav class="mt-10 flex justify-center gap-2" aria-label="{{ 'general.pagination' | t }}">
-          {%- if paginate.previous -%}
-            <a href="{{ paginate.previous.url }}" class="morbeez-btn-secondary" rel="prev">← {{ 'general.pagination_previous' | t }}</a>
-          {%- endif -%}
-          <span class="flex items-center px-4 text-sm text-[var(--color-muted)]">{{ paginate.current_page }} / {{ paginate.pages }}</span>
-          {%- if paginate.next -%}
-            <a href="{{ paginate.next.url }}" class="morbeez-btn-secondary" rel="next">{{ 'general.pagination_next' | t }} →</a>
-          {%- endif -%}
-        </nav>
-      {%- endif -%}
+      {%- render 'morbeez-pagination', paginate: paginate -%}
     {%- endif -%}
   {%- endpaginate -%}
 
@@ -40,7 +31,16 @@
 {
   "name": "t:sections.main_collection.name",
   "settings": [
-    { "type": "range", "id": "products_per_page", "min": 8, "max": 36, "step": 4, "default": 16, "label": "t:sections.main_collection.settings.products_per_page" }
+    {
+      "type": "range",
+      "id": "products_per_page",
+      "min": 12,
+      "max": 48,
+      "step": 4,
+      "default": 24,
+      "label": "t:sections.main_collection.settings.products_per_page",
+      "info": "t:sections.main_collection.settings.products_per_page_info"
+    }
   ]
 }
 {% endschema %}

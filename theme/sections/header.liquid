@@ -1,5 +1,5 @@
 <header class="sticky top-0 z-40 border-b border-[var(--color-border)] morbeez-glass" role="banner">
-  <div class="morbeez-container flex h-[4.25rem] items-center justify-between gap-4">
+  <div class="morbeez-container flex h-[4.25rem] items-center gap-4 lg:gap-6">
     <a
       href="{{ routes.root_url }}"
       class="group flex shrink-0 items-center gap-2 font-heading text-xl font-bold tracking-tight text-[var(--color-primary)]"
@@ -14,13 +14,16 @@
       {%- endif -%}
     </a>
 
-    <nav class="hidden items-center gap-1 lg:flex" aria-label="{{ 'accessibility.main_navigation' | t }}">
+    <nav
+      class="morbeez-header-nav hidden min-w-0 w-full flex-1 items-center justify-around lg:flex"
+      aria-label="{{ 'accessibility.main_navigation' | t }}"
+    >
       {%- for link in linklists[section.settings.menu].links -%}
         {%- render 'morbeez-mega-menu', link: link -%}
       {%- endfor -%}
     </nav>
 
-    <div class="flex items-center gap-1 sm:gap-2">
+    <div class="flex shrink-0 items-center gap-1 sm:gap-2">
       <div class="hidden md:block">
         {%- render 'morbeez-language-switcher' -%}
       </div>

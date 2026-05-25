@@ -54,6 +54,22 @@
     ]
   },
   {
+    "name": "t:settings.regional.name",
+    "settings": [
+      {
+        "type": "checkbox",
+        "id": "display_prices_inr",
+        "label": "t:settings.regional.display_prices_inr",
+        "default": true,
+        "info": "t:settings.regional.display_prices_inr_info"
+      },
+      {
+        "type": "paragraph",
+        "content": "t:settings.regional.currency_admin_note"
+      }
+    ]
+  },
+  {
     "name": "t:settings.features.name",
     "settings": [
       {

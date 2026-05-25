@@ -8,6 +8,7 @@
     "enable_ai_crop_doctor_cta": true,
     "enable_dealer_enquiry": true,
     "enable_organization_schema": true,
+    "display_prices_inr": true,
     "sections": {
       "header-group": {
         "type": "header",

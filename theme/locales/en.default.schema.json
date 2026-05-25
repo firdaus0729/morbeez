@@ -15,6 +15,12 @@
       "type_header_font": "Heading font",
       "type_body_font": "Body font"
     },
+    "regional": {
+      "name": "India / currency",
+      "display_prices_inr": "Show prices with ₹ (Indian Rupee)",
+      "display_prices_inr_info": "Uses ₹ symbol and INR formatting on product, collection, cart, and search pages.",
+      "currency_admin_note": "Also set Shopify Admin → Settings → General → Store currency to Indian Rupee (INR) so checkout amounts are correct."
+    },
     "whatsapp": {
       "name": "WhatsApp (global)",
       "phone": "Default WhatsApp number",
@@ -45,6 +51,8 @@
     "footer": {
       "name": "Footer",
       "settings": {
+        "footer_logo": "Footer logo",
+        "footer_logo_info": "Optional. Use a light/white logo for the dark footer. If empty, uses Theme settings → Brand → Logo.",
         "tagline": "Tagline"
       },
       "blocks": {
@@ -326,7 +334,14 @@
     "main_collection": {
       "name": "Collection products",
       "settings": {
-        "products_per_page": "Products per page"
+        "products_per_page": "Products per page",
+        "products_per_page_info": "12–48 per page. Shopify max 48. Use pagination below the grid."
+      }
+    },
+    "main_search": {
+      "name": "Search results",
+      "settings": {
+        "results_per_page": "Results per page"
       }
     },
     "main_product": {
@@ -352,9 +367,6 @@
     },
     "main_password": {
       "name": "Password page"
-    },
-    "main_search": {
-      "name": "Search results"
     }
   }
 }

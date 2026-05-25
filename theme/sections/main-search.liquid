@@ -2,6 +2,7 @@
   <h1 class="font-heading text-3xl font-bold">{{ 'general.search' | t }}</h1>
 
   <form action="{{ routes.search_url }}" method="get" role="search" class="mt-6 flex gap-2">
+    <input type="hidden" name="type" value="product">
     <input
       type="search"
       name="q"
@@ -13,27 +14,44 @@
   </form>
 
   {%- if search.performed -%}
-  <p class="mt-4 text-sm text-[var(--color-muted)]">
-    {{ 'search.results_count' | t: count: search.results_count, terms: search.terms }}
-  </p>
-
-  {%- if search.results_count > 0 -%}
-    <div class="mt-8 grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
-      {%- for item in search.results -%}
-        {%- if item.object_type == 'product' -%}
-          {%- render 'morbeez-product-card', product: item -%}
+    {%- paginate search.results by section.settings.results_per_page -%}
+      <p class="mt-4 text-sm text-[var(--color-muted)]">
+        {{ 'search.results_count' | t: count: search.results_count, terms: search.terms }}
+        {%- if paginate.pages > 1 -%}
+          · {{ 'general.pagination.page' | t: page: paginate.current_page }} / {{ paginate.pages }}
         {%- endif -%}
-      {%- endfor -%}
-    </div>
-  {%- else -%}
-    <p class="mt-8 text-center text-[var(--color-muted)]">{{ 'search.no_results' | t }}</p>
-  {%- endif -%}
+      </p>
+
+      {%- assign product_results = search.results | where: 'object_type', 'product' -%}
+      {%- if product_results.size > 0 -%}
+        <div class="mt-8 grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4 lg:gap-6">
+          {%- for item in search.results -%}
+            {%- if item.object_type == 'product' -%}
+              {%- render 'morbeez-product-card', product: item -%}
+            {%- endif -%}
+          {%- endfor -%}
+        </div>
+        {%- render 'morbeez-pagination', paginate: paginate, item_label: 'results' -%}
+      {%- else -%}
+        <p class="mt-8 text-center text-[var(--color-muted)]">{{ 'search.no_results' | t }}</p>
+      {%- endif -%}
+    {%- endpaginate -%}
   {%- endif -%}
 </div>
 
 {% schema %}
 {
   "name": "t:sections.main_search.name",
-  "settings": []
+  "settings": [
+    {
+      "type": "range",
+      "id": "results_per_page",
+      "min": 12,
+      "max": 48,
+      "step": 4,
+      "default": 24,
+      "label": "t:sections.main_search.settings.results_per_page"
+    }
+  ]
 }
 {% endschema %}

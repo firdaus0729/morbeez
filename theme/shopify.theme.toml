@@ -1,6 +1,9 @@
 # Run theme commands from this folder, or from repo root:
-#   shopify theme dev --path theme
 #   npm run theme:dev
+#   npm run theme:push
+#
+# Pinned theme: Development (157069279431) — not the separate "Morbeez" copy.
 
 [environments.development]
 store = "morbeez.myshopify.com"
+theme = "157069279431"

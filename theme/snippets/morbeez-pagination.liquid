@@ -1,0 +1,86 @@
+{% comment %}
+  @param {paginate} paginate - Shopify paginate object
+  @param {string} [item_label] - e.g. "products" for collections
+{% endcomment %}
+{%- if paginate.pages > 1 -%}
+  {%- liquid
+    assign from_index = paginate.current_offset | plus: 1
+    assign to_index = paginate.current_offset | plus: paginate.page_size
+    if to_index > paginate.items
+      assign to_index = paginate.items
+    endif
+    if item_label == 'results'
+      assign label = 'general.pagination.results' | t
+    else
+      assign label = 'general.pagination.products' | t
+    endif
+  -%}
+  {%- if paginate.previous -%}
+    <link rel="prev" href="{{ paginate.previous.url }}">
+  {%- endif -%}
+  {%- if paginate.next -%}
+    <link rel="next" href="{{ paginate.next.url }}">
+  {%- endif -%}
+
+  <nav class="morbeez-pagination mt-10" aria-label="{{ 'general.pagination' | t }}">
+    <p class="mb-4 text-center text-sm text-[var(--color-muted)]">
+      {{ 'general.pagination.showing' | t: from: from_index, to: to_index, total: paginate.items, label: label }}
+    </p>
+
+    <ul class="flex flex-wrap items-center justify-center gap-1" role="list">
+      {%- if paginate.previous -%}
+        <li>
+          <a
+            href="{{ paginate.previous.url }}"
+            class="morbeez-pagination__btn"
+            rel="prev"
+            aria-label="{{ 'general.pagination_previous' | t }}"
+          >
+            ← {{ 'general.pagination_previous' | t }}
+          </a>
+        </li>
+      {%- else -%}
+        <li>
+          <span class="morbeez-pagination__btn morbeez-pagination__btn--disabled" aria-hidden="true">← {{ 'general.pagination_previous' | t }}</span>
+        </li>
+      {%- endif -%}
+
+      {%- for part in paginate.parts -%}
+        <li>
+          {%- if part.is_link -%}
+            <a
+              href="{{ part.url }}"
+              class="morbeez-pagination__btn morbeez-pagination__page"
+              aria-label="{{ 'general.pagination.page' | t: page: part.title }}"
+            >
+              {{ part.title }}
+            </a>
+          {%- else -%}
+            {%- if part.title == paginate.current_page -%}
+              <span class="morbeez-pagination__btn morbeez-pagination__btn--current" aria-current="page">{{ part.title }}</span>
+            {%- else -%}
+              <span class="morbeez-pagination__btn morbeez-pagination__ellipsis">{{ part.title }}</span>
+            {%- endif -%}
+          {%- endif -%}
+        </li>
+      {%- endfor -%}
+
+      {%- if paginate.next -%}
+        <li>
+          <a
+            href="{{ paginate.next.url }}"
+            class="morbeez-pagination__btn"
+            rel="next"
+            aria-label="{{ 'general.pagination_next' | t }}"
+          >
+            {{ 'general.pagination_next' | t }} →
+          </a>
+        </li>
+      {%- else -%}
+        <li>
+          <span class="morbeez-pagination__btn morbeez-pagination__btn--disabled" aria-hidden="true">{{ 'general.pagination_next' | t }} →</span>
+        </li>
+      {%- endif -%}
+    </ul>
+  </nav>
+{%- endif -%}

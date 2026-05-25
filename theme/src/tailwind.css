@@ -210,4 +210,33 @@
   .morbeez-tile:hover .morbeez-tile__overlay {
     @apply opacity-100;
   }
+
+  /* Header nav: flex + space-around across middle bar (logo | nav | actions) */
+  .morbeez-header-nav {
+    @apply flex w-full items-center justify-around;
+  }
+
+  .morbeez-money__symbol {
+    @apply mr-0.5 font-semibold;
+  }
+
+  .morbeez-pagination__btn {
+    @apply inline-flex min-h-10 min-w-10 items-center justify-center rounded-lg border border-gray-200 bg-white px-3 text-sm font-medium text-[var(--color-trust)] transition;
+  }
+
+  .morbeez-pagination__btn:hover:not(.morbeez-pagination__btn--disabled):not(.morbeez-pagination__btn--current) {
+    @apply border-[var(--color-primary)] text-[var(--color-primary)];
+  }
+
+  .morbeez-pagination__btn--current {
+    @apply border-[var(--color-primary)] bg-[var(--color-primary)] text-white;
+  }
+
+  .morbeez-pagination__btn--disabled {
+    @apply cursor-not-allowed opacity-40;
+  }
+
+  .morbeez-pagination__ellipsis {
+    @apply min-w-8 border-transparent bg-transparent px-1;
+  }
 }

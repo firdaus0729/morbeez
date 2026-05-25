@@ -38,14 +38,14 @@
                         type="number"
                         name="{{ filter.min_value.param_name }}"
                         value="{{ filter.min_value.value | money_without_currency }}"
-                        placeholder="Min"
+                        placeholder="Min (₹)"
                         class="w-full rounded border border-gray-200 px-2 py-1 text-sm"
                       >
                       <input
                         type="number"
                         name="{{ filter.max_value.param_name }}"
                         value="{{ filter.max_value.value | money_without_currency }}"
-                        placeholder="Max"
+                        placeholder="Max (₹)"
                         class="w-full rounded border border-gray-200 px-2 py-1 text-sm"
                       >
                       <button type="submit" class="morbeez-btn-primary w-full border-0 text-xs">{{ 'collections.filters.apply' | t }}</button>

@@ -16,7 +16,7 @@
             <div class="flex-1">
               <a href="{{ item.url }}" class="font-semibold hover:text-[var(--color-primary)]">{{ item.product.title }}</a>
               <p class="text-sm text-[var(--color-muted)]">{{ item.variant.title }}</p>
-              <p class="mt-1 font-semibold text-[var(--color-primary)]">{{ item.final_line_price | money }}</p>
+              <p class="mt-1 font-semibold text-[var(--color-primary)]">{%- render 'morbeez-money', amount: item.final_line_price -%}</p>
             </div>
             <input
               type="number"
@@ -30,7 +30,7 @@
         {%- endfor -%}
       </div>
       <div class="mt-8 flex flex-wrap items-center justify-between gap-4 border-t border-gray-100 pt-6">
-        <p class="text-xl font-bold">{{ 'cart.subtotal' | t }}: {{ cart.total_price | money }}</p>
+        <p class="text-xl font-bold">{{ 'cart.subtotal' | t }}: {%- render 'morbeez-money', amount: cart.total_price -%}</p>
         <button type="submit" name="checkout" class="morbeez-btn-primary border-0">{{ 'cart.checkout' | t }}</button>
       </div>
     </form>

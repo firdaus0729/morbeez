@@ -1,0 +1,27 @@
+{% comment %}
+  Indian Rupee–friendly price display.
+  Set Shopify Admin → Settings → General → Store currency: Indian Rupee (INR).
+  @param {number} amount - Price in cents (e.g. product.price)
+  @param {boolean} [plain] - Plain text (for <option> labels)
+{% endcomment %}
+{%- liquid
+  assign amount = amount | default: 0
+  assign currency_code = cart.currency.iso_code | default: shop.currency
+  assign use_inr = false
+  if currency_code == 'INR'
+    assign use_inr = true
+  elsif settings.display_prices_inr
+    assign use_inr = true
+  endif
+-%}
+{%- if plain -%}
+  {%- if use_inr -%}₹{{ amount | money_without_currency | strip }}{%- else -%}{{ amount | money }}{%- endif -%}
+{%- else -%}
+  <span class="morbeez-money" data-currency="{{ currency_code }}">
+    {%- if use_inr -%}
+      <span class="morbeez-money__symbol">₹</span><span class="morbeez-money__amount">{{ amount | money_without_currency | strip }}</span>
+    {%- else -%}
+      {{ amount | money }}
+    {%- endif -%}
+  </span>
+{%- endif -%}

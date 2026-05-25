@@ -15,7 +15,7 @@
     "offers": {
       "@type": "Offer",
       "url": {{ shop.url | append: product.url | json }},
-      "priceCurrency": {{ cart.currency.iso_code | json }},
+      "priceCurrency": {% if cart.currency.iso_code == 'INR' or settings.display_prices_inr %}"INR"{% else %}{{ cart.currency.iso_code | json }}{% endif %},
       "price": {{ product.selected_or_first_available_variant.price | divided_by: 100.0 | json }},
       "availability": "https://schema.org/{% if product.available %}InStock{% else %}OutOfStock{% endif %}"
     }

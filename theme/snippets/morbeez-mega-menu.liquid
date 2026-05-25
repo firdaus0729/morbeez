@@ -6,7 +6,7 @@
   <div class="morbeez-mega-menu group relative">
     <a
       href="{{ link.url }}"
-      class="flex items-center gap-1 py-4 text-sm font-medium text-[var(--color-trust)] hover:text-[var(--color-primary)]"
+      class="morbeez-header-nav__link flex items-center gap-1 py-4 text-sm font-medium text-[var(--color-trust)] hover:text-[var(--color-primary)]"
       aria-expanded="false"
       data-mega-trigger
     >
@@ -41,7 +41,7 @@
     </div>
   </div>
 {%- else -%}
-  <a href="{{ link.url }}" class="py-4 text-sm font-medium text-[var(--color-trust)] hover:text-[var(--color-primary)]">
+  <a href="{{ link.url }}" class="morbeez-header-nav__link py-4 text-sm font-medium text-[var(--color-trust)] hover:text-[var(--color-primary)]">
     {{ link.title }}
   </a>
 {%- endif -%}

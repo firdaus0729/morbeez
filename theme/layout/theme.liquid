@@ -1,5 +1,5 @@
 <!doctype html>
-<html class="no-js" lang="{{ request.locale.iso_code }}">
+<html class="no-js" lang="{% if request.locale.iso_code == 'en' and settings.display_prices_inr %}en-IN{% else %}{{ request.locale.iso_code }}{% endif %}">
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
