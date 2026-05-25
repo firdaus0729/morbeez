@@ -1,4 +1,5 @@
 import { supabase } from '../../lib/supabase.js';
+import { throwIfSupabaseError } from '../../lib/supabase-errors.js';
 import { ConflictError, UnauthorizedError, ValidationError } from '../../lib/errors.js';
 import { hashPassword, verifyPassword } from '../../lib/password.js';
 import { createFarmerToken } from '../../lib/jwt.js';
@@ -47,7 +48,12 @@ export const farmerAuthService = {
       throw new ValidationError('Password must be at least 8 characters');
     }
 
-    const { data: existing } = await supabase.from('farmers').select('id').eq('email', email).maybeSingle();
+    const { data: existing, error: existingErr } = await supabase
+      .from('farmers')
+      .select('id')
+      .eq('email', email)
+      .maybeSingle();
+    throwIfSupabaseError(existingErr, 'Could not check existing account');
     if (existing) throw new ConflictError('An account with this email already exists');
 
     const fullName = `${input.firstName.trim()} ${input.lastName.trim()}`.trim();
@@ -71,12 +77,13 @@ export const farmerAuthService = {
       .select()
       .single();
 
-    if (error) {
-      if (error.code === '23505') throw new ConflictError('An account with this email already exists');
-      throw error;
-    }
+    throwIfSupabaseError(error, 'Could not create farmer account');
 
-    await eventBus.publish('farmer.upserted', { farmerId: data.id, email, source: 'website' }, 'farmer-auth');
+    try {
+      await eventBus.publish('farmer.upserted', { farmerId: data.id, email, source: 'website' }, 'farmer-auth');
+    } catch {
+      /* signup succeeds even if outbox write fails */
+    }
 
     const token = createFarmerToken(data.id, email);
     return { token, farmer: publicFarmer(data) };
@@ -86,7 +93,7 @@ export const farmerAuthService = {
     const email = normalizeEmail(input.email);
 
     const { data, error } = await supabase.from('farmers').select('*').eq('email', email).maybeSingle();
-    if (error) throw error;
+    throwIfSupabaseError(error, 'Could not load account');
     if (!data?.password_hash) throw new UnauthorizedError('Invalid email or password');
 
     if (!verifyPassword(input.password, data.password_hash)) {
