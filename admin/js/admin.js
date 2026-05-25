@@ -1,5 +1,5 @@
 /**
- * Morbeez staff admin portal — /admin
+ * Morbeez staff console — /console
  */
 const TOKEN_KEY = 'morbeez_admin_token';
 const API_BASE = window.location.origin;
@@ -59,7 +59,7 @@ async function api(path, options = {}) {
     data = { message: res.statusText };
   }
 
-  if (res.status === 401 && path !== '/admin/api/v1/auth/login') {
+  if (res.status === 401 && path !== '/console/api/v1/auth/login') {
     logout();
     throw new Error('Session expired. Please sign in again.');
   }
@@ -121,7 +121,7 @@ async function initSession() {
     return;
   }
   try {
-    const data = await api('/admin/api/v1/auth/me');
+    const data = await api('/console/api/v1/auth/me');
     state.admin = data.admin;
     $('#sidebar-user').textContent = `${data.admin.fullName || data.admin.email} · ${data.admin.role}`;
     const hash = location.hash.slice(1) || 'dashboard';
@@ -142,7 +142,7 @@ async function handleLogin(e) {
   btn.textContent = 'Signing in…';
 
   try {
-    const data = await api('/admin/api/v1/auth/login', {
+    const data = await api('/console/api/v1/auth/login', {
       method: 'POST',
       body: JSON.stringify({
         email: $('#login-email').value,
@@ -167,7 +167,7 @@ async function renderDashboard() {
   const el = $('#main-content');
   el.innerHTML = '<p class="loading">Loading…</p>';
   try {
-    const { stats } = await api('/admin/api/v1/stats');
+    const { stats } = await api('/console/api/v1/stats');
     el.innerHTML = `
       <div class="stats-grid">
         <div class="stat-card"><div class="label">Registered farmers</div><div class="value">${stats.farmers}</div></div>
@@ -200,7 +200,7 @@ async function renderProducts() {
       limit: '25',
       ...(state.products.search ? { search: state.products.search } : {}),
     });
-    const data = await api(`/admin/api/v1/products?${q}`);
+    const data = await api(`/console/api/v1/products?${q}`);
     const rows = data.products
       .map(
         (p) => `
@@ -292,7 +292,7 @@ async function renderProductForm(id) {
   let product = null;
   if (id) {
     try {
-      const data = await api(`/admin/api/v1/products/${id}`);
+      const data = await api(`/console/api/v1/products/${id}`);
       product = data.product;
     } catch (err) {
       el.innerHTML = `<div class="alert alert-error">${escapeHtml(err.message)}</div>`;
@@ -316,10 +316,10 @@ async function renderProductForm(id) {
     };
     try {
       if (id) {
-        await api(`/admin/api/v1/products/${id}`, { method: 'PUT', body: JSON.stringify(body) });
+        await api(`/console/api/v1/products/${id}`, { method: 'PUT', body: JSON.stringify(body) });
         showToast('Product updated');
       } else {
-        await api('/admin/api/v1/products', { method: 'POST', body: JSON.stringify(body) });
+        await api('/console/api/v1/products', { method: 'POST', body: JSON.stringify(body) });
         showToast('Product created');
       }
       location.hash = 'products';
@@ -340,7 +340,7 @@ async function renderFarmers() {
       limit: '25',
       ...(state.farmers.search ? { search: state.farmers.search } : {}),
     });
-    const data = await api(`/admin/api/v1/farmers?${q}`);
+    const data = await api(`/console/api/v1/farmers?${q}`);
     const pg = data.pagination;
 
     const rows = data.farmers
@@ -402,7 +402,7 @@ async function openFarmerModal(id) {
   const root = $('#modal-root');
   root.innerHTML = '<div class="modal-backdrop"><div class="modal"><p>Loading…</p></div></div>';
   try {
-    const { farmer } = await api(`/admin/api/v1/farmers/${id}`);
+    const { farmer } = await api(`/console/api/v1/farmers/${id}`);
     root.innerHTML = `
       <div class="modal-backdrop" id="modal-close-bg">
         <div class="modal">
@@ -436,7 +436,7 @@ async function openFarmerModal(id) {
       e.preventDefault();
       const fd = new FormData(e.target);
       try {
-        await api(`/admin/api/v1/farmers/${id}`, {
+        await api(`/console/api/v1/farmers/${id}`, {
           method: 'PATCH',
           body: JSON.stringify({
             firstName: fd.get('firstName') || undefined,

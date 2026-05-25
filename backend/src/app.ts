@@ -65,16 +65,20 @@ export async function buildApp() {
   await app.register(authRoutes);
   await app.register(adminRoutes);
 
+  const consolePrefix = '/console/';
+
   await app.register(fastifyStatic, {
     root: adminStaticRoot,
-    prefix: '/admin/',
+    prefix: consolePrefix,
     index: ['index.html'],
     decorateReply: false,
   });
 
-  app.get('/admin', async (_request, reply) => {
-    return reply.redirect('/admin/');
-  });
+  app.get('/console', async (_request, reply) => reply.redirect(consolePrefix));
+
+  /* Legacy /admin — Shopify often hijacks “admin” URLs for store owners */
+  app.get('/admin', async (_request, reply) => reply.redirect(consolePrefix));
+  app.get('/admin/', async (_request, reply) => reply.redirect(consolePrefix));
 
   await app.register(farmersRoutes);
   await app.register(leadsRoutes);

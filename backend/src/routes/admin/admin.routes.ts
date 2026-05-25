@@ -33,19 +33,21 @@ const productCreateSchema = z.object({
 const productUpdateSchema = productCreateSchema.partial();
 
 export async function adminRoutes(app: FastifyInstance): Promise<void> {
-  app.post('/admin/api/v1/auth/login', async (request, reply) => {
+  const api = '/console/api/v1';
+
+  app.post(`${api}/auth/login`, async (request, reply) => {
     const body = loginSchema.parse(request.body);
     const result = await adminAuthService.login(body);
     return reply.send({ ok: true, ...result });
   });
 
-  app.get('/admin/api/v1/auth/me', async (request, reply) => {
+  app.get(`${api}/auth/me`, async (request, reply) => {
     const admin = requireAdmin(request);
     const profile = await adminAuthService.me(admin.id);
     return reply.send({ ok: true, admin: profile });
   });
 
-  app.get('/admin/api/v1/stats', async (request, reply) => {
+  app.get(`${api}/stats`, async (request, reply) => {
     requireAdmin(request);
     const [farmers, products] = await Promise.all([
       farmersAdminService.list({ page: 1, limit: 1 }),
@@ -60,7 +62,7 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
     });
   });
 
-  app.get('/admin/api/v1/farmers', async (request, reply) => {
+  app.get(`${api}/farmers`, async (request, reply) => {
     requireAdmin(request);
     const q = request.query as { page?: string; limit?: string; search?: string };
     const result = await farmersAdminService.list({
@@ -71,14 +73,14 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
     return reply.send({ ok: true, ...result });
   });
 
-  app.get('/admin/api/v1/farmers/:id', async (request, reply) => {
+  app.get(`${api}/farmers/:id`, async (request, reply) => {
     requireAdmin(request);
     const { id } = request.params as { id: string };
     const farmer = await farmersAdminService.get(id);
     return reply.send({ ok: true, farmer });
   });
 
-  app.patch('/admin/api/v1/farmers/:id', async (request, reply) => {
+  app.patch(`${api}/farmers/:id`, async (request, reply) => {
     requireAdminRole(request, 'admin', 'manager');
     const { id } = request.params as { id: string };
     const body = farmerUpdateSchema.parse(request.body);
@@ -86,7 +88,7 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
     return reply.send({ ok: true, farmer });
   });
 
-  app.get('/admin/api/v1/products', async (request, reply) => {
+  app.get(`${api}/products`, async (request, reply) => {
     requireAdmin(request);
     const q = request.query as { page?: string; limit?: string; search?: string };
     const result = await shopifyProductsService.list({
@@ -97,21 +99,21 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
     return reply.send({ ok: true, ...result });
   });
 
-  app.get('/admin/api/v1/products/:id', async (request, reply) => {
+  app.get(`${api}/products/:id`, async (request, reply) => {
     requireAdmin(request);
     const { id } = request.params as { id: string };
     const product = await shopifyProductsService.get(id);
     return reply.send({ ok: true, product });
   });
 
-  app.post('/admin/api/v1/products', async (request, reply) => {
+  app.post(`${api}/products`, async (request, reply) => {
     requireAdminRole(request, 'admin', 'manager');
     const body = productCreateSchema.parse(request.body);
     const product = await shopifyProductsService.create(body);
     return reply.code(201).send({ ok: true, product });
   });
 
-  app.put('/admin/api/v1/products/:id', async (request, reply) => {
+  app.put(`${api}/products/:id`, async (request, reply) => {
     requireAdminRole(request, 'admin', 'manager');
     const { id } = request.params as { id: string };
     const body = productUpdateSchema.parse(request.body);

@@ -1,48 +1,55 @@
-# Morbeez Admin Portal
+# Morbeez Staff Console
 
-Staff console for managing **Shopify products** and **registered farmers** — separate from the public storefront and farmer login.
+Staff portal for managing **Shopify products** and **registered farmers** — separate from the public storefront and farmer login.
 
-## URL
+> **Do not use `/admin` in the URL.** Shopify redirects store owners from paths containing “admin” to [admin.shopify.com](https://admin.shopify.com). Use **`/console`** instead.
 
-| Environment | Admin URL |
-|-------------|-----------|
-| Local API | `http://localhost:3000/admin/` |
-| Production (Render) | `https://morbeez-api.onrender.com/admin/` |
+## URLs
 
-Optional Shopify redirect page: `/pages/admin` → opens the URL above (theme setting **Morbeez API base URL** + `/admin/`).
+| Environment | Staff console URL |
+|-------------|-------------------|
+| Production (Render) | **https://morbeez-api.onrender.com/console/** |
+| Local API | `http://localhost:10000/console/` |
+
+### Professional options (recommended later)
+
+| Style | Example | Notes |
+|-------|---------|--------|
+| **Path (current)** | `morbeez-api.onrender.com/console/` | Works now after deploy |
+| **Subdomain** | `console.morbeez.in` | Point CNAME to Render; best for staff bookmarks |
+| **Short path** | `…/staff` or `…/manage` | Alternative if you prefer different wording |
+
+Optional Shopify page: handle `staff-console` with template `page.console` → redirects to API `/console/`.
 
 ## First-time setup
 
 ### 1. Database migration
 
 ```powershell
-cd "E:\task\india(kata)"
 supabase db push
 ```
 
-Creates `admin_users` table (`supabase/migrations/20260525000000_admin_users.sql`).
-
-### 2. Environment variables (`backend/.env`)
+### 2. Environment (`backend/.env` + Render)
 
 ```env
 ADMIN_JWT_SECRET=<openssl rand -hex 32>
-SHOPIFY_ADMIN_API_ACCESS_TOKEN=<Admin API token with read/write products>
+SHOPIFY_ADMIN_API_ACCESS_TOKEN=<Admin API token with product read/write>
 ```
 
-### 3. Create your admin account
+### 3. Create staff account
 
 ```powershell
-node scripts/create-admin-user.mjs --email admin@morbeez.in --password "YourSecurePass123" --name "Store Admin"
+npm run admin:create-user -- --email admin@morbeez.in --password "YourSecurePass123" --name "Store Admin"
 ```
 
-### 4. Run API
+### 4. Run API & sign in
 
 ```powershell
 cd backend
 npm run dev
 ```
 
-Open **http://localhost:3000/admin/** → sign in.
+Open **http://localhost:10000/console/**
 
 ## Roles
 
@@ -52,12 +59,8 @@ Open **http://localhost:3000/admin/** → sign in.
 | `manager` | Edit products & farmers |
 | `viewer` | Read-only |
 
-## Features
+## Deploy
 
-- **Dashboard** — farmer count, product count
-- **Products** — list, search, create, edit (Shopify Admin API)
-- **Farmers** — list, search, edit website registrations (Supabase)
+Redeploy Render, then use **https://morbeez-api.onrender.com/console/**
 
-## Deploy to Render
-
-Ensure `ADMIN_JWT_SECRET` and `SHOPIFY_ADMIN_API_ACCESS_TOKEN` are set on Render, redeploy the API, then use `https://morbeez-api.onrender.com/admin/`.
+Legacy `/admin` and `/admin/` redirect to `/console/` on the API server.

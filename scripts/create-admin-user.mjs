@@ -98,7 +98,7 @@ async function main() {
 
   const user = Array.isArray(body) ? body[0] : body;
   console.log('Admin user created:', { id: user.id, email: user.email, role: user.role });
-  console.log('Sign in at: http://localhost:' + (env.PORT || 3000) + '/admin/');
+  console.log('Sign in at: http://localhost:' + (env.PORT || 3000) + '/console/');
 }
 
 main();
