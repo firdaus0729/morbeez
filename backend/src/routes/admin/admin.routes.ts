@@ -10,6 +10,8 @@ import { combosAdminService } from '../../services/admin/combos-admin.service.js
 import { flashSalesAdminService } from '../../services/admin/flash-sales-admin.service.js';
 import { aiAdvisoryAdminService } from '../../services/admin/ai-advisory-admin.service.js';
 import { aiMappingAdminService } from '../../services/admin/ai-mapping-admin.service.js';
+import { telecallerAdminService } from '../../services/admin/telecaller-admin.service.js';
+import { consoleSearchService } from '../../services/admin/console-search.service.js';
 import { productIntelligenceService } from '../../services/admin/product-intelligence.service.js';
 import { shopifyProductsService } from '../../services/shopify/shopify.products.service.js';
 import { requireAdmin, requireAdminRole } from '../../middleware/adminAuth.js';
@@ -499,6 +501,179 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
     const body = farmerUpdateSchema.parse(request.body);
     const farmer = await farmersAdminService.update(id, body);
     return reply.send({ ok: true, farmer });
+  });
+
+  app.get(`${api}/telecaller/overview`, async (request, reply) => {
+    const admin = requireAdmin(request);
+    const overview = await telecallerAdminService.getOverview(admin.email);
+    const { count } = await supabase.from('leads').select('id', { count: 'exact', head: true });
+    overview.allLeadsCount = count ?? 0;
+    return reply.send({ ok: true, overview });
+  });
+
+  app.get(`${api}/telecaller/leads`, async (request, reply) => {
+    const admin = requireAdmin(request);
+    const q = request.query as {
+      scope?: string;
+      stage?: string;
+      search?: string;
+      page?: string;
+      limit?: string;
+    };
+    const result = await telecallerAdminService.listLeads(
+      {
+        scope: q.scope === 'mine' ? 'mine' : 'all',
+        stage: q.stage,
+        search: q.search,
+        page: q.page ? Number(q.page) : 1,
+        limit: q.limit ? Number(q.limit) : 20,
+      },
+      admin.email
+    );
+    return reply.send({ ok: true, ...result });
+  });
+
+  app.get(`${api}/telecaller/leads/:id`, async (request, reply) => {
+    requireAdmin(request);
+    const { id } = request.params as { id: string };
+    const detail = await telecallerAdminService.getLeadDetail(id);
+    return reply.send({ ok: true, ...detail });
+  });
+
+  app.post(`${api}/telecaller/leads`, async (request, reply) => {
+    requireAdminRole(request, 'admin', 'manager');
+    const admin = requireAdmin(request);
+    const body = z
+      .object({
+        phone: z.string().min(10),
+        name: z.string().optional(),
+        notes: z.string().optional(),
+        cropType: z.string().optional(),
+        district: z.string().optional(),
+        state: z.string().optional(),
+      })
+      .parse(request.body);
+    const detail = await telecallerAdminService.createLead(body, admin.email);
+    return reply.status(201).send({ ok: true, ...detail });
+  });
+
+  app.patch(`${api}/telecaller/leads/:id`, async (request, reply) => {
+    requireAdminRole(request, 'admin', 'manager');
+    const admin = requireAdmin(request);
+    const { id } = request.params as { id: string };
+    const body = z
+      .object({
+        stage: z
+          .enum([
+            'new_lead',
+            'interested',
+            'follow_up',
+            'recommendation',
+            'order_placed',
+            'repeat_customer',
+          ])
+          .optional(),
+        notes: z.string().optional(),
+        followUpAt: z.string().nullable().optional(),
+        assignedTo: z.string().nullable().optional(),
+        priority: z.string().optional(),
+      })
+      .parse(request.body);
+    const detail = await telecallerAdminService.updateLead(id, body, admin.email);
+    return reply.send({ ok: true, ...detail });
+  });
+
+  app.post(`${api}/telecaller/leads/:id/notes`, async (request, reply) => {
+    requireAdminRole(request, 'admin', 'manager');
+    const admin = requireAdmin(request);
+    const { id } = request.params as { id: string };
+    const { note } = z.object({ note: z.string().min(1) }).parse(request.body);
+    const detail = await telecallerAdminService.addNote(id, note, admin.email);
+    return reply.send({ ok: true, ...detail });
+  });
+
+  app.post(`${api}/telecaller/leads/:id/calls`, async (request, reply) => {
+    requireAdminRole(request, 'admin', 'manager');
+    const admin = requireAdmin(request);
+    const { id } = request.params as { id: string };
+    const body = z
+      .object({
+        outcome: z.string().optional(),
+        notes: z.string().optional(),
+        durationSeconds: z.number().int().optional(),
+      })
+      .parse(request.body);
+    const detail = await telecallerAdminService.logCall(id, body, admin.email);
+    return reply.send({ ok: true, ...detail });
+  });
+
+  app.post(`${api}/telecaller/leads/:id/tasks`, async (request, reply) => {
+    requireAdminRole(request, 'admin', 'manager');
+    const admin = requireAdmin(request);
+    const { id } = request.params as { id: string };
+    const body = z
+      .object({
+        title: z.string().min(1),
+        dueAt: z.string().optional(),
+        notes: z.string().optional(),
+        taskType: z.string().optional(),
+      })
+      .parse(request.body);
+    const task = await telecallerAdminService.createTask(id, body, admin.email);
+    return reply.send({ ok: true, task });
+  });
+
+  app.patch(`${api}/telecaller/tasks/:id/complete`, async (request, reply) => {
+    requireAdminRole(request, 'admin', 'manager');
+    const { id } = request.params as { id: string };
+    await telecallerAdminService.completeTask(id);
+    return reply.send({ ok: true });
+  });
+
+  app.get(`${api}/telecaller/tasks`, async (request, reply) => {
+    const admin = requireAdmin(request);
+    const q = request.query as { status?: string };
+    const tasks = await telecallerAdminService.listTasks(admin.email, q.status ?? 'pending');
+    return reply.send({ ok: true, tasks });
+  });
+
+  app.get(`${api}/telecaller/calls`, async (request, reply) => {
+    const admin = requireAdmin(request);
+    const calls = await telecallerAdminService.listCalls(admin.email);
+    return reply.send({ ok: true, calls });
+  });
+
+  app.get(`${api}/telecaller/whatsapp`, async (request, reply) => {
+    requireAdmin(request);
+    const threads = await telecallerAdminService.listWhatsAppThreads();
+    return reply.send({ ok: true, threads });
+  });
+
+  app.get(`${api}/telecaller/whatsapp/:farmerId/messages`, async (request, reply) => {
+    requireAdmin(request);
+    const { farmerId } = request.params as { farmerId: string };
+    const messages = await telecallerAdminService.getWhatsAppMessages(farmerId);
+    return reply.send({ ok: true, messages });
+  });
+
+  app.post(`${api}/telecaller/whatsapp/:farmerId/send`, async (request, reply) => {
+    requireAdminRole(request, 'admin', 'manager');
+    const admin = requireAdmin(request);
+    const { farmerId } = request.params as { farmerId: string };
+    const { text } = z.object({ text: z.string().min(1).max(4096) }).parse(request.body);
+    const result = await telecallerAdminService.sendWhatsAppMessage(
+      farmerId,
+      text,
+      admin.email
+    );
+    return reply.send({ ok: true, ...result });
+  });
+
+  app.get(`${api}/search`, async (request, reply) => {
+    requireAdmin(request);
+    const q = request.query as { q?: string };
+    const results = await consoleSearchService.search(q?.q ?? '');
+    return reply.send({ ok: true, results });
   });
 
   app.get(`${api}/inventory`, async (request, reply) => {

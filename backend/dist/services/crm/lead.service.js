@@ -19,9 +19,11 @@ export const leadService = {
             intent: input.intent,
             source: input.source,
             status: 'new',
+            stage: 'new_lead',
             priority: input.intent === 'callback' ? 'high' : 'normal',
             notes: input.notes ?? null,
             assigned_to: null,
+            last_interaction_at: new Date().toISOString(),
         })
             .select()
             .single();
