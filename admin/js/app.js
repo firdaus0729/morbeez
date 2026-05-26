@@ -1,5 +1,10 @@
 import { TOKEN_KEY, $, api, state, logout, initials, dateRangeLabel, canEdit } from './core.js';
-import { renderSidebarNav, ROUTE_TITLES, roleLabel } from './nav.js';
+import { renderSidebarNav, ROUTE_TITLES, roleLabel, bindSidebarGroups } from './nav.js';
+import { renderTelecallerWorkspace, bindTelecallerTopbar } from './views/telecaller-workspace.js';
+import { renderTelecallerFollowups } from './views/telecaller-followups.js';
+import { renderTelecallerCalls } from './views/telecaller-calls.js';
+import { renderWhatsAppCrm } from './views/whatsapp-crm.js';
+import { initSearchPalette } from './search-palette.js';
 import { icon } from './icons.js';
 import { renderDashboard } from './views/dashboard.js';
 import { renderProducts } from './views/products.js';
@@ -93,10 +98,16 @@ function navigate(route, params = {}) {
   document.body.classList.toggle('route-ai-mapping', route === 'ai-mapping');
   document.body.classList.toggle('route-farmers', route === 'farmers');
   document.body.classList.toggle(
+    'route-telecaller',
+    route === 'telecaller' || route.startsWith('telecaller/')
+  );
+  document.body.classList.toggle('route-whatsapp-crm', route === 'whatsapp-crm');
+  document.body.classList.toggle(
     'route-product-wizard',
     route === 'products/new' || route === 'products/edit'
   );
   updateSidebar(route);
+  bindSidebarGroups($('#sidebar-nav'));
   updateUserChrome();
   injectTopbarIcons();
 
@@ -105,6 +116,7 @@ function navigate(route, params = {}) {
   if (route.startsWith('products/edit')) titleKey = 'products/edit';
   if (route.startsWith('products/new')) titleKey = 'products/new';
   if (route.startsWith('orders/detail')) titleKey = 'orders/detail';
+  if (route.startsWith('telecaller/')) titleKey = route;
 
   $('#page-title').textContent = ROUTE_TITLES[titleKey] || ROUTE_TITLES[base] || 'Console';
   $('#topbar-actions').innerHTML = '';
@@ -123,6 +135,13 @@ function navigate(route, params = {}) {
   else if (route === 'products/new') renderProductWizard();
   else if (route === 'products/edit') renderProductWizard(params.id);
   else if (route === 'inventory') renderInventory();
+  else if (route === 'telecaller') {
+    bindTelecallerTopbar();
+    renderTelecallerWorkspace();
+  }
+  else if (route === 'telecaller/followups') renderTelecallerFollowups();
+  else if (route === 'telecaller/calls') renderTelecallerCalls();
+  else if (route === 'whatsapp-crm') renderWhatsAppCrm();
   else if (route === 'farmers') {
     bindFarmersTopbar();
     renderFarmers();
@@ -236,6 +255,7 @@ window.addEventListener('hashchange', onHashChange);
 window.addEventListener('morbeez:navigate', (e) => navigate(e.detail.route));
 
 injectTopbarIcons();
+initSearchPalette();
 
 if (localStorage.getItem(TOKEN_KEY)) {
   initSession();

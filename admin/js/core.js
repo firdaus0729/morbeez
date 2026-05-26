@@ -23,6 +23,14 @@ export const state = {
   flashSales: { tab: 'all', page: 1, viewAll: false },
   aiAdvisory: { showLogs: false, logsPage: 1 },
   aiMapping: { tab: 'crop', page: 1, limit: 7, search: '', filter: '', filtersOpen: false },
+  telecaller: {
+    scope: 'mine',
+    stage: 'all',
+    search: '',
+    selectedLeadId: null,
+    detailTab: 'overview',
+    page: 1,
+  },
 };
 
 export function $(sel, root = document) {
