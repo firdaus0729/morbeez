@@ -36,6 +36,42 @@ function followUpClass(label) {
   return 'tc-follow-soon';
 }
 
+const DRAWER_MQ = '(max-width: 1099px)';
+
+function isDrawerViewport() {
+  return window.matchMedia(DRAWER_MQ).matches;
+}
+
+function openLeadDrawer() {
+  if (isDrawerViewport()) {
+    document.body.classList.add('tc-drawer-open');
+  }
+}
+
+function closeLeadDrawer() {
+  document.body.classList.remove('tc-drawer-open');
+}
+
+function bindLeadDrawerUi(root) {
+  const close = () => closeLeadDrawer();
+  $('#tc-drawer-backdrop', root)?.addEventListener('click', close);
+  $('#tc-drawer-close', root)?.addEventListener('click', close);
+  if (!window._tcDrawerEscBound) {
+    window._tcDrawerEscBound = true;
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && document.body.classList.contains('tc-drawer-open')) {
+        closeLeadDrawer();
+      }
+    });
+  }
+  if (!window._tcDrawerResizeBound) {
+    window._tcDrawerResizeBound = true;
+    window.addEventListener('resize', () => {
+      if (!isDrawerViewport()) closeLeadDrawer();
+    });
+  }
+}
+
 export async function renderTelecallerWorkspace() {
   const el = $('#main-content');
   el.innerHTML = '<div class="products-loading"><div class="spinner"></div></div>';
@@ -101,7 +137,9 @@ export async function renderTelecallerWorkspace() {
           ${kpiCard('Conversion Rate', `${ov.conversionRate || 24.6}%`, 6, 'vs last month', 'dashboard')}
         </div>
 
-        <div class="tc-workspace-split">
+        <div class="tc-workspace-shell">
+          <div class="tc-drawer-backdrop" id="tc-drawer-backdrop" aria-hidden="true"></div>
+          <div class="tc-workspace-split">
           <div class="tc-leads-pane">
             <div class="tc-leads-toolbar">
               <div class="tc-scope-tabs">
@@ -139,8 +177,14 @@ export async function renderTelecallerWorkspace() {
             </div>
           </div>
 
-          <div class="tc-detail-pane" id="tc-detail-pane">
-            ${selectedId ? '' : '<div class="tc-detail-empty"><p>Select a lead from the list to view profile and tabs</p></div>'}
+          <aside class="tc-detail-drawer" id="tc-detail-drawer" aria-label="Lead profile">
+            <button type="button" class="tc-drawer-close" id="tc-drawer-close" aria-label="Close profile">
+              ${icon('arrowLeft', 'icon-btn')} <span>Leads</span>
+            </button>
+            <div class="tc-detail-pane" id="tc-detail-pane">
+              ${selectedId ? '' : '<div class="tc-detail-empty"><p>Select a lead from the list to view profile and tabs</p></div>'}
+            </div>
+          </aside>
           </div>
         </div>
       </div>`;
@@ -154,9 +198,11 @@ export async function renderTelecallerWorkspace() {
       const pane = $('#tc-detail-pane');
       if (pane) {
         await renderLeadDetailInto(pane, id, { inPane: true });
-        pane.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        openLeadDrawer();
       }
     };
+
+    bindLeadDrawerUi(el);
 
     if (selectedId) {
       await renderLeadDetailInto($('#tc-detail-pane'), selectedId, { inPane: true });
