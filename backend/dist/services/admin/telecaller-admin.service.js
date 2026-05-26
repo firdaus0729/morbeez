@@ -576,5 +576,139 @@ export const telecallerAdminService = {
         await logInteraction(farmerId, 'whatsapp', `${sent ? 'Sent' : 'Queued'} by ${agentEmail}: ${text.slice(0, 80)}`);
         return { messages: await this.getWhatsAppMessages(farmerId), sent };
     },
+    async listFieldFindings(farmerId, page = 1, limit = 10) {
+        const from = (page - 1) * limit;
+        const to = from + limit - 1;
+        const { data, error, count } = await supabase
+            .from('crm_field_findings')
+            .select('*', { count: 'exact' })
+            .eq('farmer_id', farmerId)
+            .order('visited_at', { ascending: false })
+            .range(from, to);
+        throwIfSupabaseError(error, 'Could not load field findings');
+        let rows = data ?? [];
+        let total = count ?? 0;
+        if (!rows.length) {
+            const demo = this.demoFieldFindings(farmerId);
+            total = demo.length;
+            rows = demo.slice(from, from + limit);
+        }
+        const findings = rows.map((r) => this.mapFieldFinding(r));
+        return {
+            findings,
+            pagination: {
+                page,
+                limit,
+                total,
+                pages: Math.max(1, Math.ceil(total / limit)),
+            },
+        };
+    },
+    mapFieldFinding(r) {
+        const params = r.parameters ?? [];
+        const photos = r.photo_urls ?? [];
+        return {
+            id: r.id,
+            visitedAt: r.visited_at,
+            visitedLabel: formatDateTime(r.visited_at),
+            blockName: r.block_name,
+            cropType: r.crop_type,
+            agronomistName: r.agronomist_name,
+            agronomistRole: r.agronomist_role,
+            agronomistInitials: String(r.agronomist_name || 'A')
+                .split(/\s+/)
+                .map((p) => p[0])
+                .join('')
+                .slice(0, 2)
+                .toUpperCase(),
+            observations: r.observations,
+            parameters: params,
+            diseasePest: r.disease_pest,
+            diseaseTone: r.disease_tone,
+            actionTaken: r.action_taken,
+            followUpLabel: formatDateTime(r.follow_up_at),
+            photoUrls: photos,
+            photoCount: photos.length,
+        };
+    },
+    demoFieldFindings(farmerId) {
+        const tones = ['warning', 'danger', 'healthy', 'warning', 'healthy', 'danger', 'healthy'];
+        const diseases = [
+            'Nutrient Deficiency',
+            'Leaf Spot',
+            'Healthy',
+            'Nutrient Deficiency',
+            'Healthy',
+            'Bacterial Wilt',
+            'Healthy',
+        ];
+        const blocks = ['Block A', 'Block B', 'Block C', 'Block A', 'Block B', 'Block A', 'Block C'];
+        const crops = ['Banana', 'Banana', 'Paddy', 'Ginger', 'Wheat', 'Chilli', 'Cotton'];
+        const now = Date.now();
+        const agronomists = [
+            { name: 'Arjun Nair', role: 'Field Agronomist' },
+            { name: 'Priya Menon', role: 'Senior Agronomist' },
+            { name: 'Suresh Iyer', role: 'Crop Specialist' },
+        ];
+        return Array.from({ length: 27 }, (_, i) => ({
+            id: `demo-${farmerId.slice(0, 8)}-${i}`,
+            farmer_id: farmerId,
+            block_name: blocks[i],
+            crop_type: crops[i],
+            agronomist_name: agronomists[i % agronomists.length].name,
+            agronomist_role: agronomists[i % agronomists.length].role,
+            observations: i % 2 === 0
+                ? 'Yellowing observed on lower leaves. Soil moisture adequate.'
+                : 'Crop vigour good overall. Minor pest pressure on new growth.',
+            parameters: [
+                { label: 'Leaf Stage', value: 'Vegetative' },
+                { label: 'Plant Height', value: `${120 + i * 5} cm` },
+                { label: 'No. of Leaves', value: String(8 + i) },
+                { label: 'SPAD', value: String(42 + i) },
+                { label: 'Soil Moisture', value: `${55 + i}%` },
+            ],
+            disease_pest: diseases[i],
+            disease_tone: tones[i],
+            action_taken: tones[i] === 'healthy'
+                ? 'Continue current nutrition schedule.'
+                : 'Recommended foliar spray and follow-up in 7 days.',
+            follow_up_at: new Date(now + (i + 3) * 86400000).toISOString(),
+            photo_urls: ['1', '2', '3'].slice(0, 2 + (i % 2)),
+            visited_at: new Date(now - i * 86400000 * 2).toISOString(),
+        }));
+    },
+    async createFieldFinding(farmerId, leadId, input) {
+        const { data, error } = await supabase
+            .from('crm_field_findings')
+            .insert({
+            farmer_id: farmerId,
+            lead_id: leadId,
+            block_name: input.blockName,
+            crop_type: input.cropType,
+            agronomist_name: 'Field Agronomist',
+            agronomist_role: 'Field Agronomist',
+            observations: input.observations,
+            disease_pest: input.diseasePest ?? 'Pending review',
+            disease_tone: input.diseaseTone ?? 'warning',
+            action_taken: input.actionTaken,
+            parameters: [
+                { label: 'Leaf Stage', value: '—' },
+                { label: 'SPAD', value: '—' },
+            ],
+            follow_up_at: new Date(Date.now() + 7 * 86400000).toISOString(),
+            photo_urls: [],
+        })
+            .select()
+            .single();
+        throwIfSupabaseError(error, 'Could not save field finding');
+        return this.mapFieldFinding(data);
+    },
+    async getNavBadges() {
+        const { count } = await supabase
+            .from('crm_tasks')
+            .select('id', { count: 'exact', head: true })
+            .eq('status', 'pending');
+        return { followUpTasks: count ?? 0 };
+    },
 };
 //# sourceMappingURL=telecaller-admin.service.js.map

@@ -29,7 +29,11 @@ export const state = {
     search: '',
     selectedLeadId: null,
     detailTab: 'overview',
+    leadTab: 'field-findings',
+    ffLimit: 10,
+    ffPage: 1,
     page: 1,
+    navBadges: { followUpTasks: 0 },
   },
 };
 

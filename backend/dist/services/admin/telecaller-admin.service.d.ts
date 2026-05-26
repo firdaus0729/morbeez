@@ -559,5 +559,87 @@ export declare const telecallerAdminService: {
         }[];
         sent: boolean;
     }>;
+    listFieldFindings(farmerId: string, page?: number, limit?: number): Promise<{
+        findings: {
+            id: unknown;
+            visitedAt: unknown;
+            visitedLabel: string | null;
+            blockName: unknown;
+            cropType: unknown;
+            agronomistName: unknown;
+            agronomistRole: unknown;
+            agronomistInitials: string;
+            observations: unknown;
+            parameters: {
+                label: string;
+                value: string;
+            }[];
+            diseasePest: unknown;
+            diseaseTone: unknown;
+            actionTaken: unknown;
+            followUpLabel: string | null;
+            photoUrls: string[];
+            photoCount: number;
+        }[];
+        pagination: {
+            page: number;
+            limit: number;
+            total: number;
+            pages: number;
+        };
+    }>;
+    mapFieldFinding(r: Record<string, unknown>): {
+        id: unknown;
+        visitedAt: unknown;
+        visitedLabel: string | null;
+        blockName: unknown;
+        cropType: unknown;
+        agronomistName: unknown;
+        agronomistRole: unknown;
+        agronomistInitials: string;
+        observations: unknown;
+        parameters: {
+            label: string;
+            value: string;
+        }[];
+        diseasePest: unknown;
+        diseaseTone: unknown;
+        actionTaken: unknown;
+        followUpLabel: string | null;
+        photoUrls: string[];
+        photoCount: number;
+    };
+    demoFieldFindings(farmerId: string): Record<string, unknown>[];
+    createFieldFinding(farmerId: string, leadId: string | null, input: {
+        blockName: string;
+        cropType: string;
+        observations?: string;
+        diseasePest?: string;
+        diseaseTone?: string;
+        actionTaken?: string;
+    }): Promise<{
+        id: unknown;
+        visitedAt: unknown;
+        visitedLabel: string | null;
+        blockName: unknown;
+        cropType: unknown;
+        agronomistName: unknown;
+        agronomistRole: unknown;
+        agronomistInitials: string;
+        observations: unknown;
+        parameters: {
+            label: string;
+            value: string;
+        }[];
+        diseasePest: unknown;
+        diseaseTone: unknown;
+        actionTaken: unknown;
+        followUpLabel: string | null;
+        photoUrls: string[];
+        photoCount: number;
+    }>;
+    getNavBadges(): Promise<{
+        followUpTasks: number;
+    }>;
 };
 //# sourceMappingURL=telecaller-admin.service.d.ts.map

@@ -676,6 +676,47 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
     return reply.send({ ok: true, results });
   });
 
+  app.get(`${api}/telecaller/nav-badges`, async (request, reply) => {
+    requireAdmin(request);
+    const badges = await telecallerAdminService.getNavBadges();
+    return reply.send({ ok: true, badges });
+  });
+
+  app.get(`${api}/telecaller/leads/:id/field-findings`, async (request, reply) => {
+    requireAdmin(request);
+    const { id } = request.params as { id: string };
+    const q = request.query as { page?: string; limit?: string };
+    const detail = await telecallerAdminService.getLeadDetail(id);
+    const result = await telecallerAdminService.listFieldFindings(
+      detail.lead.farmerId as string,
+      q.page ? Number(q.page) : 1,
+      q.limit ? Number(q.limit) : 10
+    );
+    return reply.send({ ok: true, ...result });
+  });
+
+  app.post(`${api}/telecaller/leads/:id/field-findings`, async (request, reply) => {
+    requireAdminRole(request, 'admin', 'manager');
+    const { id } = request.params as { id: string };
+    const body = z
+      .object({
+        blockName: z.string().min(1),
+        cropType: z.string().min(1),
+        observations: z.string().optional(),
+        diseasePest: z.string().optional(),
+        diseaseTone: z.enum(['healthy', 'warning', 'danger']).optional(),
+        actionTaken: z.string().optional(),
+      })
+      .parse(request.body);
+    const detail = await telecallerAdminService.getLeadDetail(id);
+    const finding = await telecallerAdminService.createFieldFinding(
+      detail.lead.farmerId as string,
+      id,
+      body
+    );
+    return reply.status(201).send({ ok: true, finding });
+  });
+
   app.get(`${api}/inventory`, async (request, reply) => {
     requireAdmin(request);
     const q = request.query as {

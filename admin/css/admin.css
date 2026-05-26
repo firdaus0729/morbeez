@@ -4246,3 +4246,526 @@ tr:hover td {
     max-height: 200px;
   }
 }
+
+/* ─── CRM topbar (Telecaller workspace) ─── */
+.route-telecaller .topbar,
+.route-lead-detail .topbar {
+  flex-wrap: nowrap;
+  gap: 16px;
+}
+
+.route-telecaller .page-heading.hidden,
+.route-lead-detail .page-heading.hidden {
+  display: none;
+}
+
+.route-telecaller .topbar-tools,
+.route-lead-detail .topbar-tools {
+  flex: 1;
+  max-width: none;
+  margin-left: 0;
+}
+
+.crm-topbar-search {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  max-width: 520px;
+}
+
+.crm-topbar-search input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  font-family: inherit;
+  font-size: 14px;
+  outline: none;
+  cursor: pointer;
+}
+
+.bell-badge {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  background: #ef4444;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--card);
+}
+
+.sidebar-badge {
+  margin-left: auto;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 7px;
+  background: var(--green-500);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sidebar-sublink {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.telecaller-list-page .tc-leads-card {
+  margin-top: 0;
+}
+
+.tc-lead-row {
+  cursor: pointer;
+}
+
+.tc-lead-row:hover {
+  background: var(--green-100);
+}
+
+/* ─── Lead detail page (full profile) ─── */
+.lead-detail-page {
+  padding: 0 4px 32px;
+}
+
+.ld-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-decoration: none;
+}
+
+.ld-back:hover {
+  color: var(--green-700);
+}
+
+.ld-profile-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.ld-profile-main {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.ld-avatar-xl {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: var(--green-700);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+.ld-name-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.ld-name-row h1 {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.ld-status-pill {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--bg);
+  color: var(--text-muted);
+}
+
+.ld-status-active {
+  background: var(--green-100);
+  color: #166534;
+}
+
+.ld-rating {
+  font-size: 14px;
+  font-weight: 700;
+  color: #ca8a04;
+}
+
+.ld-meta-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: 14px;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.ld-meta-icon {
+  width: 16px;
+  height: 16px;
+  color: var(--green-600);
+}
+
+.ld-meta-sep {
+  opacity: 0.5;
+}
+
+.ld-profile-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.ld-btn-wa {
+  background: #25d366;
+  border-color: #25d366;
+}
+
+.ld-btn-wa:hover {
+  background: #1da851;
+}
+
+.ld-tabs {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 0;
+  padding-bottom: 0;
+  -webkit-overflow-scrolling: touch;
+}
+
+.ld-tab {
+  padding: 12px 14px;
+  border: none;
+  background: none;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+  white-space: nowrap;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+}
+
+.ld-tab:hover {
+  color: var(--text);
+}
+
+.ld-tab.active {
+  color: var(--green-700);
+  border-bottom-color: var(--green-500);
+}
+
+.ld-tab-content {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-top: none;
+  border-radius: 0 0 var(--radius) var(--radius);
+  padding: 24px;
+  box-shadow: var(--shadow);
+}
+
+.ld-tab-section h2 {
+  margin: 0 0 6px;
+  font-size: 1.15rem;
+}
+
+.ld-tab-desc {
+  margin: 0 0 20px;
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+.ld-tab-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+
+.ld-tab-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.ld-findings-card {
+  border: none;
+  box-shadow: none;
+  padding: 0;
+}
+
+.ld-findings-table {
+  font-size: 13px;
+}
+
+.ld-findings-table th {
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.ld-col-datetime {
+  white-space: nowrap;
+  font-weight: 600;
+}
+
+.ld-col-agronomist {
+  min-width: 140px;
+}
+
+.ld-agronomist-cell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ld-agronomist-cell small {
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.ld-col-obs {
+  max-width: 200px;
+  line-height: 1.45;
+  color: var(--text-muted);
+}
+
+.ld-col-params {
+  min-width: 140px;
+}
+
+.ld-params {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.ld-params li {
+  margin-bottom: 2px;
+}
+
+.ld-params span {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.ld-disease {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.ld-disease-healthy {
+  background: #ecfdf5;
+  color: #166534;
+}
+
+.ld-disease-warning {
+  background: #fff7ed;
+  color: #c2410c;
+}
+
+.ld-disease-danger {
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+.ld-col-action {
+  max-width: 180px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.ld-photo-thumbs {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.ld-photo-thumb {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  background: linear-gradient(135deg, #c8e6c9, #81c784);
+  border: 1px solid var(--border);
+}
+
+.ld-photo-more {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.ld-findings-footer {
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.ld-rows-per-page {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.ld-rows-per-page select {
+  width: auto;
+}
+
+.ld-overview-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.ld-panel {
+  background: var(--bg);
+  border-radius: var(--radius-sm);
+  padding: 16px;
+}
+
+.ld-panel h3 {
+  margin: 0 0 12px;
+  font-size: 14px;
+  color: var(--green-700);
+}
+
+.ld-dl {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin: 0;
+}
+
+.ld-dl dt {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.ld-dl dd {
+  margin: 0;
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.ld-mini-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.ld-mini-grid span {
+  display: block;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.ld-more-btn {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.ld-pagination {
+  margin: 0 auto;
+}
+
+.ld-timeline {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-left: 2px solid var(--green-200);
+}
+
+.ld-timeline li {
+  padding: 0 0 16px 16px;
+  position: relative;
+}
+
+.ld-timeline li::before {
+  content: '';
+  position: absolute;
+  left: -7px;
+  top: 4px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--green-500);
+}
+
+.ld-timeline time {
+  display: block;
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+.ld-next-card {
+  padding: 16px;
+  background: var(--green-100);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--green-200);
+}
+
+.tool-btn-bell {
+  position: relative;
+}
+
+@media (max-width: 1100px) {
+  .ld-overview-grid {
+    grid-template-columns: 1fr;
+  }
+  .ld-findings-table {
+    min-width: 900px;
+  }
+  .ld-findings-card .table-wrap {
+    overflow-x: auto;
+  }
+}

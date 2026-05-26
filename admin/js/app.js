@@ -1,6 +1,7 @@
 import { TOKEN_KEY, $, api, state, logout, initials, dateRangeLabel, canEdit } from './core.js';
 import { renderSidebarNav, ROUTE_TITLES, roleLabel, bindSidebarGroups } from './nav.js';
-import { renderTelecallerWorkspace, bindTelecallerTopbar } from './views/telecaller-workspace.js';
+import { renderTelecallerWorkspace } from './views/telecaller-workspace.js';
+import { renderTelecallerLeadDetail, bindTelecallerCrmTopbar } from './views/telecaller-lead-detail.js';
 import { renderTelecallerFollowups } from './views/telecaller-followups.js';
 import { renderTelecallerCalls } from './views/telecaller-calls.js';
 import { renderWhatsAppCrm } from './views/whatsapp-crm.js';
@@ -101,6 +102,7 @@ function navigate(route, params = {}) {
     'route-telecaller',
     route === 'telecaller' || route.startsWith('telecaller/')
   );
+  document.body.classList.toggle('route-lead-detail', route === 'telecaller/lead');
   document.body.classList.toggle('route-whatsapp-crm', route === 'whatsapp-crm');
   document.body.classList.toggle(
     'route-product-wizard',
@@ -109,7 +111,13 @@ function navigate(route, params = {}) {
   updateSidebar(route);
   bindSidebarGroups($('#sidebar-nav'));
   updateUserChrome();
-  injectTopbarIcons();
+
+  const isCrmRoute = route === 'telecaller' || route.startsWith('telecaller/');
+  if (isCrmRoute) {
+    bindTelecallerCrmTopbar();
+  } else {
+    injectTopbarIcons();
+  }
 
   const base = route.split('/')[0];
   let titleKey = route;
@@ -118,7 +126,11 @@ function navigate(route, params = {}) {
   if (route.startsWith('orders/detail')) titleKey = 'orders/detail';
   if (route.startsWith('telecaller/')) titleKey = route;
 
-  $('#page-title').textContent = ROUTE_TITLES[titleKey] || ROUTE_TITLES[base] || 'Console';
+  const pageTitle = $('#page-title');
+  if (pageTitle) {
+    pageTitle.textContent = ROUTE_TITLES[titleKey] || ROUTE_TITLES[base] || 'Console';
+    pageTitle.classList.toggle('hidden', route === 'telecaller/lead');
+  }
   $('#topbar-actions').innerHTML = '';
   $('#main-content').innerHTML = '';
 
@@ -136,8 +148,10 @@ function navigate(route, params = {}) {
   else if (route === 'products/edit') renderProductWizard(params.id);
   else if (route === 'inventory') renderInventory();
   else if (route === 'telecaller') {
-    bindTelecallerTopbar();
     renderTelecallerWorkspace();
+  }
+  else if (route === 'telecaller/lead') {
+    renderTelecallerLeadDetail(params.id);
   }
   else if (route === 'telecaller/followups') renderTelecallerFollowups();
   else if (route === 'telecaller/calls') renderTelecallerCalls();
@@ -180,6 +194,16 @@ function navigate(route, params = {}) {
   }
 }
 
+async function loadNavBadges() {
+  try {
+    const data = await api('/console/api/v1/telecaller/nav-badges');
+    window.__navBadges = data.badges || {};
+    state.telecaller.navBadges = data.badges || {};
+  } catch {
+    window.__navBadges = {};
+  }
+}
+
 async function initSession() {
   const token = localStorage.getItem(TOKEN_KEY);
   if (!token) {
@@ -189,6 +213,7 @@ async function initSession() {
   try {
     const data = await api('/console/api/v1/auth/me');
     state.admin = data.admin;
+    await loadNavBadges();
     onHashChange();
   } catch {
     navigate('login');
@@ -236,6 +261,8 @@ function onHashChange() {
     navigate('products/new');
   } else if (hash.startsWith('orders/detail/')) {
     navigate('orders/detail', { id: hash.split('/')[2] });
+  } else if (hash.startsWith('telecaller/lead/')) {
+    navigate('telecaller/lead', { id: hash.split('/')[2] });
   } else {
     navigate(hash);
   }

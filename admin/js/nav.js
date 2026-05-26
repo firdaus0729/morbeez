@@ -13,7 +13,7 @@ export const NAV_GROUPS = [
     live: true,
     children: [
       { id: 'telecaller', label: 'Workspace', hash: 'telecaller', live: true },
-      { id: 'telecaller/followups', label: 'Follow-up Tasks', hash: 'telecaller/followups', live: true },
+      { id: 'telecaller/followups', label: 'Follow-up Tasks', hash: 'telecaller/followups', live: true, badgeKey: 'followUpTasks' },
       { id: 'telecaller/calls', label: 'Calls', hash: 'telecaller/calls', live: true },
     ],
   },
@@ -74,6 +74,7 @@ export const ROUTE_TITLES = {
   telecaller: 'Telecaller CRM Workspace',
   'telecaller/followups': 'Follow-up Tasks',
   'telecaller/calls': 'Calls',
+  'telecaller/lead': 'Telecaller CRM Workspace',
   products: 'Products',
   'products/new': 'Add Product',
   'products/edit': 'Edit Product',
@@ -142,9 +143,13 @@ export function renderSidebarNav(activeRoute) {
       .filter((c) => c.live !== false)
       .map((c) => {
         const active = route === c.hash || route === c.id;
+        const badge =
+          c.badgeKey && typeof window !== 'undefined' && window.__navBadges?.[c.badgeKey]
+            ? `<span class="sidebar-badge">${window.__navBadges[c.badgeKey]}</span>`
+            : '';
         return `<li>
           <a href="#${c.hash}" data-nav="${c.id}" class="sidebar-sublink ${active ? 'active' : ''}">
-            <span>${c.label}</span>
+            <span>${c.label}</span>${badge}
           </a>
         </li>`;
       })
