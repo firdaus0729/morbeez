@@ -2,6 +2,7 @@ export interface SignupInput {
     email: string;
     firstName: string;
     lastName: string;
+    phone: string;
     password: string;
     acceptTerms: boolean;
     newsletter: boolean;

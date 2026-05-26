@@ -1,9 +1,13 @@
 {%- liquid
-  assign wa_phone = section.settings.phone | default: settings.whatsapp_phone
+  assign wa_phone = section.settings.phone | default: settings.whatsapp_phone | default: '917676026318'
   assign wa_msg = section.settings.default_message | default: settings.whatsapp_message
 -%}
 {%- if section.settings.enabled and wa_phone != blank -%}
-  {%- render 'morbeez-whatsapp-url', phone_raw: wa_phone, message_raw: wa_msg -%}
+  {%- capture wa_href -%}
+    {%- render 'morbeez-whatsapp-url', phone_raw: wa_phone, message_raw: wa_msg -%}
+  {%- endcapture -%}
+  {%- assign wa_href = wa_href | strip -%}
+  {%- assign wa_digits = wa_phone | remove: '+' | remove: ' ' | replace: '-', '' -%}
   <div
     class="fixed z-50"
     style="bottom: calc(1.25rem + env(safe-area-inset-bottom, 0px)); right: 1.25rem;"

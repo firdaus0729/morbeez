@@ -14,7 +14,10 @@
             {{ section.settings.disclaimer }}
           </p>
 
-          {%- render 'morbeez-whatsapp-url', phone_raw: settings.whatsapp_phone, message_raw: settings.whatsapp_message -%}
+          {%- capture wa_href -%}
+            {%- render 'morbeez-whatsapp-url', phone_raw: settings.whatsapp_phone, message_raw: settings.whatsapp_message -%}
+          {%- endcapture -%}
+          {%- assign wa_href = wa_href | strip -%}
           <form
             id="MorbeezCropDoctorForm"
             class="space-y-5"

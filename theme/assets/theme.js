@@ -8,12 +8,25 @@
   var waCta = document.querySelector('[data-morbeez-whatsapp-cta] a');
   if (waCta) {
     var href = waCta.getAttribute('href') || '';
+    var waRoot = waCta.closest('[data-morbeez-whatsapp-cta]');
     if (href.indexOf('/pages/http') === 0) {
       try {
         href = decodeURIComponent(href.replace(/^\/pages\//, ''));
         waCta.setAttribute('href', href);
       } catch (e) {
         /* ignore */
+      }
+    }
+    if (!href || href.indexOf('https://wa.me/') !== 0) {
+      var phone = (waRoot && waRoot.getAttribute('data-wa-phone')) || '917676026318';
+      phone = String(phone).replace(/\D/g, '');
+      if (phone) {
+        href =
+          'https://wa.me/' +
+          phone +
+          '?text=' +
+          encodeURIComponent('Hi Morbeez, I need help with ');
+        waCta.setAttribute('href', href);
       }
     }
     if (href.indexOf('https://wa.me/') === 0 && document.title) {

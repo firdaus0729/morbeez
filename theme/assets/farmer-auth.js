@@ -122,6 +122,25 @@
     });
   }
 
+  function normalizeIndianPhone(raw) {
+    var digits = String(raw || '').replace(/\D/g, '');
+    if (digits.length === 10) return '91' + digits;
+    if (digits.length === 12 && digits.indexOf('91') === 0) return digits;
+    return digits;
+  }
+
+  function isValidIndianPhone(raw) {
+    return /^91[6-9]\d{9}$/.test(normalizeIndianPhone(raw));
+  }
+
+  function formatPhoneDisplay(phone) {
+    var d = String(phone || '').replace(/\D/g, '');
+    if (d.length === 12 && d.indexOf('91') === 0) {
+      return '+91 ' + d.slice(2, 7) + ' ' + d.slice(7);
+    }
+    return phone || '';
+  }
+
   function showLoggedIn(farmer) {
     if (tabsRow) tabsRow.classList.add('hidden');
     loginForm?.classList.add('hidden');
@@ -135,7 +154,12 @@
         nameEl.textContent =
           [farmer.firstName, farmer.lastName].filter(Boolean).join(' ') || farmer.name || farmer.email;
       }
-      if (emailEl) emailEl.textContent = farmer.email || '';
+      if (emailEl) {
+        var parts = [];
+        if (farmer.email) parts.push(farmer.email);
+        if (farmer.phone) parts.push('WhatsApp: ' + formatPhoneDisplay(farmer.phone));
+        emailEl.textContent = parts.join(' · ');
+      }
     }
   }
 
@@ -229,6 +253,11 @@
         showMessage('Please accept the Terms of Service and Privacy Policy.', true);
         return;
       }
+      var whatsapp = fd.get('whatsapp');
+      if (!isValidIndianPhone(whatsapp)) {
+        showMessage('Enter a valid 10-digit Indian WhatsApp mobile number (e.g. 9876543210).', true);
+        return;
+      }
       var btn = signupForm.querySelector('[type="submit"]');
       if (btn) {
         btn.disabled = true;
@@ -240,6 +269,7 @@
           email: fd.get('email'),
           firstName: fd.get('firstName'),
           lastName: fd.get('lastName'),
+          phone: normalizeIndianPhone(whatsapp),
           password: fd.get('password'),
           acceptTerms: true,
           newsletter: !!fd.get('newsletter'),
@@ -258,7 +288,10 @@
               doneSignup();
             }
           } else {
-            showMessage(r.data.message || 'Sign up failed. This email may already be registered.', true);
+            showMessage(
+              r.data.message || 'Sign up failed. This email or WhatsApp number may already be registered.',
+              true
+            );
           }
         })
         .catch(function (err) {

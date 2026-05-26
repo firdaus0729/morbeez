@@ -6,6 +6,7 @@ const signupSchema = z.object({
     email: z.string().email().max(255),
     firstName: z.string().min(1).max(80),
     lastName: z.string().min(1).max(80),
+    phone: z.string().min(10).max(20),
     password: z.string().min(8).max(128),
     acceptTerms: z.literal(true),
     newsletter: z.boolean().default(false),

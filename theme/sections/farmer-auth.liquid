@@ -70,6 +70,23 @@
           </div>
         </div>
         <div class="morbeez-auth-field mt-3">
+          <span class="morbeez-auth-field-icon" aria-hidden="true">{%- render 'morbeez-icon', name: 'whatsapp', class: 'h-4 w-4' -%}</span>
+          <input
+            type="tel"
+            name="whatsapp"
+            placeholder="WhatsApp number"
+            autocomplete="tel"
+            required
+            inputmode="numeric"
+            pattern="[0-9+\s\-()]{10,16}"
+            class="morbeez-auth-input"
+            aria-describedby="morbeez-auth-whatsapp-hint"
+          >
+        </div>
+        <p id="morbeez-auth-whatsapp-hint" class="mt-1.5 text-xs text-[var(--color-muted)]">
+          Required — 10-digit Indian mobile for WhatsApp (e.g. 9876543210). We use this for crop advisory and order updates.
+        </p>
+        <div class="morbeez-auth-field mt-3">
           <span class="morbeez-auth-field-icon" aria-hidden="true">{%- render 'morbeez-icon', name: 'key', class: 'h-4 w-4' -%}</span>
           <input type="password" name="password" placeholder="Password" autocomplete="new-password" required minlength="8" class="morbeez-auth-input morbeez-auth-input--password">
           <button type="button" class="morbeez-auth-toggle-pw" data-toggle-pw aria-label="Show password">{%- render 'morbeez-icon', name: 'eye', class: 'h-5 w-5' -%}</button>

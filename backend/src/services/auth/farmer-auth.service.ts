@@ -4,11 +4,13 @@ import { ConflictError, UnauthorizedError, ValidationError } from '../../lib/err
 import { hashPassword, verifyPassword } from '../../lib/password.js';
 import { createFarmerToken } from '../../lib/jwt.js';
 import { eventBus } from '../../events/bus.js';
+import { isValidIndianPhone, normalizePhone } from '../../lib/phone.js';
 
 export interface SignupInput {
   email: string;
   firstName: string;
   lastName: string;
+  phone: string;
   password: string;
   acceptTerms: boolean;
   newsletter: boolean;
@@ -47,45 +49,94 @@ export const farmerAuthService = {
     if (input.password.length < 8) {
       throw new ValidationError('Password must be at least 8 characters');
     }
+    if (!isValidIndianPhone(input.phone)) {
+      throw new ValidationError('Enter a valid 10-digit Indian WhatsApp mobile number');
+    }
 
-    const { data: existing, error: existingErr } = await supabase
+    const phone = normalizePhone(input.phone);
+    const fullName = `${input.firstName.trim()} ${input.lastName.trim()}`.trim();
+    const now = new Date().toISOString();
+
+    const { data: existingEmail, error: existingEmailErr } = await supabase
       .from('farmers')
       .select('id')
       .eq('email', email)
       .maybeSingle();
-    throwIfSupabaseError(existingErr, 'Could not check existing account');
-    if (existing) throw new ConflictError('An account with this email already exists');
+    throwIfSupabaseError(existingEmailErr, 'Could not check existing account');
+    if (existingEmail) throw new ConflictError('An account with this email already exists');
 
-    const fullName = `${input.firstName.trim()} ${input.lastName.trim()}`.trim();
-    const now = new Date().toISOString();
-
-    const { data, error } = await supabase
+    const { data: existingPhone, error: existingPhoneErr } = await supabase
       .from('farmers')
-      .insert({
-        email,
-        first_name: input.firstName.trim(),
-        last_name: input.lastName.trim(),
-        name: fullName,
-        password_hash: hashPassword(input.password),
-        terms_accepted_at: now,
-        newsletter_subscribed: input.newsletter,
-        preferred_language: 'en',
-        source: 'website',
-        metadata: { signup_channel: 'website' },
-        last_login_at: now,
-      })
-      .select()
-      .single();
+      .select('*')
+      .eq('phone', phone)
+      .maybeSingle();
+    throwIfSupabaseError(existingPhoneErr, 'Could not check WhatsApp number');
 
-    throwIfSupabaseError(error, 'Could not create farmer account');
+    const signupPayload = {
+      email,
+      phone,
+      first_name: input.firstName.trim(),
+      last_name: input.lastName.trim(),
+      name: fullName,
+      password_hash: hashPassword(input.password),
+      terms_accepted_at: now,
+      newsletter_subscribed: input.newsletter,
+      preferred_language: 'en',
+      source: 'website',
+      metadata: {
+        signup_channel: 'website',
+        whatsapp_opt_in: true,
+      },
+      last_login_at: now,
+      updated_at: now,
+    };
+
+    let data: Record<string, unknown>;
+
+    if (existingPhone) {
+      if (existingPhone.email && existingPhone.email !== email) {
+        throw new ConflictError('This WhatsApp number is already linked to another account');
+      }
+      if (existingPhone.password_hash) {
+        throw new ConflictError('This WhatsApp number already has a website account. Please log in.');
+      }
+
+      const { data: merged, error: mergeErr } = await supabase
+        .from('farmers')
+        .update({
+          ...signupPayload,
+          metadata: {
+            ...(typeof existingPhone.metadata === 'object' && existingPhone.metadata !== null
+              ? existingPhone.metadata
+              : {}),
+            signup_channel: 'website',
+            whatsapp_opt_in: true,
+            website_linked_at: now,
+          },
+        })
+        .eq('id', existingPhone.id)
+        .select()
+        .single();
+
+      throwIfSupabaseError(mergeErr, 'Could not link WhatsApp number to your account');
+      data = merged;
+    } else {
+      const { data: created, error } = await supabase.from('farmers').insert(signupPayload).select().single();
+      throwIfSupabaseError(error, 'Could not create farmer account');
+      data = created;
+    }
 
     try {
-      await eventBus.publish('farmer.upserted', { farmerId: data.id, email, source: 'website' }, 'farmer-auth');
+      await eventBus.publish(
+        'farmer.upserted',
+        { farmerId: data.id, email, phone, source: 'website' },
+        'farmer-auth'
+      );
     } catch {
       /* signup succeeds even if outbox write fails */
     }
 
-    const token = createFarmerToken(data.id, email);
+    const token = createFarmerToken(data.id as string, email);
     return { token, farmer: publicFarmer(data) };
   },
 
