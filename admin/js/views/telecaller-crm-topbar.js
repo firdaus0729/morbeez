@@ -6,12 +6,6 @@ import { openAddLeadModal } from './telecaller-shared.js';
 
 let defaultTopbarHtml = null;
 
-function bindSidebarToggle() {
-  $('#btn-sidebar')?.addEventListener('click', () => {
-    document.body.classList.toggle('sidebar-open');
-  });
-}
-
 function fillUserProfile() {
   const admin = state.admin;
   if (!admin) return;
@@ -81,7 +75,6 @@ export function bindTelecallerCrmTopbar(pageTitle = 'Telecaller CRM Workspace') 
       </button>
     </div>`;
 
-  bindSidebarToggle();
   fillUserProfile();
 
   const openSearch = () => openSearchPalette();
@@ -117,7 +110,6 @@ export function restoreDefaultTopbar() {
   if (!topbar || !defaultTopbarHtml) return;
   topbar.classList.remove('crm-topbar-shell');
   topbar.innerHTML = defaultTopbarHtml;
-  bindSidebarToggle();
 }
 
 export function refreshCrmTopbarUser() {

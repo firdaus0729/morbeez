@@ -26,6 +26,7 @@ import { renderAiAdvisory, bindAiAdvisoryTopbar, teardownAiAdvisory } from './vi
 import { renderAiMapping, bindAiMappingTopbar } from './views/ai-mapping.js';
 import { renderStaff } from './views/staff.js';
 import { renderModulePlaceholder, renderSettings } from './views/placeholder.js';
+import { initSidebarToggle } from './sidebar-toggle.js';
 
 const PLACEHOLDER_ROUTES = new Set([
   'whatsapp',
@@ -290,12 +291,12 @@ $('#btn-logout')?.addEventListener('click', () => {
   logout();
   $('#btn-logout')?.classList.add('hidden');
 });
-$('#btn-sidebar')?.addEventListener('click', () => document.body.classList.toggle('sidebar-open'));
 window.addEventListener('hashchange', onHashChange);
 window.addEventListener('morbeez:navigate', (e) => navigate(e.detail.route));
 
 injectTopbarIcons();
 initSearchPalette();
+initSidebarToggle();
 
 if (localStorage.getItem(TOKEN_KEY)) {
   initSession();

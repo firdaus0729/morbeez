@@ -77,10 +77,10 @@ export async function renderTelecallerWorkspace() {
           <div><strong>${escapeHtml(l.farmerName)}</strong><small>${escapeHtml(l.phone || '')}</small></div>
         </td>
         <td>${stageBadge(l.stage, l.stageLabel)}</td>
-        <td class="tc-muted">${escapeHtml(l.lastInteractionLabel || '—')}</td>
+        <td class="tc-muted tc-hide-sm">${escapeHtml(l.lastInteractionLabel || '—')}</td>
         <td class="${followUpClass(l.followUpLabel)}">${escapeHtml(l.followUpLabel || '—')}</td>
-        <td class="tc-muted tc-col-assigned">${escapeHtml(l.assignedTo?.split('@')[0] || 'Unassigned')}</td>
-        <td><span class="ld-status-pill ld-status-active">Active</span></td>
+        <td class="tc-muted tc-col-assigned tc-hide-md">${escapeHtml(l.assignedTo?.split('@')[0] || 'Unassigned')}</td>
+        <td class="tc-hide-sm"><span class="ld-status-pill ld-status-active">Active</span></td>
         <td class="col-actions tc-row-actions">
           ${l.phone ? `<a href="tel:${escapeHtml(l.phone)}" class="action-icon" onclick="event.stopPropagation()">${icon('phone', 'icon-action')}</a>` : ''}
           <a href="${wa}" target="_blank" rel="noopener" class="action-icon" onclick="event.stopPropagation()">${icon('whatsapp', 'icon-action')}</a>
@@ -127,10 +127,10 @@ export async function renderTelecallerWorkspace() {
                   <tr>
                     <th>Farmer Name</th>
                     <th>Lead Stage</th>
-                    <th>Last Interaction</th>
+                    <th class="tc-hide-sm">Last Interaction</th>
                     <th>Next Follow-up</th>
-                    <th>Assigned To</th>
-                    <th>Status</th>
+                    <th class="tc-hide-md">Assigned To</th>
+                    <th class="tc-hide-sm">Status</th>
                     <th class="col-actions-h">Action</th>
                   </tr>
                 </thead>
@@ -145,20 +145,27 @@ export async function renderTelecallerWorkspace() {
         </div>
       </div>`;
 
+    const selectLead = async (id) => {
+      state.telecaller.selectedLeadId = id;
+      state.telecaller.leadTab = state.telecaller.leadTab || 'overview';
+      el.querySelectorAll('.tc-lead-row').forEach((row) => {
+        row.classList.toggle('selected', row.dataset.leadId === id);
+      });
+      const pane = $('#tc-detail-pane');
+      if (pane) {
+        await renderLeadDetailInto(pane, id, { inPane: true });
+        pane.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+    };
+
     if (selectedId) {
       await renderLeadDetailInto($('#tc-detail-pane'), selectedId, { inPane: true });
     }
 
-    const selectLead = (id) => {
-      state.telecaller.selectedLeadId = id;
-      state.telecaller.leadTab = state.telecaller.leadTab || 'overview';
-      renderTelecallerWorkspace();
-    };
-
     el.querySelectorAll('.tc-lead-row').forEach((row) => {
       row.addEventListener('click', (ev) => {
-        if (ev.target.closest('a')) return;
-        selectLead(row.dataset.leadId);
+        if (ev.target.closest('a, button')) return;
+        void selectLead(row.dataset.leadId);
       });
     });
 
