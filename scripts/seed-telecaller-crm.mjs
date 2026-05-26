@@ -220,9 +220,18 @@ async function ensureFollowUpTask(env, farmerId, leadId, assignTo, followUp) {
   });
 }
 
+async function resolveAssignEmail(env) {
+  const fromArg = process.argv.find((a) => a.startsWith('--assign='))?.split('=')[1];
+  if (fromArg) return fromArg;
+  if (env.CRM_SEED_ASSIGN_EMAIL) return env.CRM_SEED_ASSIGN_EMAIL;
+  const admins = await sbGet(env, 'admin_users', 'select=email&order=created_at.asc&limit=1');
+  return admins[0]?.email || null;
+}
+
 async function main() {
   const env = loadEnv();
-  const assignTo = process.argv.find((a) => a.startsWith('--assign='))?.split('=')[1] || null;
+  const assignTo = await resolveAssignEmail(env);
+  if (assignTo) console.log('Assigning leads to:', assignTo);
   const now = new Date();
   let processed = 0;
 

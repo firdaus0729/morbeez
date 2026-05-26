@@ -1,7 +1,12 @@
 import { TOKEN_KEY, $, api, state, logout, initials, dateRangeLabel, canEdit } from './core.js';
 import { renderSidebarNav, ROUTE_TITLES, roleLabel, bindSidebarGroups } from './nav.js';
 import { renderTelecallerWorkspace } from './views/telecaller-workspace.js';
-import { renderTelecallerLeadDetail, bindTelecallerCrmTopbar } from './views/telecaller-lead-detail.js';
+import {
+  renderTelecallerLeadDetail,
+  bindTelecallerCrmTopbar,
+  restoreDefaultTopbar,
+  refreshCrmTopbarUser,
+} from './views/telecaller-lead-detail.js';
 import { renderTelecallerFollowups } from './views/telecaller-followups.js';
 import { renderTelecallerCalls } from './views/telecaller-calls.js';
 import { renderWhatsAppCrm } from './views/whatsapp-crm.js';
@@ -52,7 +57,10 @@ function updateUserChrome() {
   set('#sidebar-user-name', name);
   set('#sidebar-user-role', role);
   set('#topbar-admin-label', name.split(' ')[0]);
+  set('#topbar-admin-name', name);
+  set('#topbar-admin-role', role);
   set('#topbar-date-text', dateRangeLabel());
+  refreshCrmTopbarUser();
 
   ['#sidebar-avatar', '#topbar-avatar'].forEach((sel) => {
     const el = $(sel);
@@ -112,13 +120,6 @@ function navigate(route, params = {}) {
   bindSidebarGroups($('#sidebar-nav'));
   updateUserChrome();
 
-  const isCrmRoute = route === 'telecaller' || route.startsWith('telecaller/');
-  if (isCrmRoute) {
-    bindTelecallerCrmTopbar();
-  } else {
-    injectTopbarIcons();
-  }
-
   const base = route.split('/')[0];
   let titleKey = route;
   if (route.startsWith('products/edit')) titleKey = 'products/edit';
@@ -126,12 +127,24 @@ function navigate(route, params = {}) {
   if (route.startsWith('orders/detail')) titleKey = 'orders/detail';
   if (route.startsWith('telecaller/')) titleKey = route;
 
-  const pageTitle = $('#page-title');
-  if (pageTitle) {
-    pageTitle.textContent = ROUTE_TITLES[titleKey] || ROUTE_TITLES[base] || 'Console';
-    pageTitle.classList.toggle('hidden', route === 'telecaller/lead');
+  const headerTitle = ROUTE_TITLES[titleKey] || ROUTE_TITLES[base] || 'Console';
+  const isCrmRoute = route === 'telecaller' || route.startsWith('telecaller/');
+
+  if (isCrmRoute) {
+    bindTelecallerCrmTopbar(headerTitle);
+  } else {
+    restoreDefaultTopbar();
+    injectTopbarIcons();
+    const pageTitle = $('#page-title');
+    if (pageTitle) {
+      pageTitle.textContent = headerTitle;
+      pageTitle.classList.remove('hidden');
+    }
   }
-  $('#topbar-actions').innerHTML = '';
+
+  const topbarActions = $('#topbar-actions');
+  if (topbarActions && !isCrmRoute) topbarActions.innerHTML = '';
+
   $('#main-content').innerHTML = '';
 
   if (route === 'dashboard') renderDashboard();

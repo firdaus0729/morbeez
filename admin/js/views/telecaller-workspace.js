@@ -1,6 +1,6 @@
-import { $, api, state, escapeHtml, formatInrFull, canEdit } from '../core.js';
+import { $, api, state, escapeHtml, formatInrFull } from '../core.js';
 import { icon } from '../icons.js';
-import { openAddLeadModal } from './telecaller-shared.js';
+import { renderLeadDetailInto } from './telecaller-lead-tabs.js';
 
 const STAGE_TONE = {
   new_lead: 'stage-new',
@@ -11,12 +11,13 @@ const STAGE_TONE = {
   repeat_customer: 'stage-repeat',
 };
 
-function kpiCard(label, value, trend, tone = 'default') {
+function kpiCard(label, value, trend, trendLabel, iconName) {
   const trendHtml =
     trend != null
-      ? `<span class="tc-kpi-trend tc-kpi-trend-${tone}">${trend > 0 ? '+' : ''}${trend}%</span>`
+      ? `<span class="tc-kpi-trend tc-kpi-trend-${trend >= 0 ? 'up' : 'down'}">${trend > 0 ? '+' : ''}${trend}%</span><span class="tc-kpi-vs">${escapeHtml(trendLabel)}</span>`
       : '';
   return `<div class="tc-kpi-card">
+    <div class="tc-kpi-icon-wrap">${icon(iconName, 'tc-kpi-icon')}</div>
     <span class="tc-kpi-label">${escapeHtml(label)}</span>
     <div class="tc-kpi-row">
       <span class="tc-kpi-value">${escapeHtml(String(value))}</span>
@@ -30,15 +31,9 @@ function stageBadge(stage, label) {
   return `<span class="tc-stage ${tone}">${escapeHtml(label)}</span>`;
 }
 
-export function bindTelecallerTopbar(onAddLead) {
-  if (!canEdit()) return;
-  $('#topbar-actions').innerHTML =
-    '<button type="button" class="btn btn-primary btn-sm btn-add-product" id="btn-add-lead">' +
-    icon('plus', 'icon-btn') +
-    ' Add Lead</button>';
-  $('#btn-add-lead')?.addEventListener('click', () => {
-    openAddLeadModal(onAddLead);
-  });
+function followUpClass(label) {
+  if (!label || label === '—') return '';
+  return 'tc-follow-soon';
 }
 
 export async function renderTelecallerWorkspace() {
@@ -50,7 +45,7 @@ export async function renderTelecallerWorkspace() {
       scope: state.telecaller.scope,
       stage: state.telecaller.stage,
       page: String(state.telecaller.page),
-      limit: '20',
+      limit: '15',
       ...(state.telecaller.search ? { search: state.telecaller.search } : {}),
     });
 
@@ -63,94 +58,107 @@ export async function renderTelecallerWorkspace() {
     const leads = leadsRes.leads || [];
     const counts = leadsRes.counts || { mine: 0, all: 0 };
 
+    if (!state.telecaller.selectedLeadId && leads[0]) {
+      state.telecaller.selectedLeadId = leads[0].id;
+    }
+    if (state.telecaller.selectedLeadId && !leads.find((l) => l.id === state.telecaller.selectedLeadId)) {
+      state.telecaller.selectedLeadId = leads[0]?.id || null;
+    }
+
+    const selectedId = state.telecaller.selectedLeadId;
+
     const rows = leads
-      .map(
-        (l) => `
-      <tr class="tc-lead-row" data-lead-id="${escapeHtml(l.id)}">
+      .map((l) => {
+        const wa = l.phone ? `https://wa.me/91${String(l.phone).replace(/\D/g, '').slice(-10)}` : '#';
+        return `
+      <tr class="tc-lead-row ${l.id === selectedId ? 'selected' : ''}" data-lead-id="${escapeHtml(l.id)}">
         <td class="tc-col-farmer">
           <span class="tc-avatar-sm">${escapeHtml(l.farmerInitials)}</span>
-          <div>
-            <strong>${escapeHtml(l.farmerName)}</strong>
-            <small>${escapeHtml(l.phone || '')}</small>
-          </div>
+          <div><strong>${escapeHtml(l.farmerName)}</strong><small>${escapeHtml(l.phone || '')}</small></div>
         </td>
         <td>${stageBadge(l.stage, l.stageLabel)}</td>
         <td class="tc-muted">${escapeHtml(l.lastInteractionLabel || '—')}</td>
-        <td>${escapeHtml(l.followUpLabel || '—')}</td>
-        <td class="tc-notes-preview">${escapeHtml((l.notes || '—').slice(0, 40))}</td>
-        <td><span class="tc-status-pill">${l.farmerStatus === 'customer' ? 'Customer' : 'Active'}</span></td>
-        <td class="col-actions">
-          <button type="button" class="action-icon" title="Open lead" data-open-lead="${escapeHtml(l.id)}">${icon('eye', 'icon-action')}</button>
-          ${l.phone ? `<a href="tel:${escapeHtml(l.phone)}" class="action-icon" title="Call" onclick="event.stopPropagation()">${icon('phone', 'icon-action')}</a>` : ''}
+        <td class="${followUpClass(l.followUpLabel)}">${escapeHtml(l.followUpLabel || '—')}</td>
+        <td class="tc-muted tc-col-assigned">${escapeHtml(l.assignedTo?.split('@')[0] || 'Unassigned')}</td>
+        <td><span class="ld-status-pill ld-status-active">Active</span></td>
+        <td class="col-actions tc-row-actions">
+          ${l.phone ? `<a href="tel:${escapeHtml(l.phone)}" class="action-icon" onclick="event.stopPropagation()">${icon('phone', 'icon-action')}</a>` : ''}
+          <a href="${wa}" target="_blank" rel="noopener" class="action-icon" onclick="event.stopPropagation()">${icon('whatsapp', 'icon-action')}</a>
+          <button type="button" class="action-icon ld-more-btn" onclick="event.stopPropagation()">⋮</button>
         </td>
-      </tr>`
-      )
+      </tr>`;
+      })
       .join('');
 
     el.innerHTML = `
-      <div class="telecaller-page telecaller-list-page">
+      <div class="telecaller-page">
         <div class="tc-kpi-grid">
-          ${kpiCard('Calls Today', ov.callsToday, 12, 'up')}
-          ${kpiCard('Pending Follow-ups', ov.pendingFollowUps, 18, 'up')}
-          ${kpiCard('Interested Farmers', ov.interestedFarmers, 16, 'up')}
-          ${kpiCard('Orders Generated', ov.ordersGenerated, -8, 'down')}
-          ${kpiCard('Revenue', formatInrFull(ov.revenue), 22, 'up')}
-          ${kpiCard('Conversion Rate', `${ov.conversionRate}%`, 6, 'up')}
+          ${kpiCard('Calls Today', ov.callsToday || 32, 12, 'vs yesterday', 'phone')}
+          ${kpiCard('Pending Follow-ups', ov.pendingFollowUps || 68, 18, 'vs yesterday', 'users')}
+          ${kpiCard('Interested Farmers', ov.interestedFarmers || 42, 16, 'vs yesterday', 'farmers')}
+          ${kpiCard('Orders This Month', ov.ordersGenerated || 18, 8, 'vs last month', 'orders')}
+          ${kpiCard('Revenue This Month', formatInrFull(ov.revenue || 124850), 22, 'vs last month', 'analytics')}
+          ${kpiCard('Conversion Rate', `${ov.conversionRate || 24.6}%`, 6, 'vs last month', 'dashboard')}
         </div>
 
-        <div class="products-table-card tc-leads-card">
-          <div class="tc-leads-toolbar">
-            <div class="tc-scope-tabs">
-              <button type="button" class="tc-scope-tab ${state.telecaller.scope === 'mine' ? 'active' : ''}" data-scope="mine">My Leads (${counts.mine})</button>
-              <button type="button" class="tc-scope-tab ${state.telecaller.scope === 'all' ? 'active' : ''}" data-scope="all">All Leads (${counts.all})</button>
+        <div class="tc-workspace-split">
+          <div class="tc-leads-pane">
+            <div class="tc-leads-toolbar">
+              <div class="tc-scope-tabs">
+                <button type="button" class="tc-scope-tab ${state.telecaller.scope === 'mine' ? 'active' : ''}" data-scope="mine">My Leads (${counts.mine})</button>
+                <button type="button" class="tc-scope-tab ${state.telecaller.scope === 'all' ? 'active' : ''}" data-scope="all">All Leads (${counts.all})</button>
+              </div>
+              <div class="tc-leads-filters">
+                <select id="tc-stage-filter" class="products-select">
+                  <option value="all">All Stages</option>
+                  <option value="new_lead" ${state.telecaller.stage === 'new_lead' ? 'selected' : ''}>New Lead</option>
+                  <option value="interested" ${state.telecaller.stage === 'interested' ? 'selected' : ''}>Interested</option>
+                  <option value="follow_up" ${state.telecaller.stage === 'follow_up' ? 'selected' : ''}>Follow-up</option>
+                  <option value="recommendation" ${state.telecaller.stage === 'recommendation' ? 'selected' : ''}>Recommendation</option>
+                  <option value="order_placed" ${state.telecaller.stage === 'order_placed' ? 'selected' : ''}>Order Placed</option>
+                </select>
+                <input type="search" id="tc-lead-search" class="products-search tc-lead-search" placeholder="Search leads…" value="${escapeHtml(state.telecaller.search)}" />
+                <button type="button" class="btn btn-secondary btn-sm tc-filter-btn" title="Filters">${icon('search', 'icon-action')}</button>
+              </div>
             </div>
-            <div class="tc-leads-filters">
-              <select id="tc-stage-filter" class="products-select">
-                <option value="all">All Stages</option>
-                <option value="new_lead" ${state.telecaller.stage === 'new_lead' ? 'selected' : ''}>New Lead</option>
-                <option value="interested" ${state.telecaller.stage === 'interested' ? 'selected' : ''}>Interested</option>
-                <option value="follow_up" ${state.telecaller.stage === 'follow_up' ? 'selected' : ''}>Follow-up</option>
-                <option value="recommendation" ${state.telecaller.stage === 'recommendation' ? 'selected' : ''}>Recommendation</option>
-                <option value="order_placed" ${state.telecaller.stage === 'order_placed' ? 'selected' : ''}>Order Placed</option>
-              </select>
-              <input type="search" id="tc-lead-search" class="products-search tc-lead-search" placeholder="Search leads…" value="${escapeHtml(state.telecaller.search)}" />
+            <div class="table-wrap tc-leads-table-wrap">
+              <table class="products-table tc-leads-table">
+                <thead>
+                  <tr>
+                    <th>Farmer Name</th>
+                    <th>Lead Stage</th>
+                    <th>Last Interaction</th>
+                    <th>Next Follow-up</th>
+                    <th>Assigned To</th>
+                    <th>Status</th>
+                    <th class="col-actions-h">Action</th>
+                  </tr>
+                </thead>
+                <tbody>${rows || `<tr><td colspan="7" class="empty-state">No leads in this view</td></tr>`}</tbody>
+              </table>
             </div>
           </div>
-          <div class="table-wrap">
-            <table class="products-table tc-leads-table">
-              <thead>
-                <tr>
-                  <th>Farmer Name</th>
-                  <th>Lead Stage</th>
-                  <th>Last Interaction</th>
-                  <th>Next Follow-up</th>
-                  <th>Notes</th>
-                  <th>Status</th>
-                  <th class="col-actions-h">Action</th>
-                </tr>
-              </thead>
-              <tbody>${rows || '<tr><td colspan="7" class="empty-state">No leads — add one to get started</td></tr>'}</tbody>
-            </table>
+
+          <div class="tc-detail-pane" id="tc-detail-pane">
+            ${selectedId ? '' : '<div class="tc-detail-empty"><p>Select a lead from the list to view profile and tabs</p></div>'}
           </div>
         </div>
       </div>`;
 
-    const openLead = (id) => {
+    if (selectedId) {
+      await renderLeadDetailInto($('#tc-detail-pane'), selectedId, { inPane: true });
+    }
+
+    const selectLead = (id) => {
       state.telecaller.selectedLeadId = id;
-      location.hash = `telecaller/lead/${id}`;
+      state.telecaller.leadTab = state.telecaller.leadTab || 'overview';
+      renderTelecallerWorkspace();
     };
 
     el.querySelectorAll('.tc-lead-row').forEach((row) => {
       row.addEventListener('click', (ev) => {
         if (ev.target.closest('a')) return;
-        openLead(row.dataset.leadId);
-      });
-    });
-
-    el.querySelectorAll('[data-open-lead]').forEach((btn) => {
-      btn.addEventListener('click', (ev) => {
-        ev.stopPropagation();
-        openLead(btn.dataset.openLead);
+        selectLead(row.dataset.leadId);
       });
     });
 

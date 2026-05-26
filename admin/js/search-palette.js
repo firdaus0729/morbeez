@@ -40,7 +40,7 @@ function closePalette() {
   }
 }
 
-function openPalette() {
+export function openSearchPalette() {
   let root = $('#search-palette');
   if (!root) {
     root = document.createElement('div');
@@ -106,10 +106,10 @@ export function initSearchPalette() {
   document.addEventListener('keydown', (e) => {
     if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
       e.preventDefault();
-      openPalette();
+      openSearchPalette();
     }
     if (e.key === 'Escape') closePalette();
   });
 
-  $('#btn-search')?.addEventListener('click', () => openPalette());
+  $('#btn-search')?.addEventListener('click', () => openSearchPalette());
 }
