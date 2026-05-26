@@ -6,6 +6,8 @@
     "color_surface": "#f7f8f7",
     "color_muted": "#64748b",
     "enable_ai_crop_doctor_cta": true,
+    "whatsapp_phone": "917676026318",
+    "whatsapp_message": "Hi Morbeez, I need help with ",
     "enable_dealer_enquiry": true,
     "enable_organization_schema": true,
     "display_prices_inr": true,

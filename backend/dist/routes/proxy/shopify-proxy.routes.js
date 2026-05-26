@@ -35,9 +35,18 @@ export async function shopifyProxyRoutes(app) {
             imageMimeType: z.string().optional(),
         })
             .parse(request.body);
+        const digits = body.phone.replace(/\D/g, '');
+        const normalized = digits.length === 10 ? `91${digits}` : digits.length === 12 && digits.startsWith('91') ? digits : digits;
+        if (!/^91[6-9]\d{9}$/.test(normalized)) {
+            return reply.code(400).send({
+                error: 'VALIDATION_ERROR',
+                message: 'Please enter a valid 10-digit Indian mobile number (e.g. 9876543210), not an international +420 number.',
+            });
+        }
         const { cropDoctorService } = await import('../../services/ai/crop-doctor.service.js');
         const result = await cropDoctorService.diagnoseByPhone({
             ...body,
+            phone: normalized,
             channel: 'web',
         });
         const summary = body.language === 'ml' ? result.advisory.farmerSummaryMl : result.advisory.farmerSummaryEn;

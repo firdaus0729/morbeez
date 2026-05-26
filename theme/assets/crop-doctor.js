@@ -5,32 +5,23 @@
   var resultEl = document.getElementById('MorbeezCropDoctorResult');
   var proxyUrl = '/apps/morbeez/advisory/diagnose';
 
+  function normalizeIndianPhone(raw) {
+    var digits = String(raw || '').replace(/\D/g, '');
+    if (digits.length === 10) return '91' + digits;
+    if (digits.length === 12 && digits.indexOf('91') === 0) return digits;
+    return digits;
+  }
+
   form.addEventListener('submit', function (e) {
     e.preventDefault();
     var fd = new FormData(form);
-    var phone = fd.get('phone');
-    var cropType = fd.get('cropType') || 'ginger';
-    var language = fd.get('language') || 'en';
-    var symptomsText = fd.get('symptoms') || '';
-    var fileInput = form.querySelector('[name="image"]');
-    var file = fileInput && fileInput.files && fileInput.files[0];
-
     var btn = form.querySelector('[type="submit"]');
-    if (btn) {
-      btn.disabled = true;
-      btn.textContent = 'Analyzing…';
-    }
 
-    function postDiagnose(payload) {
-      return fetch(proxyUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-        body: JSON.stringify(payload),
-      }).then(function (res) {
-        return res.json().then(function (data) {
-          return { ok: res.ok, data: data };
-        });
-      });
+    function resetBtn() {
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = 'Analyze my crop';
+      }
     }
 
     function showResult(ok, data) {
@@ -55,9 +46,49 @@
         resultEl.innerHTML = html;
       } else {
         resultEl.classList.add('morbeez-result-box--error');
-        resultEl.innerHTML =
-          '<p>' + (data.message || 'Analysis failed. Try again or WhatsApp us.') + '</p>';
+        var msg =
+          data.message || data.error || 'Analysis failed. Please check your mobile number and try again.';
+        var waHref = form.getAttribute('data-wa-href') || '';
+        var errHtml = '<p>' + msg + '</p>';
+        if (waHref && waHref.indexOf('https://wa.me/') === 0) {
+          errHtml +=
+            '<p class="mt-2"><a class="font-semibold text-[var(--color-primary)] underline" href="' +
+            waHref +
+            '" target="_blank" rel="noopener">Contact us on WhatsApp</a></p>';
+        }
+        resultEl.innerHTML = errHtml;
       }
+    }
+
+    function postDiagnose(payload) {
+      return fetch(proxyUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify(payload),
+      }).then(function (res) {
+        return res.json().then(function (data) {
+          return { ok: res.ok, data: data };
+        });
+      });
+    }
+
+    var phone = normalizeIndianPhone(fd.get('phone'));
+    if (!/^91[6-9]\d{9}$/.test(phone)) {
+      showResult(false, {
+        message: 'Please enter a valid 10-digit Indian mobile number (e.g. 9876543210).',
+      });
+      return;
+    }
+
+    var cropType = fd.get('cropType') || 'ginger';
+    var language = fd.get('language') || 'en';
+    var symptomsText = fd.get('symptoms') || '';
+    var fileInput = form.querySelector('[name="image"]');
+    var file = fileInput && fileInput.files && fileInput.files[0];
+
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = 'Analyzing…';
     }
 
     if (file) {
@@ -95,13 +126,6 @@
           showResult(false, {});
         })
         .finally(resetBtn);
-    }
-
-    function resetBtn() {
-      if (btn) {
-        btn.disabled = false;
-        btn.textContent = 'Analyze my crop';
-      }
     }
   });
 })();

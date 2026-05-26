@@ -4,12 +4,23 @@
 (function () {
   document.documentElement.classList.remove('no-js');
 
-  /* WhatsApp CTA — append page title to prefilled message */
+  /* WhatsApp CTA — fix bad theme links + append page title to prefilled message */
   var waCta = document.querySelector('[data-morbeez-whatsapp-cta] a');
-  if (waCta && document.title) {
-    var href = waCta.getAttribute('href');
-    if (href && href.indexOf('text=') !== -1) {
-      waCta.setAttribute('href', href + encodeURIComponent(' — ' + document.title));
+  if (waCta) {
+    var href = waCta.getAttribute('href') || '';
+    if (href.indexOf('/pages/http') === 0) {
+      try {
+        href = decodeURIComponent(href.replace(/^\/pages\//, ''));
+        waCta.setAttribute('href', href);
+      } catch (e) {
+        /* ignore */
+      }
+    }
+    if (href.indexOf('https://wa.me/') === 0 && document.title) {
+      var extra = encodeURIComponent(' — ' + document.title);
+      if (href.indexOf('text=') !== -1) {
+        waCta.setAttribute('href', href + extra);
+      }
     }
   }
 

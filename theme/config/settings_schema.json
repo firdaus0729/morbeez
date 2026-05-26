@@ -43,7 +43,8 @@
         "type": "text",
         "id": "whatsapp_phone",
         "label": "t:settings.whatsapp.phone",
-        "info": "t:settings.whatsapp.phone_info"
+        "info": "Digits only with country code, e.g. 917676026318 (not a full wa.me URL).",
+        "default": "917676026318"
       },
       {
         "type": "textarea",

@@ -1,0 +1,17 @@
+{% comment %}
+  Build a valid https://wa.me/ link. Phone setting must be digits only (e.g. 917676026318).
+  If a full wa.me URL was pasted in theme settings, extract the number.
+{% endcomment %}
+{%- liquid
+  assign raw = phone_raw | default: settings.whatsapp_phone | default: '917676026318'
+  assign cleaned = raw | strip
+  if cleaned contains 'wa.me'
+    assign parts = cleaned | split: 'wa.me/'
+    assign tail = parts | last
+    assign cleaned = tail | split: '?' | first | split: '/' | first
+  endif
+  assign wa_digits = cleaned | remove: '+' | remove: ' ' | replace: '-', '' | replace: '(', '' | replace: ')', ''
+  assign wa_message = message_raw | default: settings.whatsapp_message | default: 'Hi Morbeez, I need help with '
+  assign wa_href = 'https://wa.me/' | append: wa_digits
+  assign wa_href = wa_href | append: '?text=' | append: wa_message | url_encode
+-%}

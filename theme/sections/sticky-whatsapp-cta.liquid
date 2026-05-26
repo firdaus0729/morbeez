@@ -1,22 +1,18 @@
 {%- liquid
   assign wa_phone = section.settings.phone | default: settings.whatsapp_phone
-  assign wa_default_message = section.settings.default_message | default: settings.whatsapp_message | default: 'Hi Morbeez, I need help with '
+  assign wa_msg = section.settings.default_message | default: settings.whatsapp_message
 -%}
 {%- if section.settings.enabled and wa_phone != blank -%}
-  {%- capture wa_message -%}
-    {{ wa_default_message }}{{ request.page_type }}
-  {%- endcapture -%}
-  {%- assign wa_url = 'https://wa.me/' | append: wa_phone | remove: '+' | remove: ' ' | remove: '-' -%}
-  {%- assign wa_url = wa_url | append: '?text=' | append: wa_message | url_encode -%}
-
+  {%- render 'morbeez-whatsapp-url', phone_raw: wa_phone, message_raw: wa_msg -%}
   <div
     class="fixed z-50"
     style="bottom: calc(1.25rem + env(safe-area-inset-bottom, 0px)); right: 1.25rem;"
     data-morbeez-whatsapp-cta
+    data-wa-phone="{{ wa_digits }}"
     {{ section.shopify_attributes }}
   >
     <a
-      href="{{ wa_url }}"
+      href="{{ wa_href }}"
       target="_blank"
       rel="noopener noreferrer"
       class="morbeez-btn-whatsapp flex h-14 w-14 items-center justify-center rounded-full p-0 shadow-lg md:h-auto md:w-auto md:rounded-full md:px-5"
@@ -39,8 +35,8 @@
       "type": "text",
       "id": "phone",
       "label": "t:sections.sticky_whatsapp.settings.phone",
-      "info": "t:sections.sticky_whatsapp.settings.phone_info",
-      "default": "919999999999"
+      "info": "Digits only with country code, e.g. 917676026318 (no + or spaces).",
+      "default": "917676026318"
     },
     {
       "type": "textarea",

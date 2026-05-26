@@ -1,1 +1,1 @@
-{"version":3,"file":"shopify-proxy.routes.d.ts","sourceRoot":"","sources":["../../../src/routes/proxy/shopify-proxy.routes.ts"],"names":[],"mappings":"AAAA,OAAO,KAAK,EAAE,eAAe,EAAE,MAAM,SAAS,CAAC;AAkB/C;;;;GAIG;AACH,wBAAsB,kBAAkB,CAAC,GAAG,EAAE,eAAe,GAAG,OAAO,CAAC,IAAI,CAAC,CAsF5E"}
+{"version":3,"file":"shopify-proxy.routes.d.ts","sourceRoot":"","sources":["../../../src/routes/proxy/shopify-proxy.routes.ts"],"names":[],"mappings":"AAAA,OAAO,KAAK,EAAE,eAAe,EAAE,MAAM,SAAS,CAAC;AAkB/C;;;;GAIG;AACH,wBAAsB,kBAAkB,CAAC,GAAG,EAAE,eAAe,GAAG,OAAO,CAAC,IAAI,CAAC,CAkG5E"}

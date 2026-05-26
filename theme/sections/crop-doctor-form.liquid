@@ -14,10 +14,27 @@
             {{ section.settings.disclaimer }}
           </p>
 
-          <form id="MorbeezCropDoctorForm" class="space-y-5" enctype="multipart/form-data">
+          {%- render 'morbeez-whatsapp-url', phone_raw: settings.whatsapp_phone, message_raw: settings.whatsapp_message -%}
+          <form
+            id="MorbeezCropDoctorForm"
+            class="space-y-5"
+            enctype="multipart/form-data"
+            data-wa-href="{{ wa_href }}"
+          >
             <div>
               <label class="morbeez-label" for="cd-phone">{{ 'forms.phone' | t }}</label>
-              <input id="cd-phone" name="phone" type="tel" required placeholder="9876543210" class="morbeez-input">
+              <input
+                id="cd-phone"
+                name="phone"
+                type="tel"
+                required
+                inputmode="numeric"
+                autocomplete="tel"
+                placeholder="9876543210"
+                pattern="[0-9+\s\-()]{10,16}"
+                class="morbeez-input"
+              >
+              <p class="mt-1 text-xs text-[var(--color-muted)]">10-digit Indian mobile (e.g. 9876543210). Do not use +420 or other country codes unless we support your region.</p>
             </div>
             <div class="grid gap-5 sm:grid-cols-2">
               <div>
