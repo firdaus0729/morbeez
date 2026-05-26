@@ -666,6 +666,7 @@ export declare const telecallerAdminService: {
     }>;
     getNavBadges(): Promise<{
         followUpTasks: number;
+        pendingEscalations: number;
     }>;
 };
 //# sourceMappingURL=telecaller-admin.service.d.ts.map

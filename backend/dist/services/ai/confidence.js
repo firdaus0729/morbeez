@@ -1,4 +1,7 @@
-export const ESCALATION_THRESHOLD = 0.65;
+import { env } from '../../config/env.js';
+export function getEscalationThreshold() {
+    return env.AI_ESCALATION_THRESHOLD;
+}
 /** Merge Plant.id signal with GPT self-reported confidence */
 export function computeConfidence(gptConfidence, plantId) {
     let plantSignal = 0.5;
@@ -12,9 +15,10 @@ export function computeConfidence(gptConfidence, plantId) {
     return Math.round(Math.min(1, Math.max(0, merged)) * 10000) / 10000;
 }
 export function shouldEscalate(confidence, advisory) {
+    const threshold = getEscalationThreshold();
     if (advisory.uncertain || advisory.escalationRecommended)
         return true;
-    if (confidence < ESCALATION_THRESHOLD)
+    if (confidence < threshold)
         return true;
     if (!advisory.probableIssue || advisory.probableIssue.toLowerCase().includes('uncertain'))
         return true;
@@ -25,8 +29,9 @@ export function escalationReason(confidence, advisory) {
         return advisory.escalationReason;
     if (advisory.uncertain)
         return 'AI marked diagnosis as uncertain';
-    if (confidence < ESCALATION_THRESHOLD) {
-        return `Confidence ${(confidence * 100).toFixed(0)}% below threshold ${ESCALATION_THRESHOLD * 100}%`;
+    const threshold = getEscalationThreshold();
+    if (confidence < threshold) {
+        return `Confidence ${(confidence * 100).toFixed(0)}% below threshold ${threshold * 100}%`;
     }
     return 'Manual agronomist review recommended';
 }

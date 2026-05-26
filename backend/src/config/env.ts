@@ -42,6 +42,10 @@ const envSchema = z.object({
   ADS_GYANI_SEND_TEXT_PATH: z.string().optional(),
   ADS_GYANI_SEND_TEMPLATE_PATH: z.string().optional(),
   ADS_GYANI_TEMPLATE_LANGUAGE: z.string().optional(),
+  WHATSAPP_WELCOME_TEMPLATE: z.string().optional(),
+  WHATSAPP_OUTBOUND_TEMPLATE: z.string().optional(),
+  WHATSAPP_SESSION_HOURS: z.coerce.number().default(24),
+  SHOPIFY_STOREFRONT_URL: z.string().url().optional(),
 
   OPENAI_API_KEY: z.string().optional(),
   OPENAI_VISION_MODEL: z.string().default('gpt-4o'),
@@ -90,6 +94,14 @@ const envSchema = z.object({
     .transform((v) => v !== 'false')
     .default('true'),
   AI_ESCALATION_THRESHOLD: z.coerce.number().min(0).max(1).default(0.65),
+  AI_DAILY_TEXT_LIMIT_FREE: z.coerce.number().default(10),
+  AI_DAILY_TEXT_LIMIT_PREMIUM: z.coerce.number().default(100),
+  AI_DAILY_IMAGE_LIMIT_FREE: z.coerce.number().default(3),
+  AI_DAILY_IMAGE_LIMIT_PREMIUM: z.coerce.number().default(50),
+  AI_DAILY_VOICE_LIMIT_FREE: z.coerce.number().default(5),
+  AI_DAILY_VOICE_LIMIT_PREMIUM: z.coerce.number().default(30),
+  AI_MAX_VOICE_DURATION_SEC: z.coerce.number().default(60),
+  AI_MIN_REQUEST_INTERVAL_SEC: z.coerce.number().default(30),
 });
 
 export type Env = z.infer<typeof envSchema>;

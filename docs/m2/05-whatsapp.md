@@ -18,6 +18,8 @@ interface WhatsAppProvider {
 
 Set `WHATSAPP_PROVIDER=adsgyani` and fill `ADS_GYANI_*` vars (see `.env.example`).
 
+**Full inbound AI pipeline (M3):** see [06-whatsapp-ai-pipeline.md](../m3/06-whatsapp-ai-pipeline.md) — lead capture, language detection, FAQ cache, quotas, Crop Doctor routing.
+
 ### Ads Gyani setup
 
 1. **Settings → API & Webhook**: copy **API Base URL** (`https://adsgyani.in/api`), **Vendor UID** (UUID), **API Access Token**

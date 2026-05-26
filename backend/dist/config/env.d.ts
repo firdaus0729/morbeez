@@ -36,6 +36,10 @@ declare const envSchema: z.ZodObject<{
     ADS_GYANI_SEND_TEXT_PATH: z.ZodOptional<z.ZodString>;
     ADS_GYANI_SEND_TEMPLATE_PATH: z.ZodOptional<z.ZodString>;
     ADS_GYANI_TEMPLATE_LANGUAGE: z.ZodOptional<z.ZodString>;
+    WHATSAPP_WELCOME_TEMPLATE: z.ZodOptional<z.ZodString>;
+    WHATSAPP_OUTBOUND_TEMPLATE: z.ZodOptional<z.ZodString>;
+    WHATSAPP_SESSION_HOURS: z.ZodDefault<z.ZodNumber>;
+    SHOPIFY_STOREFRONT_URL: z.ZodOptional<z.ZodString>;
     OPENAI_API_KEY: z.ZodOptional<z.ZodString>;
     OPENAI_VISION_MODEL: z.ZodDefault<z.ZodString>;
     OPENAI_TEXT_MODEL: z.ZodDefault<z.ZodString>;
@@ -57,6 +61,14 @@ declare const envSchema: z.ZodObject<{
     ENABLE_ADVISORY_FOLLOW_UPS: z.ZodDefault<z.ZodEffects<z.ZodString, boolean, string>>;
     ENABLE_ADVISORY_AUTOMATION: z.ZodDefault<z.ZodEffects<z.ZodString, boolean, string>>;
     AI_ESCALATION_THRESHOLD: z.ZodDefault<z.ZodNumber>;
+    AI_DAILY_TEXT_LIMIT_FREE: z.ZodDefault<z.ZodNumber>;
+    AI_DAILY_TEXT_LIMIT_PREMIUM: z.ZodDefault<z.ZodNumber>;
+    AI_DAILY_IMAGE_LIMIT_FREE: z.ZodDefault<z.ZodNumber>;
+    AI_DAILY_IMAGE_LIMIT_PREMIUM: z.ZodDefault<z.ZodNumber>;
+    AI_DAILY_VOICE_LIMIT_FREE: z.ZodDefault<z.ZodNumber>;
+    AI_DAILY_VOICE_LIMIT_PREMIUM: z.ZodDefault<z.ZodNumber>;
+    AI_MAX_VOICE_DURATION_SEC: z.ZodDefault<z.ZodNumber>;
+    AI_MIN_REQUEST_INTERVAL_SEC: z.ZodDefault<z.ZodNumber>;
 }, "strip", z.ZodTypeAny, {
     NODE_ENV: "development" | "staging" | "production" | "test";
     PORT: number;
@@ -68,6 +80,7 @@ declare const envSchema: z.ZodObject<{
     SHOPIFY_API_VERSION: string;
     SHOPIFY_WEBHOOK_SECRET: string;
     WHATSAPP_PROVIDER: "cloud" | "wati" | "interakt" | "adsgyani";
+    WHATSAPP_SESSION_HOURS: number;
     OPENAI_VISION_MODEL: string;
     OPENAI_TEXT_MODEL: string;
     OPENAI_WHISPER_MODEL: string;
@@ -86,6 +99,14 @@ declare const envSchema: z.ZodObject<{
     ENABLE_ADVISORY_FOLLOW_UPS: boolean;
     ENABLE_ADVISORY_AUTOMATION: boolean;
     AI_ESCALATION_THRESHOLD: number;
+    AI_DAILY_TEXT_LIMIT_FREE: number;
+    AI_DAILY_TEXT_LIMIT_PREMIUM: number;
+    AI_DAILY_IMAGE_LIMIT_FREE: number;
+    AI_DAILY_IMAGE_LIMIT_PREMIUM: number;
+    AI_DAILY_VOICE_LIMIT_FREE: number;
+    AI_DAILY_VOICE_LIMIT_PREMIUM: number;
+    AI_MAX_VOICE_DURATION_SEC: number;
+    AI_MIN_REQUEST_INTERVAL_SEC: number;
     API_BASE_URL?: string | undefined;
     SUPABASE_ANON_KEY?: string | undefined;
     SHOPIFY_APP_CLIENT_SECRET?: string | undefined;
@@ -111,6 +132,9 @@ declare const envSchema: z.ZodObject<{
     ADS_GYANI_SEND_TEXT_PATH?: string | undefined;
     ADS_GYANI_SEND_TEMPLATE_PATH?: string | undefined;
     ADS_GYANI_TEMPLATE_LANGUAGE?: string | undefined;
+    WHATSAPP_WELCOME_TEMPLATE?: string | undefined;
+    WHATSAPP_OUTBOUND_TEMPLATE?: string | undefined;
+    SHOPIFY_STOREFRONT_URL?: string | undefined;
     OPENAI_API_KEY?: string | undefined;
     PLANT_ID_API_KEY?: string | undefined;
     ADMIN_UI_ORIGIN?: string | undefined;
@@ -153,6 +177,10 @@ declare const envSchema: z.ZodObject<{
     ADS_GYANI_SEND_TEXT_PATH?: string | undefined;
     ADS_GYANI_SEND_TEMPLATE_PATH?: string | undefined;
     ADS_GYANI_TEMPLATE_LANGUAGE?: string | undefined;
+    WHATSAPP_WELCOME_TEMPLATE?: string | undefined;
+    WHATSAPP_OUTBOUND_TEMPLATE?: string | undefined;
+    WHATSAPP_SESSION_HOURS?: number | undefined;
+    SHOPIFY_STOREFRONT_URL?: string | undefined;
     OPENAI_API_KEY?: string | undefined;
     OPENAI_VISION_MODEL?: string | undefined;
     OPENAI_TEXT_MODEL?: string | undefined;
@@ -171,6 +199,14 @@ declare const envSchema: z.ZodObject<{
     ENABLE_ADVISORY_FOLLOW_UPS?: string | undefined;
     ENABLE_ADVISORY_AUTOMATION?: string | undefined;
     AI_ESCALATION_THRESHOLD?: number | undefined;
+    AI_DAILY_TEXT_LIMIT_FREE?: number | undefined;
+    AI_DAILY_TEXT_LIMIT_PREMIUM?: number | undefined;
+    AI_DAILY_IMAGE_LIMIT_FREE?: number | undefined;
+    AI_DAILY_IMAGE_LIMIT_PREMIUM?: number | undefined;
+    AI_DAILY_VOICE_LIMIT_FREE?: number | undefined;
+    AI_DAILY_VOICE_LIMIT_PREMIUM?: number | undefined;
+    AI_MAX_VOICE_DURATION_SEC?: number | undefined;
+    AI_MIN_REQUEST_INTERVAL_SEC?: number | undefined;
 }>;
 export type Env = z.infer<typeof envSchema>;
 export declare const env: {
@@ -184,6 +220,7 @@ export declare const env: {
     SHOPIFY_API_VERSION: string;
     SHOPIFY_WEBHOOK_SECRET: string;
     WHATSAPP_PROVIDER: "cloud" | "wati" | "interakt" | "adsgyani";
+    WHATSAPP_SESSION_HOURS: number;
     OPENAI_VISION_MODEL: string;
     OPENAI_TEXT_MODEL: string;
     OPENAI_WHISPER_MODEL: string;
@@ -202,6 +239,14 @@ export declare const env: {
     ENABLE_ADVISORY_FOLLOW_UPS: boolean;
     ENABLE_ADVISORY_AUTOMATION: boolean;
     AI_ESCALATION_THRESHOLD: number;
+    AI_DAILY_TEXT_LIMIT_FREE: number;
+    AI_DAILY_TEXT_LIMIT_PREMIUM: number;
+    AI_DAILY_IMAGE_LIMIT_FREE: number;
+    AI_DAILY_IMAGE_LIMIT_PREMIUM: number;
+    AI_DAILY_VOICE_LIMIT_FREE: number;
+    AI_DAILY_VOICE_LIMIT_PREMIUM: number;
+    AI_MAX_VOICE_DURATION_SEC: number;
+    AI_MIN_REQUEST_INTERVAL_SEC: number;
     API_BASE_URL?: string | undefined;
     SUPABASE_ANON_KEY?: string | undefined;
     SHOPIFY_APP_CLIENT_SECRET?: string | undefined;
@@ -227,6 +272,9 @@ export declare const env: {
     ADS_GYANI_SEND_TEXT_PATH?: string | undefined;
     ADS_GYANI_SEND_TEMPLATE_PATH?: string | undefined;
     ADS_GYANI_TEMPLATE_LANGUAGE?: string | undefined;
+    WHATSAPP_WELCOME_TEMPLATE?: string | undefined;
+    WHATSAPP_OUTBOUND_TEMPLATE?: string | undefined;
+    SHOPIFY_STOREFRONT_URL?: string | undefined;
     OPENAI_API_KEY?: string | undefined;
     PLANT_ID_API_KEY?: string | undefined;
     ADMIN_UI_ORIGIN?: string | undefined;

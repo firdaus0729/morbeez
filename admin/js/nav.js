@@ -24,6 +24,7 @@ export const NAV_GROUPS = [
     live: true,
     children: [
       { id: 'ai-advisory', label: 'Overview', hash: 'ai-advisory', live: true },
+      { id: 'telecaller/escalations', label: 'Escalations', hash: 'telecaller/escalations', live: true, badgeKey: 'pendingEscalations' },
       { id: 'ai-mapping', label: 'AI Mapping', hash: 'ai-mapping', live: true },
     ],
   },
@@ -75,6 +76,7 @@ export const ROUTE_TITLES = {
   'telecaller/followups': 'Follow-up Tasks',
   'telecaller/calls': 'Calls',
   'telecaller/lead': 'Telecaller CRM Workspace',
+  'telecaller/escalations': 'Agronomist Escalations',
   products: 'Products',
   'products/new': 'Add Product',
   'products/edit': 'Edit Product',

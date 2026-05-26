@@ -10,6 +10,7 @@ import { flashSalesAdminService } from '../../services/admin/flash-sales-admin.s
 import { aiAdvisoryAdminService } from '../../services/admin/ai-advisory-admin.service.js';
 import { aiMappingAdminService } from '../../services/admin/ai-mapping-admin.service.js';
 import { telecallerAdminService } from '../../services/admin/telecaller-admin.service.js';
+import { escalationAdminService } from '../../services/admin/escalation-admin.service.js';
 import { crmFarmerService } from '../../services/admin/crm-farmer.service.js';
 import { consoleSearchService } from '../../services/admin/console-search.service.js';
 import { productIntelligenceService } from '../../services/admin/product-intelligence.service.js';
@@ -959,6 +960,38 @@ export async function adminRoutes(app) {
         const { id } = request.params;
         await crmFarmerService.archiveFieldFinding(id);
         return reply.send({ ok: true });
+    });
+    app.get(`${api}/escalations`, async (request, reply) => {
+        requireAdminRole(request, 'admin', 'manager', 'telecaller');
+        const q = request.query;
+        const result = await escalationAdminService.list({
+            status: q.status ?? 'pending',
+            page: q.page ? Number(q.page) : 1,
+            limit: q.limit ? Number(q.limit) : 20,
+        });
+        return reply.send({ ok: true, ...result });
+    });
+    app.get(`${api}/escalations/:id`, async (request, reply) => {
+        requireAdminRole(request, 'admin', 'manager', 'telecaller');
+        const { id } = request.params;
+        const escalation = await escalationAdminService.getById(id);
+        return reply.send({ ok: true, escalation });
+    });
+    app.patch(`${api}/escalations/:id`, async (request, reply) => {
+        requireAdminRole(request, 'admin', 'manager', 'telecaller');
+        const admin = requireAdmin(request);
+        const { id } = request.params;
+        const body = z
+            .object({
+            status: z.enum(['pending', 'assigned', 'in_review', 'resolved', 'closed']).optional(),
+            assignedTo: z.string().optional(),
+            agronomistNotes: z.string().max(5000).optional(),
+            resolution: z.string().max(2000).optional(),
+            correction: z.record(z.unknown()).optional(),
+        })
+            .parse(request.body);
+        const escalation = await escalationAdminService.update(id, body, admin.email);
+        return reply.send({ ok: true, escalation });
     });
     app.get(`${api}/inventory`, async (request, reply) => {
         requireAdmin(request);

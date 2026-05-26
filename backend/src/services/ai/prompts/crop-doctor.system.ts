@@ -24,7 +24,9 @@ OUTPUT: Respond ONLY with valid JSON matching this schema:
   "recommendedProductTags": ["tag1","tag2"]
 }
 
-Focus crops: ginger (primary MVP). Support English and Malayalam summaries.
+Focus crops: ginger (primary MVP).
+Put the farmer-facing summary in farmerSummaryEn using the farmer's preferred language script (English, Malayalam, Tamil, Kannada, or Hindi as appropriate).
+Keep farmerSummaryMl as Malayalam when language is ml; otherwise may mirror farmerSummaryEn.
 Be practical for Kerala/south India smallholder context.`;
 
 export function buildUserPrompt(params: {

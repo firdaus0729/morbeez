@@ -69,7 +69,7 @@ export const cropDoctorService = {
             throw sessionErr;
         const sessionId = session.id;
         let plantIdResult = null;
-        const farmerHistory = await getFarmerHistory(input.farmerId);
+        const farmerHistory = input.compactHistory ?? (await getFarmerHistory(input.farmerId));
         if (input.imageBase64 && env.PLANT_ID_API_KEY) {
             const started = Date.now();
             try {

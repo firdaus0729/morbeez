@@ -54,6 +54,8 @@ export interface DiagnoseInput {
     imageBase64?: string;
     imageMimeType?: string;
     channel: 'api' | 'whatsapp' | 'web';
+    /** WhatsApp pipeline: minimal history string (low token cost) */
+    compactHistory?: string;
 }
 export interface DiagnoseResult {
     sessionId: string;

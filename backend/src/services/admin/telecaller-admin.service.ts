@@ -700,8 +700,14 @@ export const telecallerAdminService = {
     const to = phone.length === 10 ? `91${phone}` : phone;
 
     let sent = false;
+    let sendMode = 'session';
     try {
-      await whatsappService.sendText(to, text);
+      const result = await whatsappService.sendToFarmer({
+        phone: to,
+        farmerId,
+        text,
+      });
+      sendMode = result.mode;
       sent = true;
     } catch {
       /* CRM still logs outbound when WhatsApp provider is not configured */
@@ -711,7 +717,7 @@ export const telecallerAdminService = {
       farmer_id: farmerId,
       channel: 'whatsapp',
       direction: 'outbound',
-      message_type: 'text',
+      message_type: sendMode === 'template' ? 'template' : 'text',
       content: text,
     });
 
@@ -898,10 +904,19 @@ export const telecallerAdminService = {
   },
 
   async getNavBadges() {
-    const { count } = await supabase
-      .from('crm_tasks')
-      .select('id', { count: 'exact', head: true })
-      .eq('status', 'pending');
-    return { followUpTasks: count ?? 0 };
+    const [tasksRes, escRes] = await Promise.all([
+      supabase
+        .from('crm_tasks')
+        .select('id', { count: 'exact', head: true })
+        .eq('status', 'pending'),
+      supabase
+        .from('agronomist_escalations')
+        .select('id', { count: 'exact', head: true })
+        .in('status', ['pending', 'assigned', 'in_review']),
+    ]);
+    return {
+      followUpTasks: tasksRes.count ?? 0,
+      pendingEscalations: escRes.count ?? 0,
+    };
   },
 };

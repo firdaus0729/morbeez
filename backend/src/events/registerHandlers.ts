@@ -2,6 +2,7 @@ import { eventBus } from './bus.js';
 import { logger } from '../lib/logger.js';
 import { shiprocketService } from '../services/shiprocket/shiprocket.service.js';
 import { whatsappService } from '../services/whatsapp/whatsapp.service.js';
+import { createTelecallerTask } from '../services/whatsapp/pipeline/telecaller-tasks.service.js';
 import { env } from '../config/env.js';
 import { supabase } from '../lib/supabase.js';
 
@@ -41,14 +42,23 @@ export function registerEventHandlers(): void {
   });
 
   eventBus.on('advisory.escalated', async (event) => {
+    const farmerId = event.payload.farmerId as string | undefined;
+    const sessionId = event.payload.sessionId as string | undefined;
+    const priority = (event.payload.priority as string) ?? 'normal';
+
     logger.warn(
-      {
-        sessionId: event.payload.sessionId,
-        escalationId: event.payload.escalationId,
-        priority: event.payload.priority,
-      },
+      { sessionId, escalationId: event.payload.escalationId, priority },
       'Agronomist escalation created'
     );
+
+    if (farmerId) {
+      await createTelecallerTask({
+        farmerId,
+        title: 'Agronomist review — WhatsApp crop advisory',
+        notes: `Session ${sessionId ?? 'n/a'}: ${event.payload.reason ?? 'escalation'}`,
+        priority: priority === 'urgent' ? 'urgent' : priority === 'high' ? 'high' : 'normal',
+      }).catch((err) => logger.error({ err }, 'Telecaller escalation task failed'));
+    }
   });
 
   eventBus.on('advisory.completed', async (event) => {

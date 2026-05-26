@@ -9,6 +9,7 @@ import {
 } from './views/telecaller-lead-detail.js';
 import { renderTelecallerFollowups } from './views/telecaller-followups.js';
 import { renderTelecallerCalls } from './views/telecaller-calls.js';
+import { renderTelecallerEscalations } from './views/telecaller-escalations.js';
 import { renderWhatsAppCrm } from './views/whatsapp-crm.js';
 import { initSearchPalette } from './search-palette.js';
 import { icon } from './icons.js';
@@ -169,6 +170,7 @@ function navigate(route, params = {}) {
   }
   else if (route === 'telecaller/followups') renderTelecallerFollowups();
   else if (route === 'telecaller/calls') renderTelecallerCalls();
+  else if (route === 'telecaller/escalations') renderTelecallerEscalations();
   else if (route === 'whatsapp-crm') renderWhatsAppCrm();
   else if (route === 'farmers') {
     bindFarmersTopbar();
