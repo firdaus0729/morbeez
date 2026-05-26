@@ -11,8 +11,8 @@ interface WhatsAppProvider {
 
 | Provider | Env | Use |
 |----------|-----|-----|
-| `adsgyani` | Ads Gyani (`adsgyani.in`) | **Default** — tenant API + webhook |
-| `cloud` | Meta Cloud API | Direct Meta |
+| `cloud` | Meta Cloud API | **Callback** `GET/POST /webhooks/whatsapp` |
+| `adsgyani` | Ads Gyani (`adsgyani.in`) | Webhook `/webhooks/whatsapp/adsgyani` |
 | `wati` | WATI API | Alternative BSP |
 | `interakt` | Interakt API | Alternative BSP |
 
@@ -59,10 +59,22 @@ Farmer message → Meta webhook → verify signature
 - Multilingual replies → `preferred_language` + template locale
 - Telecaller escalation → `leads.priority = urgent`
 
-## Webhook setup (Meta — only when `WHATSAPP_PROVIDER=cloud`)
+## Webhook setup (Meta Cloud API — `WHATSAPP_PROVIDER=cloud`)
 
-1. Create Meta Business app
-2. Add WhatsApp product
-3. Callback URL: `https://<api>/webhooks/whatsapp`
-4. Verify token: `WHATSAPP_VERIFY_TOKEN`
-5. Subscribe: `messages`
+1. Meta Developer App → **WhatsApp** → **Configuration**
+2. **Callback URL:** `https://morbeez-api.onrender.com/webhooks/whatsapp` (your API host + `/webhooks/whatsapp`)
+3. **Verify token:** invent a secret string (e.g. `morbeez_whatsapp_verify_8f3k2`)
+4. Set **the same string** on Render: `WHATSAPP_VERIFY_TOKEN=morbeez_whatsapp_verify_8f3k2`
+5. Click **Verify and save** (Meta sends `GET ?hub.mode=subscribe&hub.verify_token=...&hub.challenge=...`)
+6. Render env also needs: `WHATSAPP_PROVIDER=cloud`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_APP_SECRET`
+7. Subscribe webhook field: **messages**
+
+**If verification fails:** open `https://<api>/health/whatsapp-meta` — `verifyTokenConfigured` must be `true`. Test manually:
+
+```text
+GET https://<api>/webhooks/whatsapp?hub.mode=subscribe&hub.verify_token=YOUR_TOKEN&hub.challenge=12345
+```
+
+Response body must be exactly `12345` (plain text), not JSON.
+
+**Common mistake:** Verify token in Meta ≠ `WHATSAPP_VERIFY_TOKEN` on Render, or token not set on Render at all.
