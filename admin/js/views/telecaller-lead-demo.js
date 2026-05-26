@@ -57,12 +57,17 @@ export const DEMO_AGRONOMIST = {
 
 export function enrichLeadData(data) {
   if (!data) return data;
+  const hasApiBlocks = Array.isArray(data.blocks) && data.blocks.length > 0 && data.blocks[0]?.id;
   return {
     ...data,
-    interactions: data.interactions?.length >= 5 ? data.interactions : mapTimelineToInteractions(data.timeline),
+    interactions:
+      data.interactions?.length >= 3
+        ? data.interactions
+        : mapTimelineToInteractions(data.timeline),
     ordersDetailed: data.ordersDetailed?.length ? data.ordersDetailed : DEMO_ORDERS,
-    agronomist: data.agronomist || DEMO_AGRONOMIST,
-    blocks: data.blocks?.length ? data.blocks : DEMO_BLOCKS,
+    agronomist: data.agronomist?.name ? data.agronomist : DEMO_AGRONOMIST,
+    blocks: hasApiBlocks ? data.blocks : data.blocks?.length ? data.blocks : DEMO_BLOCKS,
+    recommendations: data.recommendations?.length ? data.recommendations : [],
     lastOrder: data.lastOrder || {
       product: 'Potassium Nitrate 13:0:45 (10kg)',
       qty: '2 bags',

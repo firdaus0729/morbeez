@@ -11,6 +11,7 @@ import { flashSalesAdminService } from '../../services/admin/flash-sales-admin.s
 import { aiAdvisoryAdminService } from '../../services/admin/ai-advisory-admin.service.js';
 import { aiMappingAdminService } from '../../services/admin/ai-mapping-admin.service.js';
 import { telecallerAdminService } from '../../services/admin/telecaller-admin.service.js';
+import { crmFarmerService } from '../../services/admin/crm-farmer.service.js';
 import { consoleSearchService } from '../../services/admin/console-search.service.js';
 import { productIntelligenceService } from '../../services/admin/product-intelligence.service.js';
 import { shopifyProductsService } from '../../services/shopify/shopify.products.service.js';
@@ -700,6 +701,7 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
     const { id } = request.params as { id: string };
     const body = z
       .object({
+        blockId: z.string().uuid().optional(),
         blockName: z.string().min(1),
         cropType: z.string().min(1),
         observations: z.string().optional(),
@@ -715,6 +717,200 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
       body
     );
     return reply.status(201).send({ ok: true, finding });
+  });
+
+  app.get(`${api}/crm/masters`, async (request, reply) => {
+    requireAdmin(request);
+    const q = request.query as { type?: string; parentId?: string; search?: string };
+    const type = z.string().min(1).parse(q.type ?? 'crop');
+    const items = await crmFarmerService.listMasters(
+      type as Parameters<typeof crmFarmerService.listMasters>[0],
+      q.parentId || null,
+      q.search
+    );
+    return reply.send({ ok: true, items });
+  });
+
+  app.post(`${api}/crm/masters`, async (request, reply) => {
+    requireAdminRole(request, 'admin', 'manager');
+    const body = z
+      .object({
+        masterType: z.string().min(1),
+        name: z.string().min(1).max(120),
+        parentId: z.string().uuid().nullable().optional(),
+        category: z.string().optional(),
+        description: z.string().optional(),
+      })
+      .parse(request.body);
+    const item = await crmFarmerService.createMaster({
+      masterType: body.masterType as Parameters<typeof crmFarmerService.createMaster>[0]['masterType'],
+      name: body.name,
+      parentId: body.parentId,
+      category: body.category,
+      description: body.description,
+    });
+    return reply.status(201).send({ ok: true, item });
+  });
+
+  app.patch(`${api}/crm/masters/:id`, async (request, reply) => {
+    requireAdminRole(request, 'admin', 'manager');
+    const { id } = request.params as { id: string };
+    const body = z
+      .object({
+        name: z.string().min(1).optional(),
+        active: z.boolean().optional(),
+        description: z.string().optional(),
+      })
+      .parse(request.body);
+    const item = await crmFarmerService.updateMaster(id, body);
+    return reply.send({ ok: true, item });
+  });
+
+  app.get(`${api}/telecaller/leads/:id/crm`, async (request, reply) => {
+    requireAdmin(request);
+    const { id } = request.params as { id: string };
+    const admin = requireAdmin(request);
+    const detail = await telecallerAdminService.getLeadDetail(id);
+    const farmerId = detail.lead.farmerId as string;
+    const bundle = await crmFarmerService.getFarmerCrmBundle(farmerId, id, admin.email);
+    return reply.send({ ok: true, ...bundle });
+  });
+
+  app.get(`${api}/telecaller/leads/:id/blocks`, async (request, reply) => {
+    requireAdmin(request);
+    const { id } = request.params as { id: string };
+    const detail = await telecallerAdminService.getLeadDetail(id);
+    const blocks = await crmFarmerService.ensureDemoBlocks(detail.lead.farmerId as string);
+    return reply.send({ ok: true, blocks });
+  });
+
+  app.post(`${api}/telecaller/leads/:id/blocks`, async (request, reply) => {
+    requireAdminRole(request, 'admin', 'manager');
+    const { id } = request.params as { id: string };
+    const body = z
+      .object({
+        name: z.string().min(1),
+        area: z.string().optional(),
+        cropId: z.string().uuid().optional(),
+        cropName: z.string().optional(),
+        varietyId: z.string().uuid().optional(),
+        varietyName: z.string().optional(),
+        irrigationTypeId: z.string().uuid().optional(),
+        soilTypeId: z.string().uuid().optional(),
+        plantingDate: z.string().optional(),
+        spacing: z.string().optional(),
+      })
+      .parse(request.body);
+    const detail = await telecallerAdminService.getLeadDetail(id);
+    const block = await crmFarmerService.createBlock(detail.lead.farmerId as string, body);
+    return reply.status(201).send({ ok: true, block });
+  });
+
+  app.get(`${api}/telecaller/leads/:leadId/blocks/:blockId/workspace`, async (request, reply) => {
+    requireAdmin(request);
+    const { leadId, blockId } = request.params as { leadId: string; blockId: string };
+    const detail = await telecallerAdminService.getLeadDetail(leadId);
+    const workspace = await crmFarmerService.getBlockWorkspace(
+      detail.lead.farmerId as string,
+      blockId
+    );
+    return reply.send({ ok: true, ...workspace });
+  });
+
+  app.get(`${api}/telecaller/leads/:id/interactions`, async (request, reply) => {
+    requireAdmin(request);
+    const { id } = request.params as { id: string };
+    const q = request.query as { page?: string; limit?: string };
+    const detail = await telecallerAdminService.getLeadDetail(id);
+    const result = await crmFarmerService.listInteractions(
+      detail.lead.farmerId as string,
+      q.page ? Number(q.page) : 1,
+      q.limit ? Number(q.limit) : 10
+    );
+    return reply.send({ ok: true, ...result });
+  });
+
+  app.post(`${api}/telecaller/leads/:id/interactions`, async (request, reply) => {
+    requireAdminRole(request, 'admin', 'manager');
+    const admin = requireAdmin(request);
+    const { id } = request.params as { id: string };
+    const body = z
+      .object({
+        interactionType: z.string().min(1),
+        blockId: z.string().uuid().optional(),
+        summary: z.string().optional(),
+        notes: z.string().optional(),
+        nextAction: z.string().optional(),
+        nextActionAt: z.string().optional(),
+        status: z.string().optional(),
+      })
+      .parse(request.body);
+    const detail = await telecallerAdminService.getLeadDetail(id);
+    const interaction = await crmFarmerService.createInteraction(
+      detail.lead.farmerId as string,
+      id,
+      {
+        ...body,
+        doneBy: admin.email,
+        doneByRole: 'Telecaller',
+      }
+    );
+    return reply.status(201).send({ ok: true, interaction });
+  });
+
+  app.get(`${api}/telecaller/leads/:id/recommendations`, async (request, reply) => {
+    requireAdmin(request);
+    const { id } = request.params as { id: string };
+    const q = request.query as { page?: string; limit?: string };
+    const detail = await telecallerAdminService.getLeadDetail(id);
+    const result = await crmFarmerService.listRecommendations(
+      detail.lead.farmerId as string,
+      q.page ? Number(q.page) : 1,
+      q.limit ? Number(q.limit) : 10
+    );
+    return reply.send({ ok: true, ...result });
+  });
+
+  app.post(`${api}/telecaller/leads/:id/recommendations`, async (request, reply) => {
+    requireAdminRole(request, 'admin', 'manager');
+    const admin = requireAdmin(request);
+    const { id } = request.params as { id: string };
+    const body = z
+      .object({
+        blockId: z.string().uuid().optional(),
+        recType: z.enum(['ai', 'agronomist', 'spray', 'drench']).optional(),
+        problem: z.string().optional(),
+        recommendation: z.string().min(1),
+        dosage: z.string().optional(),
+        applicationMethod: z.string().optional(),
+        followUpAt: z.string().optional(),
+      })
+      .parse(request.body);
+    const detail = await telecallerAdminService.getLeadDetail(id);
+    const rec = await crmFarmerService.createRecommendation(detail.lead.farmerId as string, id, {
+      ...body,
+      recommendedBy: admin.email,
+    });
+    return reply.status(201).send({ ok: true, recommendation: rec });
+  });
+
+  app.post(`${api}/telecaller/leads/:id/soil-reports`, async (request, reply) => {
+    requireAdminRole(request, 'admin', 'manager');
+    const admin = requireAdmin(request);
+    const { id } = request.params as { id: string };
+    const body = z
+      .object({
+        blockId: z.string().uuid().optional(),
+        metrics: z.record(z.unknown()).optional(),
+        pdfUrl: z.string().optional(),
+      })
+      .parse(request.body);
+    const detail = await telecallerAdminService.getLeadDetail(id);
+    const report = await crmFarmerService.createSoilReport(detail.lead.farmerId as string, {
+      ...body,
+      uploadedBy: admin.email,
+    });
+    return reply.status(201).send({ ok: true, report });
   });
 
   app.get(`${api}/inventory`, async (request, reply) => {

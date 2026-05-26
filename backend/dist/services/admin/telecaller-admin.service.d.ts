@@ -611,12 +611,17 @@ export declare const telecallerAdminService: {
     };
     demoFieldFindings(farmerId: string): Record<string, unknown>[];
     createFieldFinding(farmerId: string, leadId: string | null, input: {
+        blockId?: string;
         blockName: string;
         cropType: string;
         observations?: string;
         diseasePest?: string;
         diseaseTone?: string;
         actionTaken?: string;
+        parameters?: {
+            label: string;
+            value: string;
+        }[];
     }): Promise<{
         id: unknown;
         visitedAt: unknown;

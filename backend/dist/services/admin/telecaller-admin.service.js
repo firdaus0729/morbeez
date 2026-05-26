@@ -683,6 +683,7 @@ export const telecallerAdminService = {
             .insert({
             farmer_id: farmerId,
             lead_id: leadId,
+            block_id: input.blockId ?? null,
             block_name: input.blockName,
             crop_type: input.cropType,
             agronomist_name: 'Field Agronomist',
@@ -691,9 +692,10 @@ export const telecallerAdminService = {
             disease_pest: input.diseasePest ?? 'Pending review',
             disease_tone: input.diseaseTone ?? 'warning',
             action_taken: input.actionTaken,
-            parameters: [
-                { label: 'Leaf Stage', value: '—' },
-                { label: 'SPAD', value: '—' },
+            parameters: input.parameters ?? [
+                { label: 'Leaf Stage', value: 'Vegetative' },
+                { label: 'SPAD', value: '42' },
+                { label: 'Soil Moisture', value: '55%' },
             ],
             follow_up_at: new Date(Date.now() + 7 * 86400000).toISOString(),
             photo_urls: [],

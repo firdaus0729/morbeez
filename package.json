@@ -20,7 +20,8 @@
     "verify:api": "node scripts/verify-render-api.mjs",
     "prepare:logos": "python scripts/prepare-logos.py",
     "admin:create-user": "node scripts/create-admin-user.mjs",
-    "crm:seed": "node scripts/seed-telecaller-crm.mjs"
+    "crm:seed": "node scripts/seed-telecaller-crm.mjs",
+    "crm:masters": "node scripts/seed-crm-masters.mjs"
   },
   "devDependencies": {
     "@shopify/prettier-plugin-liquid": "^1.5.0",

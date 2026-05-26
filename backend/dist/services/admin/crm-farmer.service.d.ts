@@ -1,0 +1,498 @@
+export type MasterType = 'crop' | 'variety' | 'irrigation_type' | 'soil_type' | 'growth_stage' | 'block_status' | 'disease' | 'pest' | 'interaction_type' | 'recommendation_type' | 'application_method' | 'payment_mode' | 'priority' | 'visit_type' | 'moisture_status' | 'pest_pressure' | 'plant_condition' | 'delivery_partner' | 'territory' | 'specialization';
+export declare const crmFarmerService: {
+    listMasters(type: MasterType, parentId?: string | null, search?: string): Promise<{
+        id: any;
+        master_type: any;
+        name: any;
+        parent_id: any;
+        category: any;
+        description: any;
+        active: any;
+        sort_order: any;
+    }[]>;
+    createMaster(input: {
+        masterType: MasterType;
+        name: string;
+        parentId?: string | null;
+        category?: string;
+        description?: string;
+    }): Promise<any>;
+    updateMaster(id: string, patch: {
+        name?: string;
+        active?: boolean;
+        description?: string;
+    }): Promise<any>;
+    listBlocks(farmerId: string): Promise<{
+        id: unknown;
+        farmerId: unknown;
+        name: unknown;
+        area: {};
+        cropName: {};
+        varietyName: {};
+        cropId: unknown;
+        varietyId: unknown;
+        irrigationTypeId: unknown;
+        soilTypeId: unknown;
+        growthStageId: unknown;
+        growthStageName: string;
+        irrigationTypeName: string;
+        plantingDate: string | null;
+        spacing: unknown;
+        soilHealth: string;
+        soilTone: string;
+        lastVisit: string;
+        growthPercent: {};
+        status: string;
+    }[]>;
+    getBlock(blockId: string): Promise<{
+        id: unknown;
+        farmerId: unknown;
+        name: unknown;
+        area: {};
+        cropName: {};
+        varietyName: {};
+        cropId: unknown;
+        varietyId: unknown;
+        irrigationTypeId: unknown;
+        soilTypeId: unknown;
+        growthStageId: unknown;
+        growthStageName: string;
+        irrigationTypeName: string;
+        plantingDate: string | null;
+        spacing: unknown;
+        soilHealth: string;
+        soilTone: string;
+        lastVisit: string;
+        growthPercent: {};
+        status: string;
+    }>;
+    createBlock(farmerId: string, input: {
+        name: string;
+        area?: string;
+        cropId?: string;
+        cropName?: string;
+        varietyId?: string;
+        varietyName?: string;
+        irrigationTypeId?: string;
+        soilTypeId?: string;
+        plantingDate?: string;
+        spacing?: string;
+    }): Promise<{
+        id: unknown;
+        farmerId: unknown;
+        name: unknown;
+        area: {};
+        cropName: {};
+        varietyName: {};
+        cropId: unknown;
+        varietyId: unknown;
+        irrigationTypeId: unknown;
+        soilTypeId: unknown;
+        growthStageId: unknown;
+        growthStageName: string;
+        irrigationTypeName: string;
+        plantingDate: string | null;
+        spacing: unknown;
+        soilHealth: string;
+        soilTone: string;
+        lastVisit: string;
+        growthPercent: {};
+        status: string;
+    }>;
+    updateBlock(blockId: string, patch: Record<string, unknown>): Promise<{
+        id: unknown;
+        farmerId: unknown;
+        name: unknown;
+        area: {};
+        cropName: {};
+        varietyName: {};
+        cropId: unknown;
+        varietyId: unknown;
+        irrigationTypeId: unknown;
+        soilTypeId: unknown;
+        growthStageId: unknown;
+        growthStageName: string;
+        irrigationTypeName: string;
+        plantingDate: string | null;
+        spacing: unknown;
+        soilHealth: string;
+        soilTone: string;
+        lastVisit: string;
+        growthPercent: {};
+        status: string;
+    }>;
+    getBlockWorkspace(farmerId: string, blockId: string): Promise<{
+        block: {
+            id: unknown;
+            farmerId: unknown;
+            name: unknown;
+            area: {};
+            cropName: {};
+            varietyName: {};
+            cropId: unknown;
+            varietyId: unknown;
+            irrigationTypeId: unknown;
+            soilTypeId: unknown;
+            growthStageId: unknown;
+            growthStageName: string;
+            irrigationTypeName: string;
+            plantingDate: string | null;
+            spacing: unknown;
+            soilHealth: string;
+            soilTone: string;
+            lastVisit: string;
+            growthPercent: {};
+            status: string;
+        };
+        blockInfo: {
+            blockName: unknown;
+            area: {};
+            crop: {};
+            variety: {};
+            plantingDate: string | null;
+            daysAfterPlanting: number | null;
+            irrigationType: string;
+            spacing: unknown;
+            growthStage: string;
+            growthPercent: {};
+            nextStage: string;
+        };
+        soilReport: {
+            metrics: any;
+            pdfUrl: any;
+            reportedLabel: string | null;
+        };
+        latestVisit: {
+            agronomistName: unknown;
+            diseasePest: unknown;
+            observations: unknown;
+            parameters: unknown;
+            visitedLabel: string | null;
+            spad: string | undefined;
+        } | null;
+        recommendations: {
+            id: unknown;
+            recId: string;
+            dateLabel: string | null;
+            blockName: string;
+            cropType: string;
+            problem: unknown;
+            recommendation: unknown;
+            products: unknown;
+            dosage: unknown;
+            applicationMethod: unknown;
+            recommendedBy: {};
+            status: unknown;
+            statusTone: string;
+            followUpLabel: string | null;
+            recType: unknown;
+        }[];
+        timeline: {
+            title: string;
+            atLabel: string;
+            at: string;
+        }[];
+    }>;
+    blockTimeline(_farmerId: string, blockId: string): Promise<{
+        title: string;
+        atLabel: string;
+        at: string;
+    }[]>;
+    listSoilReports(farmerId: string, blockId?: string): Promise<any[]>;
+    createSoilReport(farmerId: string, input: {
+        blockId?: string;
+        metrics?: Record<string, unknown>;
+        pdfUrl?: string;
+        uploadedBy?: string;
+    }): Promise<any>;
+    listRecommendations(farmerId: string, page?: number, limit?: number): Promise<{
+        recommendations: {
+            id: unknown;
+            recId: string;
+            dateLabel: string | null;
+            blockName: string;
+            cropType: string;
+            problem: unknown;
+            recommendation: unknown;
+            products: unknown;
+            dosage: unknown;
+            applicationMethod: unknown;
+            recommendedBy: {};
+            status: unknown;
+            statusTone: string;
+            followUpLabel: string | null;
+            recType: unknown;
+        }[];
+        pagination: {
+            page: number;
+            limit: number;
+            total: number;
+            pages: number;
+        };
+    }>;
+    createRecommendation(farmerId: string, leadId: string | null, input: {
+        blockId?: string;
+        recType?: string;
+        problem?: string;
+        recommendation: string;
+        products?: unknown[];
+        dosage?: string;
+        applicationMethod?: string;
+        followUpAt?: string;
+        recommendedBy?: string;
+    }): Promise<{
+        id: unknown;
+        recId: string;
+        dateLabel: string | null;
+        blockName: string;
+        cropType: string;
+        problem: unknown;
+        recommendation: unknown;
+        products: unknown;
+        dosage: unknown;
+        applicationMethod: unknown;
+        recommendedBy: {};
+        status: unknown;
+        statusTone: string;
+        followUpLabel: string | null;
+        recType: unknown;
+    }>;
+    listInteractions(farmerId: string, page?: number, limit?: number): Promise<{
+        interactions: {
+            id: unknown;
+            atLabel: string | null;
+            type: string;
+            typeLabel: string;
+            icon: string;
+            by: {};
+            role: {};
+            summary: {};
+            nextAction: {};
+            nextDate: string;
+            status: string;
+            statusTone: string;
+            block: string;
+        }[];
+        pagination: {
+            page: number;
+            limit: number;
+            total: number;
+            pages: number;
+        };
+    }>;
+    createInteraction(farmerId: string, leadId: string | null, input: {
+        interactionType: string;
+        channel?: string;
+        blockId?: string;
+        summary?: string;
+        notes?: string;
+        nextAction?: string;
+        nextActionAt?: string;
+        status?: string;
+        doneBy?: string;
+        doneByRole?: string;
+    }): Promise<{
+        id: unknown;
+        atLabel: string | null;
+        type: string;
+        typeLabel: string;
+        icon: string;
+        by: {};
+        role: {};
+        summary: {};
+        nextAction: {};
+        nextDate: string;
+        status: string;
+        statusTone: string;
+        block: string;
+    }>;
+    getAgronomist(farmerId: string): Promise<AgronomistProfile>;
+    upsertAgronomist(farmerId: string, input: Partial<{
+        agronomistName: string;
+        employeeId: string;
+        mobile: string;
+        email: string;
+        specialization: string;
+        nextVisitAt: string;
+    }>): Promise<AgronomistProfile>;
+    ensureDemoCrmData(farmerId: string, leadId: string | null, agentEmail?: string): Promise<{
+        id: unknown;
+        farmerId: unknown;
+        name: unknown;
+        area: {};
+        cropName: {};
+        varietyName: {};
+        cropId: unknown;
+        varietyId: unknown;
+        irrigationTypeId: unknown;
+        soilTypeId: unknown;
+        growthStageId: unknown;
+        growthStageName: string;
+        irrigationTypeName: string;
+        plantingDate: string | null;
+        spacing: unknown;
+        soilHealth: string;
+        soilTone: string;
+        lastVisit: string;
+        growthPercent: {};
+        status: string;
+    }[]>;
+    getFarmerCrmBundle(farmerId: string, leadId: string | null, agentEmail?: string): Promise<{
+        blocks: {
+            id: unknown;
+            farmerId: unknown;
+            name: unknown;
+            area: {};
+            cropName: {};
+            varietyName: {};
+            cropId: unknown;
+            varietyId: unknown;
+            irrigationTypeId: unknown;
+            soilTypeId: unknown;
+            growthStageId: unknown;
+            growthStageName: string;
+            irrigationTypeName: string;
+            plantingDate: string | null;
+            spacing: unknown;
+            soilHealth: string;
+            soilTone: string;
+            lastVisit: string;
+            growthPercent: {};
+            status: string;
+        }[];
+        agronomist: AgronomistProfile;
+        interactions: {
+            interactions: {
+                id: unknown;
+                atLabel: string | null;
+                type: string;
+                typeLabel: string;
+                icon: string;
+                by: {};
+                role: {};
+                summary: {};
+                nextAction: {};
+                nextDate: string;
+                status: string;
+                statusTone: string;
+                block: string;
+            }[];
+            pagination: {
+                page: number;
+                limit: number;
+                total: number;
+                pages: number;
+            };
+        };
+        recommendations: {
+            recommendations: {
+                id: unknown;
+                recId: string;
+                dateLabel: string | null;
+                blockName: string;
+                cropType: string;
+                problem: unknown;
+                recommendation: unknown;
+                products: unknown;
+                dosage: unknown;
+                applicationMethod: unknown;
+                recommendedBy: {};
+                status: unknown;
+                statusTone: string;
+                followUpLabel: string | null;
+                recType: unknown;
+            }[];
+            pagination: {
+                page: number;
+                limit: number;
+                total: number;
+                pages: number;
+            };
+        };
+        orders: {
+            orders: {
+                id: any;
+                dateLabel: string | null;
+                product: any;
+                qty: number;
+                amount: number;
+                status: string;
+                statusTone: string;
+                payment: string;
+                deliveryDate: string | null;
+                deliveryBy: string;
+                block: string;
+            }[];
+        };
+    }>;
+    listFarmerOrders(farmerId: string): Promise<{
+        orders: {
+            id: any;
+            dateLabel: string | null;
+            product: any;
+            qty: number;
+            amount: number;
+            status: string;
+            statusTone: string;
+            payment: string;
+            deliveryDate: string | null;
+            deliveryBy: string;
+            block: string;
+        }[];
+    }>;
+    ensureDemoBlocks(farmerId: string): Promise<{
+        id: unknown;
+        farmerId: unknown;
+        name: unknown;
+        area: {};
+        cropName: {};
+        varietyName: {};
+        cropId: unknown;
+        varietyId: unknown;
+        irrigationTypeId: unknown;
+        soilTypeId: unknown;
+        growthStageId: unknown;
+        growthStageName: string;
+        irrigationTypeName: string;
+        plantingDate: string | null;
+        spacing: unknown;
+        soilHealth: string;
+        soilTone: string;
+        lastVisit: string;
+        growthPercent: {};
+        status: string;
+    }[]>;
+};
+type AgronomistProfile = {
+    name: unknown;
+    employeeId: unknown;
+    mobile: string;
+    email: string;
+    specialization: unknown;
+    assignedSince: unknown;
+    assignedBlocks: string;
+    lastReview: string | null;
+    nextVisit: string;
+    activities: {
+        date: string;
+        activity: string;
+        activityTone: string;
+        block: string;
+        notes: string;
+    }[];
+    blocks: {
+        block: string;
+        crop: string;
+        area: string;
+        status: string;
+        statusTone: string;
+    }[];
+    performance: {
+        label: string;
+        value: string;
+        icon: string;
+    }[];
+    farmerId: string;
+};
+export {};
+//# sourceMappingURL=crm-farmer.service.d.ts.map

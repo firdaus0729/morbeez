@@ -1,6 +1,12 @@
 import { $, api, state, escapeHtml, formatInrFull, canEdit, showToast } from '../core.js';
 import { icon } from '../icons.js';
 import { enrichLeadData } from './telecaller-lead-demo.js';
+import {
+  showAddBlockModal,
+  showAddInteractionModal,
+  showAddRecommendationModal,
+  showAddFieldFindingModal,
+} from './crm-ui.js';
 
 export const LEAD_TABS = [
   { id: 'overview', label: 'Overview' },
@@ -204,7 +210,7 @@ function renderInteractionsTab(d) {
     </tr>`
   ).join('');
   const total = d.interactions?.length || 0;
-  return `${tabHeader('Interactions', 'All activities and interactions with this farmer.', canEdit() ? '<button type="button" class="btn btn-primary btn-sm">+ Add Interaction</button><button type="button" class="btn btn-secondary btn-sm">Filter</button>' : '')}
+  return `${tabHeader('Interactions', 'All activities and interactions with this farmer.', canEdit() ? '<button type="button" class="btn btn-primary btn-sm" id="ld-add-interaction">+ Add Interaction</button><button type="button" class="btn btn-secondary btn-sm">Filter</button>' : '')}
     <div class="ld-filter-row">
       <select class="products-select"><option>Interaction Type (All)</option></select>
       <select class="products-select"><option>Employee (All)</option></select>
@@ -218,6 +224,38 @@ function renderInteractionsTab(d) {
       <tbody>${rows}</tbody></table></div>
       ${tablePager(1, Math.min(10, total), total, Math.ceil(total / 10) || 1, 1, 'ld-ix-limit', 10)}
     </div>`;
+}
+
+function renderRecommendationsTab(d) {
+  const recs = d.recommendations || [];
+  const rows = recs
+    .map(
+      (r) => `<tr>
+      <td>${escapeHtml(r.recId || r.id)}</td>
+      <td class="ld-col-datetime">${escapeHtml(r.dateLabel || '')}</td>
+      <td><strong>${escapeHtml(r.blockName)}</strong><br><span class="tc-muted">${escapeHtml(r.cropType)}</span></td>
+      <td>${escapeHtml(r.problem || '—')}</td>
+      <td>${escapeHtml(r.recommendation || '')}</td>
+      <td class="tc-muted">${escapeHtml(r.dosage || '—')}</td>
+      <td>${escapeHtml(r.applicationMethod || '—')}</td>
+      <td>${escapeHtml(r.recommendedBy || '')}</td>
+      <td>${ixStatus(r.statusTone, r.status)}</td>
+      <td class="tc-muted">${escapeHtml(r.followUpLabel || '—')}</td>
+      <td class="col-actions"><button type="button" class="action-icon ld-more-btn">⋮</button></td>
+    </tr>`
+    )
+    .join('');
+  return `${tabHeader(
+    'Recommendations',
+    'Product and agronomy recommendations for this farmer.',
+    canEdit()
+      ? '<button type="button" class="btn btn-secondary btn-sm">Filter</button><button type="button" class="btn btn-secondary btn-sm">Export</button><button type="button" class="btn btn-primary btn-sm" id="ld-add-recommendation">+ Add Recommendation</button>'
+      : ''
+  )}
+    <div class="products-table-card ld-table-card"><div class="table-wrap"><table class="products-table">
+      <thead><tr><th>Rec ID</th><th>Date</th><th>Block / Crop</th><th>Problem</th><th>Recommendation</th><th>Dosage</th><th>Application</th><th>By</th><th>Status</th><th>Follow-up</th><th></th></tr></thead>
+      <tbody>${rows || '<tr><td colspan="11" class="empty-state">No recommendations yet</td></tr>'}</tbody>
+    </table></div></div>`;
 }
 
 function renderOrdersTab(d) {
@@ -302,9 +340,9 @@ function renderAgronomistTab(d) {
     </div>`;
 }
 
-function renderBlocksTab(d) {
+function renderBlocksTab(d, blockWs) {
   const blocks = d.blocks || [];
-  const active = state.telecaller.blockId || blocks[0]?.id || 'a';
+  const active = state.telecaller.blockId || blocks[0]?.id;
   const block = blocks.find((b) => b.id === active) || blocks[0];
   const sub = state.telecaller.blockTab || 'overview';
   const subTabs = ['overview', 'soil', 'visits', 'recommendations', 'follow-ups', 'timeline'];
@@ -312,42 +350,80 @@ function renderBlocksTab(d) {
   const cards = blocks
     .map(
       (b) => `<button type="button" class="ld-block-card ${b.id === active ? 'active' : ''}" data-block-id="${b.id}">
-      <div class="ld-block-card-top"><strong>${escapeHtml(b.name)}</strong><span class="ld-crop-tag">${escapeHtml(b.crop)}</span></div>
-      <p>${escapeHtml(b.acre)} · ${escapeHtml(b.variety)}</p>
+      <div class="ld-block-card-top"><strong>${escapeHtml(b.name)}</strong><span class="ld-crop-tag">${escapeHtml(b.cropName || b.crop)}</span></div>
+      <p>${escapeHtml(b.area || b.acre)} · ${escapeHtml(b.varietyName || b.variety || '—')}</p>
       <p>${ixStatus(b.soilTone, b.soilHealth)} · Last visit ${escapeHtml(b.lastVisit)}</p>
       <span class="ld-block-view">View Details</span>
     </button>`
     )
     .join('');
 
-  return `${tabHeader('Farm Blocks', '', canEdit() ? '<button type="button" class="btn btn-primary btn-sm">+ Add Block</button>' : '')}
-    <div class="ld-block-cards">${cards}<button type="button" class="ld-block-card ld-block-add"><span>+</span><p>Add Block</p><small>Create new block for this farm</small></button></div>
+  const topActions = canEdit()
+    ? `<div class="ld-block-top-actions">
+        <button type="button" class="btn btn-primary btn-sm" id="ld-add-block">+ Add Block</button>
+        <button type="button" class="btn btn-secondary btn-sm" id="ld-add-soil">Add Soil Report</button>
+        <button type="button" class="btn btn-secondary btn-sm" id="ld-add-visit">Add Visit</button>
+        <button type="button" class="btn btn-secondary btn-sm" id="ld-add-rec-block">Add Recommendation</button>
+      </div>`
+    : '';
+
+  return `${tabHeader('Farm Blocks', 'Manage farm blocks, soil, visits and recommendations.', topActions)}
+    <div class="ld-block-cards">${cards}<button type="button" class="ld-block-card ld-block-add" id="ld-add-block-card"><span>+</span><p>Add Block</p><small>Create new block</small></button></div>
     ${block ? `<div class="ld-block-detail">
-      <div class="ld-block-detail-head"><h3>${escapeHtml(block.name)} (${escapeHtml(block.crop)}) — ${escapeHtml(block.acre)}</h3>${ixStatus('success', 'Active')}<select class="products-select"><option>Change Block</option></select></div>
+      <div class="ld-block-detail-head"><h3>${escapeHtml(block.name)} (${escapeHtml(block.cropName)}) — ${escapeHtml(block.area)}</h3>${ixStatus('success', 'Active')}<select class="products-select" id="ld-change-block">${blocks.map((b) => `<option value="${b.id}" ${b.id === active ? 'selected' : ''}>${escapeHtml(b.name)}</option>`).join('')}</select></div>
       <nav class="ld-subtabs">${subTabs.map((t) => `<button type="button" class="ld-subtab ${sub === t ? 'active' : ''}" data-block-tab="${t}">${t.replace('-', ' ').replace(/\b\w/g, (c) => c.toUpperCase())}</button>`).join('')}</nav>
-      <div class="ld-block-grid">${renderBlockSubtab(sub, block)}</div>
+      <div class="ld-block-grid">${renderBlockSubtab(sub, block, blockWs)}</div>
       <button type="button" class="btn btn-secondary btn-block ld-block-timeline-btn">View Block Timeline</button>
     </div>` : ''}`;
 }
 
-function renderBlockSubtab(sub, block) {
-  if (sub !== 'overview') return `<p class="tc-muted ld-block-placeholder">Detailed ${sub} view — connect field data in next sprint.</p>`;
+function renderBlockSubtab(sub, block, ws) {
+  if (sub !== 'overview') {
+    return `<p class="tc-muted ld-block-placeholder">${escapeHtml(sub)} data — use Overview for full block workspace.</p>`;
+  }
+  const info = ws?.blockInfo || {};
+  const metrics = ws?.soilReport?.metrics || {};
+  const metricRows = Object.entries(metrics)
+    .slice(0, 6)
+    .map(([k, v]) => {
+      const row = v;
+      const label = k.replace(/([A-Z])/g, ' $1').replace(/^./, (s) => s.toUpperCase());
+      const val = typeof row === 'object' ? row.value : row;
+      const st = typeof row === 'object' ? row.status : 'Normal';
+      return `<tr><td>${label}</td><td>${escapeHtml(String(val))}</td><td>${ixStatus(st === 'Good' ? 'success' : st === 'Low' ? 'warning' : 'info', st)}</td></tr>`;
+    })
+    .join('');
+
+  const visit = ws?.latestVisit;
+  const recs = ws?.recommendations || [];
+  const timeline = ws?.timeline || [];
+
   return `
-    <div class="ld-bcol"><h4>Block Information</h4><dl class="ld-ov-dl">${[['Block Name', block.name], ['Area', block.acre], ['Crop', block.crop], ['Variety', block.variety], ['Planting Date', '12 Jan 2024'], ['Days After Planting', '132'], ['Irrigation', 'Drip'], ['Spacing', '2m × 2m']].map(([k,v]) => `<div><dt>${k}</dt><dd>${escapeHtml(v)}</dd></div>`).join('')}</dl>
-      <h4 class="ld-mt">Block Progress</h4><p>Vegetative → <strong>Flowering</strong></p><div class="ld-progress"><span style="width:65%"></span></div><small>65% to next stage</small></div>
-    <div class="ld-bcol"><h4>Soil Reports</h4><table class="products-table ld-soil-mini"><tbody>${[['Soil pH','6.2','Good'],['Nitrogen','245 kg/ha','Normal'],['Organic Carbon','0.54%','Low']].map(([p,v,s]) => `<tr><td>${p}</td><td>${v}</td><td>${ixStatus(s==='Good'?'success':s==='Low'?'warning':'info',s)}</td></tr>`).join('')}</tbody></table></div>
-    <div class="ld-bcol"><h4>Latest Visit (23 May 2024)</h4><dl class="ld-ov-dl">${[['Agronomist','Arjun Nair'],['Disease','Leaf Spot'],['SPAD','42'],['Moisture','18%']].map(([k,v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join('')}</dl><div class="ld-photo-thumbs">${renderPhotoThumbs(3)}</div></div>
-    <div class="ld-bcol"><h4>Current Recommendation</h4><p><span class="ld-ix-status ld-ix-status-info">AI</span> Calcium Nitrate + Boron — Foliar Spray</p><p><span class="ld-ix-status ld-ix-status-success">Agronomist</span> Potassium correction — active</p><p class="ld-follow-date">Next: 25 May 2024, 11:00 AM</p></div>
-    <div class="ld-bcol"><h4>Timeline</h4><ul class="ld-ov-timeline"><li><strong>Field visit completed</strong><time>23 May 2024</time></li><li><strong>Recommendation given</strong><time>20 May 2024</time></li></ul></div>`;
+    <div class="ld-bcol"><h4>Block Information <button type="button" class="ld-ov-link">Edit</button></h4><dl class="ld-ov-dl">${[
+      ['Block Name', info.blockName || block.name],
+      ['Area', info.area || block.area],
+      ['Crop', info.crop || block.cropName],
+      ['Variety', info.variety || block.varietyName],
+      ['Planting Date', info.plantingDate || '—'],
+      ['Days After Planting', info.daysAfterPlanting ?? '—'],
+      ['Irrigation', info.irrigationType || 'Drip'],
+      ['Spacing', info.spacing || '—'],
+    ].map(([k, v]) => `<div><dt>${k}</dt><dd>${escapeHtml(String(v))}</dd></div>`).join('')}</dl>
+      <h4 class="ld-mt">Block Progress</h4><p>${escapeHtml(info.growthStage || 'Vegetative')} → <strong>${escapeHtml(info.nextStage || 'Flowering')}</strong></p>
+      <div class="ld-progress"><span style="width:${info.growthPercent || block.growthPercent || 65}%"></span></div></div>
+    <div class="ld-bcol"><h4>Soil Reports</h4><table class="products-table ld-soil-mini"><tbody>${metricRows || '<tr><td colspan="3">No soil report</td></tr>'}</tbody></table></div>
+    <div class="ld-bcol"><h4>Latest Visit</h4><dl class="ld-ov-dl">${visit ? [['Agronomist', visit.agronomistName], ['Disease', visit.diseasePest], ['SPAD', visit.spad || '—'], ['Notes', (visit.observations || '').slice(0, 40)]].map(([k,v]) => `<div><dt>${k}</dt><dd>${escapeHtml(String(v))}</dd></div>`).join('') : '<p class="tc-muted">No visits yet</p>'}</dl></div>
+    <div class="ld-bcol"><h4>Current Recommendation</h4>${recs.length ? recs.map((r) => `<p><span class="ld-ix-status ld-ix-status-${r.recType === 'ai' ? 'info' : 'success'}">${escapeHtml(r.recType)}</span> ${escapeHtml(r.recommendation)}</p>`).join('') : '<p class="tc-muted">No active recommendation</p>'}</div>
+    <div class="ld-bcol"><h4>Timeline</h4><ul class="ld-ov-timeline">${timeline.map((t) => `<li><strong>${escapeHtml(t.title)}</strong><time>${escapeHtml(t.atLabel)}</time></li>`).join('') || '<li class="tc-muted">No events</li>'}</ul></div>`;
 }
 
-export function renderTabBody(tab, data, ffData) {
+export function renderTabBody(tab, data, ffData, blockWs) {
   const d = enrichLeadData(data);
   switch (tab) {
     case 'overview':
       return renderOverviewTab(d);
     case 'interactions':
-      return renderInteractionsTab(d);
+      return `${renderInteractionsTab(d)}`;
     case 'calls':
       return `<div class="ld-tab-pane">${tabHeader('Calls', 'Inbound and outbound call logs for this farmer.')}<div class="products-table-card"><table class="products-table"><thead><tr><th>Date</th><th>Direction</th><th>Duration</th><th>Outcome</th><th>Agent</th></tr></thead><tbody><tr><td colspan="5" class="empty-state">Calls logged from workspace quick actions appear here.</td></tr></tbody></table></div></div>`;
     case 'whatsapp':
@@ -355,7 +431,7 @@ export function renderTabBody(tab, data, ffData) {
     case 'orders':
       return renderOrdersTab(d);
     case 'recommendations':
-      return `<div class="ld-tab-pane">${tabHeader('Recommendations', 'Product and agronomy recommendations.')}<div class="ld-rec-cards"><div class="ld-ov-card"><h4>Active — Potassium Nitrate</h4><p>Foliar application for Block A · Arjun Nair</p></div><div class="ld-ov-card"><h4>AI Suggested — Calcium + Boron</h4><p>Based on soil report SR-2025-001</p></div></div></div>`;
+      return renderRecommendationsTab(d);
     case 'field-findings':
       return renderFieldFindingsTab(ffData);
     case 'agronomist':
@@ -367,21 +443,49 @@ export function renderTabBody(tab, data, ffData) {
     case 'follow-ups':
       return `<div class="ld-tab-pane">${tabHeader('Follow-ups', 'Scheduled follow-up activities.')}${d.nextFollowUp ? `<div class="ld-next-card"><strong>${escapeHtml(d.nextFollowUp.title)}</strong><p>${escapeHtml(d.nextFollowUp.dueLabel)}</p></div>` : '<p class="tc-muted">No follow-ups scheduled.</p>'}</div>`;
     case 'blocks':
-      return renderBlocksTab(d);
+      return renderBlocksTab(d, blockWs);
     default:
       return '';
   }
 }
 
 export async function loadLeadData(leadId, tab) {
-  const data = enrichLeadData(await api(`/console/api/v1/telecaller/leads/${leadId}`));
+  const base = await api(`/console/api/v1/telecaller/leads/${leadId}`);
+  let data = { ...base };
   let ffData = null;
+  let blockWs = null;
+
+  try {
+    const crm = await api(`/console/api/v1/telecaller/leads/${leadId}/crm`);
+    data = { ...data, ...crm, blocks: crm.blocks, agronomist: crm.agronomist };
+    data.interactions = crm.interactions?.interactions;
+    data.recommendations = crm.recommendations?.recommendations;
+    data.ordersDetailed = crm.orders?.orders;
+  } catch {
+    /* demo fallback via enrichLeadData */
+  }
+
   if (tab === 'field-findings') {
     const ffLimit = state.telecaller.ffLimit || 10;
     const ffPage = state.telecaller.ffPage || 1;
     ffData = await api(`/console/api/v1/telecaller/leads/${leadId}/field-findings?limit=${ffLimit}&page=${ffPage}`);
   }
-  return { data, ffData };
+
+  if (tab === 'blocks') {
+    const blocks = data.blocks || [];
+    const blockId = state.telecaller.blockId || blocks[0]?.id;
+    if (blockId) {
+      state.telecaller.blockId = blockId;
+      try {
+        blockWs = await api(`/console/api/v1/telecaller/leads/${leadId}/blocks/${blockId}/workspace`);
+      } catch {
+        blockWs = null;
+      }
+    }
+  }
+
+  data = enrichLeadData(data);
+  return { data, ffData, blockWs, leadId };
 }
 
 export function renderTabsNav(activeTab) {
@@ -390,7 +494,7 @@ export function renderTabsNav(activeTab) {
   ).join('');
 }
 
-export function bindLeadDetail(leadId, onRefresh) {
+export function bindLeadDetail(leadId, onRefresh, dataRef = {}) {
   document.querySelectorAll('.ld-tab').forEach((btn) => {
     btn.addEventListener('click', () => {
       state.telecaller.leadTab = btn.dataset.leadTab;
@@ -433,20 +537,49 @@ export function bindLeadDetail(leadId, onRefresh) {
     }
   });
 
-  $('#ld-add-finding')?.addEventListener('click', async () => {
-    const block = prompt('Block name', 'Block A');
-    const crop = prompt('Crop', 'Banana');
-    if (!block || !crop) return;
+  const blocks = dataRef.blocks || [];
+
+  $('#ld-add-finding')?.addEventListener('click', () => {
+    showAddFieldFindingModal(leadId, blocks, () => onRefresh(leadId));
+  });
+
+  $('#ld-add-interaction')?.addEventListener('click', () => {
+    showAddInteractionModal(leadId, blocks, () => onRefresh(leadId));
+  });
+
+  $('#ld-add-recommendation')?.addEventListener('click', () => {
+    showAddRecommendationModal(leadId, blocks, () => onRefresh(leadId));
+  });
+
+  const openAddBlock = () => showAddBlockModal(leadId, () => onRefresh(leadId));
+  $('#ld-add-block')?.addEventListener('click', openAddBlock);
+  $('#ld-add-block-card')?.addEventListener('click', openAddBlock);
+
+  $('#ld-change-block')?.addEventListener('change', (ev) => {
+    state.telecaller.blockId = ev.target.value;
+    onRefresh(leadId);
+  });
+
+  $('#ld-add-soil')?.addEventListener('click', async () => {
+    const blockId = state.telecaller.blockId || blocks[0]?.id;
     try {
-      await api(`/console/api/v1/telecaller/leads/${leadId}/field-findings`, {
+      await api(`/console/api/v1/telecaller/leads/${leadId}/soil-reports`, {
         method: 'POST',
-        body: JSON.stringify({ blockName: block, cropType: crop }),
+        body: JSON.stringify({ blockId }),
       });
-      showToast('Field finding added');
+      showToast('Soil report saved');
       onRefresh(leadId);
     } catch (err) {
       showToast(err.message, 'error');
     }
+  });
+
+  $('#ld-add-visit')?.addEventListener('click', () => {
+    showAddFieldFindingModal(leadId, blocks, () => onRefresh(leadId));
+  });
+
+  $('#ld-add-rec-block')?.addEventListener('click', () => {
+    showAddRecommendationModal(leadId, blocks, () => onRefresh(leadId));
   });
 
   $('#ld-ff-limit')?.addEventListener('change', () => {
@@ -480,14 +613,14 @@ export async function renderLeadDetailInto(container, leadId, opts = {}) {
   const tab = state.telecaller.leadTab || 'overview';
   container.innerHTML = '<div class="products-loading"><div class="spinner"></div></div>';
   try {
-    const { data, ffData } = await loadLeadData(leadId, tab);
+    const { data, ffData, blockWs } = await loadLeadData(leadId, tab);
     container.innerHTML = `
       <div class="ld-pane ${opts.inPane ? 'ld-pane-embedded' : ''}">
         ${renderLeadHeader(data, { inPane: opts.inPane, compact: opts.inPane })}
         <nav class="ld-tabs" aria-label="Lead sections">${renderTabsNav(tab)}</nav>
-        <div class="ld-tab-content">${renderTabBody(tab, data, ffData)}</div>
+        <div class="ld-tab-content">${renderTabBody(tab, data, ffData, blockWs)}</div>
       </div>`;
-    bindLeadDetail(leadId, (id) => renderLeadDetailInto(container, id, opts));
+    bindLeadDetail(leadId, (id) => renderLeadDetailInto(container, id, opts), data);
   } catch (err) {
     container.innerHTML = `<div class="alert alert-error">${escapeHtml(err.message)}</div>`;
   }
