@@ -144,6 +144,44 @@ export declare const crmFarmerService: {
             growthPercent: {};
             status: string;
         };
+        soilReports: {
+            id: any;
+            reportedLabel: string | null;
+            metrics: any;
+            pdfUrl: any;
+        }[];
+        visits: {
+            id: any;
+            visitedLabel: string | null;
+            agronomistName: any;
+            diseasePest: any;
+            observations: any;
+            spad: string | undefined;
+        }[];
+        blockRecommendations: {
+            id: unknown;
+            recId: string;
+            dateLabel: string | null;
+            blockName: string;
+            cropType: string;
+            problem: unknown;
+            recommendation: unknown;
+            products: unknown;
+            dosage: unknown;
+            applicationMethod: unknown;
+            recommendedBy: {};
+            status: unknown;
+            statusTone: string;
+            followUpLabel: string | null;
+            recType: unknown;
+        }[];
+        followUps: {
+            id: any;
+            title: any;
+            dueLabel: string | null;
+            taskType: any;
+            notes: any;
+        }[];
         blockInfo: {
             blockName: unknown;
             area: {};
@@ -411,33 +449,37 @@ export declare const crmFarmerService: {
         };
         orders: {
             orders: {
-                id: any;
+                id: unknown;
+                orderRef: unknown;
                 dateLabel: string | null;
-                product: any;
+                product: string;
                 qty: number;
                 amount: number;
                 status: string;
                 statusTone: string;
                 payment: string;
-                deliveryDate: string | null;
+                deliveryDate: string;
                 deliveryBy: string;
                 block: string;
+                source: string;
             }[];
         };
     }>;
     listFarmerOrders(farmerId: string): Promise<{
         orders: {
-            id: any;
+            id: unknown;
+            orderRef: unknown;
             dateLabel: string | null;
-            product: any;
+            product: string;
             qty: number;
             amount: number;
             status: string;
             statusTone: string;
             payment: string;
-            deliveryDate: string | null;
+            deliveryDate: string;
             deliveryBy: string;
             block: string;
+            source: string;
         }[];
     }>;
     ensureDemoBlocks(farmerId: string): Promise<{
@@ -462,6 +504,214 @@ export declare const crmFarmerService: {
         growthPercent: {};
         status: string;
     }[]>;
+    listInteractionsFiltered(farmerId: string, filters: {
+        type?: string;
+        status?: string;
+        blockId?: string;
+    }, page?: number, limit?: number): Promise<{
+        interactions: {
+            id: unknown;
+            atLabel: string | null;
+            type: string;
+            typeLabel: string;
+            icon: string;
+            by: {};
+            role: {};
+            summary: {};
+            nextAction: {};
+            nextDate: string;
+            status: string;
+            statusTone: string;
+            block: string;
+        }[];
+        pagination: {
+            page: number;
+            limit: number;
+            total: number;
+            pages: number;
+        };
+    }>;
+    updateInteraction(id: string, patch: Record<string, unknown>): Promise<{
+        id: unknown;
+        atLabel: string | null;
+        type: string;
+        typeLabel: string;
+        icon: string;
+        by: {};
+        role: {};
+        summary: {};
+        nextAction: {};
+        nextDate: string;
+        status: string;
+        statusTone: string;
+        block: string;
+    }>;
+    archiveInteraction(id: string): Promise<{
+        id: unknown;
+        atLabel: string | null;
+        type: string;
+        typeLabel: string;
+        icon: string;
+        by: {};
+        role: {};
+        summary: {};
+        nextAction: {};
+        nextDate: string;
+        status: string;
+        statusTone: string;
+        block: string;
+    }>;
+    updateRecommendation(id: string, patch: Record<string, unknown>): Promise<{
+        id: unknown;
+        recId: string;
+        dateLabel: string | null;
+        blockName: string;
+        cropType: string;
+        problem: unknown;
+        recommendation: unknown;
+        products: unknown;
+        dosage: unknown;
+        applicationMethod: unknown;
+        recommendedBy: {};
+        status: unknown;
+        statusTone: string;
+        followUpLabel: string | null;
+        recType: unknown;
+    }>;
+    archiveRecommendation(id: string): Promise<{
+        id: unknown;
+        recId: string;
+        dateLabel: string | null;
+        blockName: string;
+        cropType: string;
+        problem: unknown;
+        recommendation: unknown;
+        products: unknown;
+        dosage: unknown;
+        applicationMethod: unknown;
+        recommendedBy: {};
+        status: unknown;
+        statusTone: string;
+        followUpLabel: string | null;
+        recType: unknown;
+    }>;
+    listFieldFindingsForBlock(farmerId: string, blockId: string, limit?: number): Promise<{
+        id: any;
+        visitedLabel: string | null;
+        agronomistName: any;
+        diseasePest: any;
+        observations: any;
+        spad: string | undefined;
+    }[]>;
+    archiveFieldFinding(id: string): Promise<{
+        ok: boolean;
+    }>;
+    listRecommendationsForBlock(farmerId: string, blockId: string): Promise<{
+        id: unknown;
+        recId: string;
+        dateLabel: string | null;
+        blockName: string;
+        cropType: string;
+        problem: unknown;
+        recommendation: unknown;
+        products: unknown;
+        dosage: unknown;
+        applicationMethod: unknown;
+        recommendedBy: {};
+        status: unknown;
+        statusTone: string;
+        followUpLabel: string | null;
+        recType: unknown;
+    }[]>;
+    listBlockFollowUps(farmerId: string, blockId?: string): Promise<{
+        id: any;
+        title: any;
+        dueLabel: string | null;
+        taskType: any;
+        notes: any;
+    }[]>;
+    scheduleVisit(farmerId: string, leadId: string | null, input: {
+        title?: string;
+        dueAt: string;
+        notes?: string;
+        blockId?: string;
+        assignedTo?: string;
+    }): Promise<{
+        task: any;
+        icsContent: string;
+        icsFilename: string;
+    }>;
+    createManualOrder(farmerId: string, leadId: string | null, input: {
+        blockId?: string;
+        recommendationId?: string;
+        lineItems: {
+            variantId?: number;
+            title: string;
+            quantity: number;
+            price: number;
+        }[];
+        paymentMode?: string;
+        deliveryAddress?: string;
+        notes?: string;
+        createdBy?: string;
+    }): Promise<{
+        id: unknown;
+        orderRef: unknown;
+        dateLabel: string | null;
+        product: string;
+        qty: number;
+        amount: number;
+        status: string;
+        statusTone: string;
+        payment: string;
+        deliveryDate: string;
+        deliveryBy: string;
+        block: string;
+        source: string;
+    }>;
+    convertRecommendationToOrder(recommendationId: string, farmerId: string, leadId: string | null, createdBy?: string): Promise<{
+        id: unknown;
+        orderRef: unknown;
+        dateLabel: string | null;
+        product: string;
+        qty: number;
+        amount: number;
+        status: string;
+        statusTone: string;
+        payment: string;
+        deliveryDate: string;
+        deliveryBy: string;
+        block: string;
+        source: string;
+    }>;
+    listManualOrders(farmerId: string): Promise<{
+        id: unknown;
+        orderRef: unknown;
+        dateLabel: string | null;
+        product: string;
+        qty: number;
+        amount: number;
+        status: string;
+        statusTone: string;
+        payment: string;
+        deliveryDate: string;
+        deliveryBy: string;
+        block: string;
+        source: string;
+    }[]>;
+    getOrderCatalog(search?: string): Promise<{
+        productId: string;
+        variantId: string;
+        title: string;
+        sku: string;
+        price: number;
+        stock: number;
+    }[]>;
+    buildExportHtml(_type: string, payload: Record<string, unknown>): string;
+    buildWhatsAppMessage(type: string, payload: Record<string, unknown>, phone?: string): {
+        text: string;
+        url: string | null;
+    };
 };
 type AgronomistProfile = {
     name: unknown;

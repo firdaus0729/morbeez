@@ -36,6 +36,11 @@ export const state = {
     ffPage: 1,
     page: 1,
     navBadges: { followUpTasks: 0 },
+    crmFilters: {
+      interactions: { type: '', status: '', blockId: '' },
+      recommendations: { status: '' },
+      findings: { blockId: '' },
+    },
   },
 };
 

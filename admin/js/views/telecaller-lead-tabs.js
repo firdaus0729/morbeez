@@ -6,7 +6,21 @@ import {
   showAddInteractionModal,
   showAddRecommendationModal,
   showAddFieldFindingModal,
+  showEditBlockModal,
+  showEditRecommendationModal,
+  showNewOrderModal,
+  showScheduleVisitModal,
 } from './crm-ui.js';
+import {
+  openCrmExport,
+  openWhatsAppShare,
+  convertRecommendationToOrder,
+  rowMenuHtml,
+  bindRowMenus,
+  filterChipsHtml,
+  bindFilterChips,
+  interactionsQuery,
+} from './crm-actions.js';
 
 export const LEAD_TABS = [
   { id: 'overview', label: 'Overview' },
@@ -197,8 +211,9 @@ function renderQuickActions(d) {
 }
 
 function renderInteractionsTab(d) {
+  const f = state.telecaller.crmFilters?.interactions || {};
   const rows = (d.interactions || []).map(
-    (ix) => `<tr>
+    (ix) => `<tr data-ix-id="${escapeHtml(ix.id)}">
       <td class="ld-col-datetime">${escapeHtml(ix.atLabel)}</td>
       <td><span class="ld-ix-type">${icon(ix.icon || 'phone', 'ld-ix-icon')} ${escapeHtml(ix.typeLabel)}</span></td>
       <td><strong>${escapeHtml(ix.by)}</strong><br><small class="tc-muted">${escapeHtml(ix.role)}</small></td>
@@ -206,18 +221,26 @@ function renderInteractionsTab(d) {
       <td>${ix.nextDate ? `<strong>${escapeHtml(ix.nextAction)}</strong><br><small>${escapeHtml(ix.nextDate)}</small>` : '—'}</td>
       <td>${ixStatus(ix.statusTone, ix.status)}</td>
       <td class="tc-muted">${escapeHtml(ix.block)}</td>
-      <td class="col-actions"><button type="button" class="action-icon ld-more-btn">⋮</button></td>
+      <td class="col-actions">${rowMenuHtml([
+        { label: 'Archive', action: 'archive-ix', data: { id: ix.id } },
+      ])}</td>
     </tr>`
   ).join('');
   const total = d.interactions?.length || 0;
-  return `${tabHeader('Interactions', 'All activities and interactions with this farmer.', canEdit() ? '<button type="button" class="btn btn-primary btn-sm" id="ld-add-interaction">+ Add Interaction</button><button type="button" class="btn btn-secondary btn-sm">Filter</button>' : '')}
-    <div class="ld-filter-row">
-      <select class="products-select"><option>Interaction Type (All)</option></select>
-      <select class="products-select"><option>Employee (All)</option></select>
-      <input type="text" class="input" value="01 May 2024 – 24 May 2024" readonly />
-      <select class="products-select"><option>Status (All)</option></select>
-      <select class="products-select"><option>Block (All)</option></select>
-      <button type="button" class="btn btn-secondary btn-sm">Reset</button>
+  const typeChips = filterChipsHtml('interactions', 'type', [
+    { value: 'all', label: 'All types' },
+    { value: 'Call', label: 'Call' },
+    { value: 'WhatsApp', label: 'WhatsApp' },
+    { value: 'Visit', label: 'Visit' },
+  ], f.type || 'all');
+  const statusChips = filterChipsHtml('interactions', 'status', [
+    { value: 'all', label: 'All status' },
+    { value: 'completed', label: 'Completed' },
+    { value: 'pending', label: 'Pending' },
+  ], f.status || 'all');
+  return `${tabHeader('Interactions', 'All activities and interactions with this farmer.', canEdit() ? '<button type="button" class="btn btn-primary btn-sm" id="ld-add-interaction">+ Add Interaction</button><button type="button" class="btn btn-secondary btn-sm" data-crm-export="interactions">Export</button>' : '')}
+    <div class="ld-filter-row ld-filter-chips-row">${typeChips}${statusChips}
+      <button type="button" class="btn btn-secondary btn-sm" id="ld-ix-reset">Reset</button>
     </div>
     <div class="products-table-card ld-table-card"><div class="table-wrap"><table class="products-table">
       <thead><tr><th>Date &amp; Time</th><th>Interaction Type</th><th>Done By</th><th>Summary</th><th>Next Action</th><th>Status</th><th>Block</th><th></th></tr></thead>
@@ -230,7 +253,7 @@ function renderRecommendationsTab(d) {
   const recs = d.recommendations || [];
   const rows = recs
     .map(
-      (r) => `<tr>
+      (r) => `<tr data-rec-id="${escapeHtml(r.id)}">
       <td>${escapeHtml(r.recId || r.id)}</td>
       <td class="ld-col-datetime">${escapeHtml(r.dateLabel || '')}</td>
       <td><strong>${escapeHtml(r.blockName)}</strong><br><span class="tc-muted">${escapeHtml(r.cropType)}</span></td>
@@ -241,7 +264,13 @@ function renderRecommendationsTab(d) {
       <td>${escapeHtml(r.recommendedBy || '')}</td>
       <td>${ixStatus(r.statusTone, r.status)}</td>
       <td class="tc-muted">${escapeHtml(r.followUpLabel || '—')}</td>
-      <td class="col-actions"><button type="button" class="action-icon ld-more-btn">⋮</button></td>
+      <td class="col-actions">${rowMenuHtml([
+        { label: 'Edit', action: 'edit-rec', data: { id: r.id } },
+        { label: 'WhatsApp', action: 'wa-rec', data: { id: r.id } },
+        { label: 'Export PDF', action: 'export-rec', data: { id: r.id } },
+        { label: 'Convert to order', action: 'convert-rec', data: { id: r.id } },
+        { label: 'Archive', action: 'archive-rec', data: { id: r.id } },
+      ])}</td>
     </tr>`
     )
     .join('');
@@ -249,7 +278,7 @@ function renderRecommendationsTab(d) {
     'Recommendations',
     'Product and agronomy recommendations for this farmer.',
     canEdit()
-      ? '<button type="button" class="btn btn-secondary btn-sm">Filter</button><button type="button" class="btn btn-secondary btn-sm">Export</button><button type="button" class="btn btn-primary btn-sm" id="ld-add-recommendation">+ Add Recommendation</button>'
+      ? '<button type="button" class="btn btn-secondary btn-sm" data-crm-export="recommendations">Export</button><button type="button" class="btn btn-primary btn-sm" id="ld-add-recommendation">+ Add Recommendation</button>'
       : ''
   )}
     <div class="products-table-card ld-table-card"><div class="table-wrap"><table class="products-table">
@@ -274,7 +303,7 @@ function renderOrdersTab(d) {
       <td class="col-actions">${icon('eye', 'icon-action')} <button class="action-icon ld-more-btn">⋮</button></td>
     </tr>`
   ).join('');
-  return `${tabHeader('Orders', 'All orders placed by this farmer.', '<button type="button" class="btn btn-secondary btn-sm">Filter</button><button type="button" class="btn btn-secondary btn-sm">Export</button><button type="button" class="btn btn-primary btn-sm">+ New Order</button>')}
+  return `${tabHeader('Orders', 'All orders placed by this farmer.', '<button type="button" class="btn btn-secondary btn-sm" data-crm-export="lead">Export</button><button type="button" class="btn btn-primary btn-sm" id="ld-new-order">+ New Order</button>')}
     <div class="products-table-card ld-table-card"><div class="table-wrap"><table class="products-table ld-orders-table">
       <thead><tr><th>Order ID</th><th>Order Date</th><th>Products</th><th>Qty</th><th>Amount (₹)</th><th>Status</th><th>Payment</th><th>Delivery</th><th>Block</th><th></th></tr></thead>
       <tbody>${rows || '<tr><td colspan="10" class="empty-state">No orders</td></tr>'}</tbody></table></div>
@@ -296,12 +325,14 @@ function renderFieldFindingsTab(ffData) {
       <td class="ld-col-action">${escapeHtml(f.actionTaken || '—')}</td>
       <td class="tc-muted">${escapeHtml(f.followUpLabel || '—')}</td>
       <td>${renderPhotoThumbs(f.photoCount || 0)}</td>
-      <td class="col-actions"><button type="button" class="action-icon">${icon('eye', 'icon-action')}</button><button class="action-icon ld-more-btn">⋮</button></td>
+      <td class="col-actions">${rowMenuHtml([
+        { label: 'Archive', action: 'archive-ff', data: { id: f.id } },
+      ])}</td>
     </tr>`
   ).join('');
   const from = pg.total ? (pg.page - 1) * pg.limit + 1 : 0;
   const to = Math.min(pg.page * pg.limit, pg.total);
-  return `${tabHeader('Field Findings', 'All field observations and visit findings recorded by agronomists.', '<button class="btn btn-secondary btn-sm">Filter</button><button class="btn btn-secondary btn-sm">Export</button><button type="button" class="btn btn-primary btn-sm" id="ld-add-finding">+ Add Field Finding</button>')}
+  return `${tabHeader('Field Findings', 'All field observations and visit findings recorded by agronomists.', '<button type="button" class="btn btn-secondary btn-sm" data-crm-export="findings">Export</button><button type="button" class="btn btn-primary btn-sm" id="ld-add-finding">+ Add Field Finding</button>')}
     <div class="products-table-card ld-table-card"><div class="table-wrap"><table class="products-table ld-findings-table">
       <thead><tr><th>Date &amp; Time</th><th>Block / Crop</th><th>Agronomist</th><th>Observations</th><th>Parameters</th><th>Disease / Pest</th><th>Action Taken</th><th>Next Follow-up</th><th>Photos</th><th></th></tr></thead>
       <tbody>${rows || '<tr><td colspan="10" class="empty-state">No field findings</td></tr>'}</tbody></table></div>
@@ -321,7 +352,7 @@ function renderAgronomistTab(d) {
       <div class="ld-agro-actions">
         <button type="button" class="btn btn-secondary btn-sm">${icon('phone', 'icon-btn')} Call Agronomist</button>
         <button type="button" class="btn btn-secondary btn-sm">${icon('whatsapp', 'icon-btn')} WhatsApp</button>
-        <button type="button" class="btn btn-secondary btn-sm">Schedule Visit</button>
+        <button type="button" class="btn btn-secondary btn-sm" id="ld-schedule-visit">Schedule Visit</button>
         <button type="button" class="btn btn-secondary btn-sm">Reassign Agronomist</button>
       </div>
     </div>
@@ -378,9 +409,43 @@ function renderBlocksTab(d, blockWs) {
 }
 
 function renderBlockSubtab(sub, block, ws) {
-  if (sub !== 'overview') {
-    return `<p class="tc-muted ld-block-placeholder">${escapeHtml(sub)} data — use Overview for full block workspace.</p>`;
+  if (sub === 'soil') {
+    const reports = ws?.soilReports || [];
+    return `<div class="ld-bcol ld-bcol-full"><h4>Soil Reports</h4>
+      <table class="products-table"><thead><tr><th>Date</th><th>pH</th><th>EC</th><th>N</th><th>PDF</th></tr></thead><tbody>
+      ${reports.length ? reports.map((r) => {
+        const m = r.metrics || {};
+        return `<tr><td>${escapeHtml(r.reportedLabel || '—')}</td><td>${escapeHtml(m.ph?.value ?? '—')}</td><td>${escapeHtml(m.ec?.value ?? '—')}</td><td>${escapeHtml(m.nitrogen?.value ?? '—')}</td><td>${r.pdfUrl ? `<a href="${escapeHtml(r.pdfUrl)}" target="_blank">View</a>` : '—'}</td></tr>`;
+      }).join('') : '<tr><td colspan="5" class="empty-state">No soil reports — use Add Soil Report</td></tr>'}
+      </tbody></table></div>`;
   }
+  if (sub === 'visits') {
+    const visits = ws?.visits || [];
+    return `<div class="ld-bcol ld-bcol-full"><h4>Visit Findings</h4>
+      <table class="products-table"><thead><tr><th>Date</th><th>Agronomist</th><th>Disease</th><th>SPAD</th><th>Notes</th></tr></thead><tbody>
+      ${visits.length ? visits.map((v) => `<tr><td>${escapeHtml(v.visitedLabel)}</td><td>${escapeHtml(v.agronomistName)}</td><td>${escapeHtml(v.diseasePest || '—')}</td><td>${escapeHtml(v.spad || '—')}</td><td>${escapeHtml(String(v.observations || '').slice(0, 60))}</td></tr>`).join('') : '<tr><td colspan="5" class="empty-state">No visits recorded</td></tr>'}
+      </tbody></table></div>`;
+  }
+  if (sub === 'recommendations') {
+    const recs = ws?.blockRecommendations || [];
+    return `<div class="ld-bcol ld-bcol-full"><h4>Recommendations</h4>
+      <table class="products-table"><thead><tr><th>Date</th><th>Problem</th><th>Recommendation</th><th>Status</th></tr></thead><tbody>
+      ${recs.length ? recs.map((r) => `<tr><td>${escapeHtml(r.dateLabel)}</td><td>${escapeHtml(r.problem || '—')}</td><td>${escapeHtml(r.recommendation)}</td><td>${ixStatus(r.statusTone, r.status)}</td></tr>`).join('') : '<tr><td colspan="4" class="empty-state">No recommendations</td></tr>'}
+      </tbody></table></div>`;
+  }
+  if (sub === 'follow-ups') {
+    const fu = ws?.followUps || [];
+    return `<div class="ld-bcol ld-bcol-full"><h4>Follow-ups</h4><ul class="ld-ov-timeline">
+      ${fu.length ? fu.map((t) => `<li><strong>${escapeHtml(t.title)}</strong><time>${escapeHtml(t.dueLabel)}</time><p class="tc-muted">${escapeHtml(t.taskType)}</p></li>`).join('') : '<li class="tc-muted">No pending follow-ups</li>'}
+    </ul></div>`;
+  }
+  if (sub === 'timeline') {
+    const timeline = ws?.timeline || [];
+    return `<div class="ld-bcol ld-bcol-full"><h4>Block Timeline</h4><ul class="ld-ov-timeline">
+      ${timeline.map((t) => `<li><strong>${escapeHtml(t.title)}</strong><time>${escapeHtml(t.atLabel)}</time></li>`).join('') || '<li class="tc-muted">No events</li>'}
+    </ul></div>`;
+  }
+
   const info = ws?.blockInfo || {};
   const metrics = ws?.soilReport?.metrics || {};
   const metricRows = Object.entries(metrics)
@@ -399,7 +464,7 @@ function renderBlockSubtab(sub, block, ws) {
   const timeline = ws?.timeline || [];
 
   return `
-    <div class="ld-bcol"><h4>Block Information <button type="button" class="ld-ov-link">Edit</button></h4><dl class="ld-ov-dl">${[
+    <div class="ld-bcol"><h4>Block Information <button type="button" class="ld-ov-link" id="ld-edit-block">Edit</button></h4><dl class="ld-ov-dl">${[
       ['Block Name', info.blockName || block.name],
       ['Area', info.area || block.area],
       ['Crop', info.crop || block.cropName],
@@ -458,11 +523,27 @@ export async function loadLeadData(leadId, tab) {
   try {
     const crm = await api(`/console/api/v1/telecaller/leads/${leadId}/crm`);
     data = { ...data, ...crm, blocks: crm.blocks, agronomist: crm.agronomist };
-    data.interactions = crm.interactions?.interactions;
     data.recommendations = crm.recommendations?.recommendations;
     data.ordersDetailed = crm.orders?.orders;
   } catch {
     /* demo fallback via enrichLeadData */
+  }
+
+  if (tab === 'interactions') {
+    try {
+      const q = interactionsQuery();
+      const ix = await api(`/console/api/v1/telecaller/leads/${leadId}/interactions?${q}`);
+      data.interactions = ix.interactions;
+    } catch {
+      data.interactions = data.interactions || [];
+    }
+  } else if (data.interactions === undefined) {
+    try {
+      const crmIx = await api(`/console/api/v1/telecaller/leads/${leadId}/interactions`);
+      data.interactions = crmIx.interactions;
+    } catch {
+      /* enrichLeadData */
+    }
   }
 
   if (tab === 'field-findings') {
@@ -605,6 +686,64 @@ export function bindLeadDetail(leadId, onRefresh, dataRef = {}) {
     } catch (err) {
       showToast(err.message, 'error');
     }
+  });
+
+  document.querySelectorAll('[data-crm-export]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const type = btn.dataset.crmExport || 'lead';
+      openCrmExport(leadId, type);
+    });
+  });
+
+  $('#ld-new-order')?.addEventListener('click', () => {
+    showNewOrderModal(leadId, blocks, dataRef.farmer, () => onRefresh(leadId));
+  });
+
+  $('#ld-schedule-visit')?.addEventListener('click', () => {
+    showScheduleVisitModal(leadId, blocks, () => onRefresh(leadId));
+  });
+
+  $('#ld-edit-block')?.addEventListener('click', () => {
+    const blockId = state.telecaller.blockId || blocks[0]?.id;
+    const block = blocks.find((b) => b.id === blockId) || blocks[0];
+    if (block) showEditBlockModal(leadId, block, () => onRefresh(leadId));
+  });
+
+  $('#ld-ix-reset')?.addEventListener('click', () => {
+    state.telecaller.crmFilters.interactions = { type: '', status: '', blockId: '' };
+    onRefresh(leadId);
+  });
+
+  bindFilterChips(document, 'interactions', () => onRefresh(leadId));
+
+  const recs = dataRef.recommendations || [];
+  bindRowMenus(document, {
+    'archive-ix': async (el) => {
+      const id = el.dataset.id;
+      if (!id || id.startsWith('demo')) return showToast('Save to database first', 'error');
+      await api(`/console/api/v1/telecaller/interactions/${id}/archive`, { method: 'POST', body: '{}' });
+      showToast('Archived');
+      onRefresh(leadId);
+    },
+    'edit-rec': async (el) => {
+      const rec = recs.find((r) => r.id === el.dataset.id);
+      if (rec) showEditRecommendationModal(rec, () => onRefresh(leadId));
+    },
+    'wa-rec': async (el) => openWhatsAppShare(leadId, { type: 'recommendation', recId: el.dataset.id }),
+    'export-rec': async (el) => openCrmExport(leadId, 'recommendations'),
+    'convert-rec': async (el) => convertRecommendationToOrder(leadId, el.dataset.id, () => onRefresh(leadId)),
+    'archive-rec': async (el) => {
+      await api(`/console/api/v1/telecaller/recommendations/${el.dataset.id}/archive`, { method: 'POST', body: '{}' });
+      showToast('Archived');
+      onRefresh(leadId);
+    },
+    'archive-ff': async (el) => {
+      const id = el.dataset.id;
+      if (!id || String(id).startsWith('demo')) return showToast('Demo rows cannot be archived', 'error');
+      await api(`/console/api/v1/telecaller/field-findings/${id}/archive`, { method: 'POST', body: '{}' });
+      showToast('Archived');
+      onRefresh(leadId);
+    },
   });
 }
 

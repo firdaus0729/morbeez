@@ -732,6 +732,7 @@ export const telecallerAdminService = {
       .from('crm_field_findings')
       .select('*', { count: 'exact' })
       .eq('farmer_id', farmerId)
+      .is('archived_at', null)
       .order('visited_at', { ascending: false })
       .range(from, to);
 
@@ -877,6 +878,22 @@ export const telecallerAdminService = {
       .single();
 
     throwIfSupabaseError(error, 'Could not save field finding');
+    return this.mapFieldFinding(data as Record<string, unknown>);
+  },
+
+  async updateFieldFinding(id: string, patch: Record<string, unknown>) {
+    const allowed = ['observations', 'disease_pest', 'disease_tone', 'action_taken', 'follow_up_at', 'parameters'];
+    const updates: Record<string, unknown> = {};
+    for (const k of allowed) {
+      if (patch[k] !== undefined) updates[k] = patch[k];
+    }
+    const { data, error } = await supabase
+      .from('crm_field_findings')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+    throwIfSupabaseError(error, 'Could not update field finding');
     return this.mapFieldFinding(data as Record<string, unknown>);
   },
 

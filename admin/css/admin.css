@@ -5694,6 +5694,78 @@ tr:hover td {
   }
 }
 
+.ld-filter-chips-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.ld-filter-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.ld-filter-chip {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  border-radius: 999px;
+  padding: 4px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--text-muted);
+}
+
+.ld-filter-chip.active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+
+.ld-row-menu-wrap {
+  position: relative;
+  display: inline-block;
+}
+
+.ld-row-menu {
+  position: absolute;
+  right: 0;
+  top: 100%;
+  z-index: 40;
+  min-width: 160px;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  padding: 4px 0;
+}
+
+.ld-row-menu-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: none;
+  background: none;
+  padding: 8px 14px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.ld-row-menu-item:hover {
+  background: var(--surface-alt);
+}
+
+.ld-bcol-full {
+  grid-column: 1 / -1;
+}
+
+.crm-order-modal .field {
+  margin-bottom: 12px;
+}
+
 @media (max-width: 1100px) {
   .ld-overview-grid,
   .ld-overview-mockup {

@@ -245,3 +245,146 @@ export async function showAddFieldFindingModal(leadId, blocks, onDone) {
   );
   bindMasterSelects($('.crm-modal-card', document.getElementById('modal-root')));
 }
+
+export async function showEditBlockModal(leadId, block, onDone) {
+  openModal(
+    'Edit Block',
+    `<div class="crm-form-grid">
+      <div class="field"><label>Block Name</label><input id="crm-eb-name" class="input" value="${escapeHtml(block.name)}" /></div>
+      <div class="field"><label>Area</label><input id="crm-eb-area" class="input" value="${escapeHtml(block.area || '')}" /></div>
+      <div class="field"><label>Variety</label><input id="crm-eb-variety" class="input" value="${escapeHtml(block.varietyName || '')}" /></div>
+      <div class="field"><label>Growth %</label><input id="crm-eb-growth" type="number" class="input" value="${block.growthPercent ?? 65}" /></div>
+    </div>`,
+    async (close) => {
+      await api(`/console/api/v1/telecaller/leads/${leadId}/blocks/${block.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          name: $('#crm-eb-name')?.value?.trim(),
+          area: $('#crm-eb-area')?.value?.trim(),
+          variety_name: $('#crm-eb-variety')?.value?.trim(),
+          growth_percent: Number($('#crm-eb-growth')?.value) || 0,
+        }),
+      });
+      showToast('Block updated');
+      close();
+      onDone?.();
+    }
+  );
+}
+
+export async function showEditRecommendationModal(rec, onDone) {
+  openModal(
+    'Edit Recommendation',
+    `<div class="crm-form-grid">
+      <div class="field full"><label>Problem</label><input id="crm-er-problem" class="input" value="${escapeHtml(rec.problem || '')}" /></div>
+      <div class="field full"><label>Recommendation</label><textarea id="crm-er-text" class="input" rows="3">${escapeHtml(rec.recommendation || '')}</textarea></div>
+      <div class="field"><label>Dosage</label><input id="crm-er-dosage" class="input" value="${escapeHtml(rec.dosage || '')}" /></div>
+    </div>`,
+    async (close) => {
+      await api(`/console/api/v1/telecaller/recommendations/${rec.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          problem: $('#crm-er-problem')?.value?.trim(),
+          recommendation: $('#crm-er-text')?.value?.trim(),
+          dosage: $('#crm-er-dosage')?.value?.trim(),
+        }),
+      });
+      showToast('Recommendation updated');
+      close();
+      onDone?.();
+    }
+  );
+}
+
+export async function showNewOrderModal(leadId, blocks, farmer, onDone) {
+  let catalog = [];
+  try {
+    const res = await api('/console/api/v1/telecaller/orders/catalog');
+    catalog = res.items || [];
+  } catch {
+    catalog = [];
+  }
+  const paymentModes = await fetchMasters('payment_mode').catch(() => []);
+  const blockOpts = (blocks || [])
+    .map((b) => `<option value="${escapeHtml(b.id)}">${escapeHtml(b.name)}</option>`)
+    .join('');
+  const productOpts = catalog
+    .map(
+      (p) =>
+        `<option value="${escapeHtml(p.variantId)}" data-title="${escapeHtml(p.title)}" data-price="${p.price}">${escapeHtml(p.title)} — ₹${p.price}</option>`
+    )
+    .join('');
+
+  openModal(
+    'New Order',
+    `<div class="crm-order-modal">
+      <p class="tc-muted">Shopify-style order for <strong>${escapeHtml(farmer?.name || 'Farmer')}</strong></p>
+      <div class="field"><label>Block</label><select id="crm-ord-block" class="products-select"><option value="">—</option>${blockOpts}</select></div>
+      <div class="field"><label>Product</label><select id="crm-ord-product" class="products-select"><option value="">— Select product —</option>${productOpts}</select></div>
+      <div class="crm-form-grid">
+        <div class="field"><label>Qty</label><input id="crm-ord-qty" type="number" class="input" value="1" min="1" /></div>
+        <div class="field"><label>Unit price (₹)</label><input id="crm-ord-price" type="number" class="input" value="0" min="0" step="0.01" /></div>
+      </div>
+      ${masterSelectHtml('crm-ord-pay', 'payment_mode', paymentModes, '', 'Payment Mode')}
+      <div class="field full"><label>Delivery address</label><textarea id="crm-ord-addr" class="input" rows="2" placeholder="Village, district, PIN"></textarea></div>
+      <div class="field full"><label>Notes</label><input id="crm-ord-notes" class="input" /></div>
+    </div>`,
+    async (close) => {
+      const sel = $('#crm-ord-product')?.selectedOptions?.[0];
+      const title = sel?.dataset.title || sel?.text || 'Product';
+      const price = Number($('#crm-ord-price')?.value) || Number(sel?.dataset.price) || 0;
+      const qty = Number($('#crm-ord-qty')?.value) || 1;
+      await api(`/console/api/v1/telecaller/leads/${leadId}/orders`, {
+        method: 'POST',
+        body: JSON.stringify({
+          blockId: $('#crm-ord-block')?.value || undefined,
+          lineItems: [{ variantId: sel?.value ? Number(sel.value) : undefined, title, quantity: qty, price }],
+          paymentMode: $('#crm-ord-pay')?.selectedOptions?.[0]?.text,
+          deliveryAddress: $('#crm-ord-addr')?.value?.trim(),
+          notes: $('#crm-ord-notes')?.value?.trim(),
+        }),
+      });
+      showToast('Order created');
+      close();
+      onDone?.();
+    }
+  );
+  const prodSel = $('#crm-ord-product');
+  prodSel?.addEventListener('change', () => {
+    const opt = prodSel.selectedOptions?.[0];
+    if (opt?.dataset.price) $('#crm-ord-price').value = opt.dataset.price;
+  });
+  bindMasterSelects($('.crm-modal-card', document.getElementById('modal-root')));
+}
+
+export async function showScheduleVisitModal(leadId, blocks, onDone) {
+  const blockOpts = (blocks || [])
+    .map((b) => `<option value="${escapeHtml(b.id)}">${escapeHtml(b.name)}</option>`)
+    .join('');
+  const defaultDue = new Date(Date.now() + 2 * 86400000);
+  defaultDue.setMinutes(0, 0, 0);
+  const dueLocal = defaultDue.toISOString().slice(0, 16);
+
+  openModal(
+    'Schedule Visit',
+    `<div class="crm-form-grid">
+      <div class="field"><label>Title</label><input id="crm-sv-title" class="input" value="Field visit" /></div>
+      <div class="field"><label>Date &amp; time</label><input id="crm-sv-due" type="datetime-local" class="input" value="${dueLocal}" /></div>
+      <div class="field"><label>Block</label><select id="crm-sv-block" class="products-select"><option value="">—</option>${blockOpts}</select></div>
+      <div class="field full"><label>Notes</label><textarea id="crm-sv-notes" class="input" rows="2"></textarea></div>
+      <p class="tc-muted full">A calendar file (.ics) downloads for Google Calendar / Outlook.</p>
+    </div>`,
+    async (close) => {
+      const { scheduleVisitWithCalendar } = await import('./crm-actions.js');
+      await scheduleVisitWithCalendar(leadId, {
+        title: $('#crm-sv-title')?.value?.trim(),
+        dueAt: new Date($('#crm-sv-due')?.value).toISOString(),
+        blockId: $('#crm-sv-block')?.value || undefined,
+        notes: $('#crm-sv-notes')?.value?.trim(),
+      });
+      showToast('Visit scheduled — calendar file downloaded');
+      close();
+      onDone?.();
+    }
+  );
+}

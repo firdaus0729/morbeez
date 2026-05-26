@@ -820,13 +820,19 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
   app.get(`${api}/telecaller/leads/:id/interactions`, async (request, reply) => {
     requireAdmin(request);
     const { id } = request.params as { id: string };
-    const q = request.query as { page?: string; limit?: string };
+    const q = request.query as { page?: string; limit?: string; type?: string; status?: string; blockId?: string };
     const detail = await telecallerAdminService.getLeadDetail(id);
-    const result = await crmFarmerService.listInteractions(
-      detail.lead.farmerId as string,
-      q.page ? Number(q.page) : 1,
-      q.limit ? Number(q.limit) : 10
-    );
+    const page = q.page ? Number(q.page) : 1;
+    const limit = q.limit ? Number(q.limit) : 10;
+    const result =
+      q.type || q.status || q.blockId
+        ? await crmFarmerService.listInteractionsFiltered(
+            detail.lead.farmerId as string,
+            { type: q.type, status: q.status, blockId: q.blockId },
+            page,
+            limit
+          )
+        : await crmFarmerService.listInteractions(detail.lead.farmerId as string, page, limit);
     return reply.send({ ok: true, ...result });
   });
 
@@ -911,6 +917,239 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
       uploadedBy: admin.email,
     });
     return reply.status(201).send({ ok: true, report });
+  });
+
+  app.patch(`${api}/telecaller/leads/:leadId/blocks/:blockId`, async (request, reply) => {
+    requireAdminRole(request, 'admin', 'manager', 'telecaller');
+    const { blockId } = request.params as { leadId: string; blockId: string };
+    const body = request.body as Record<string, unknown>;
+    const block = await crmFarmerService.updateBlock(blockId, body);
+    return reply.send({ ok: true, block });
+  });
+
+  app.patch(`${api}/telecaller/interactions/:id`, async (request, reply) => {
+    requireAdminRole(request, 'admin', 'manager', 'telecaller');
+    const { id } = request.params as { id: string };
+    const body = z
+      .object({
+        interactionType: z.string().optional(),
+        summary: z.string().optional(),
+        status: z.string().optional(),
+        nextActionAt: z.string().optional(),
+      })
+      .parse(request.body);
+    const interaction = await crmFarmerService.updateInteraction(id, {
+      interaction_type: body.interactionType,
+      summary: body.summary,
+      status: body.status,
+      next_action_at: body.nextActionAt,
+    });
+    return reply.send({ ok: true, interaction });
+  });
+
+  app.post(`${api}/telecaller/interactions/:id/archive`, async (request, reply) => {
+    requireAdminRole(request, 'admin', 'manager', 'telecaller');
+    const { id } = request.params as { id: string };
+    await crmFarmerService.archiveInteraction(id);
+    return reply.send({ ok: true });
+  });
+
+  app.patch(`${api}/telecaller/recommendations/:id`, async (request, reply) => {
+    requireAdminRole(request, 'admin', 'manager', 'telecaller');
+    const { id } = request.params as { id: string };
+    const body = z
+      .object({
+        problem: z.string().optional(),
+        recommendation: z.string().optional(),
+        dosage: z.string().optional(),
+        status: z.string().optional(),
+      })
+      .parse(request.body);
+    const rec = await crmFarmerService.updateRecommendation(id, body);
+    return reply.send({ ok: true, recommendation: rec });
+  });
+
+  app.post(`${api}/telecaller/recommendations/:id/archive`, async (request, reply) => {
+    requireAdminRole(request, 'admin', 'manager', 'telecaller');
+    const { id } = request.params as { id: string };
+    await crmFarmerService.archiveRecommendation(id);
+    return reply.send({ ok: true });
+  });
+
+  app.post(`${api}/telecaller/leads/:id/recommendations/:recId/convert-order`, async (request, reply) => {
+    requireAdminRole(request, 'admin', 'manager', 'telecaller');
+    const admin = requireAdmin(request);
+    const { id, recId } = request.params as { id: string; recId: string };
+    const detail = await telecallerAdminService.getLeadDetail(id);
+    const order = await crmFarmerService.convertRecommendationToOrder(
+      recId,
+      detail.lead.farmerId as string,
+      id,
+      admin.email
+    );
+    return reply.status(201).send({ ok: true, order });
+  });
+
+  app.post(`${api}/telecaller/leads/:id/orders`, async (request, reply) => {
+    requireAdminRole(request, 'admin', 'manager', 'telecaller');
+    const admin = requireAdmin(request);
+    const { id } = request.params as { id: string };
+    const body = z
+      .object({
+        blockId: z.string().uuid().optional(),
+        lineItems: z.array(
+          z.object({
+            variantId: z.number().optional(),
+            title: z.string(),
+            quantity: z.number().min(1),
+            price: z.number().min(0),
+          })
+        ),
+        paymentMode: z.string().optional(),
+        deliveryAddress: z.string().optional(),
+        notes: z.string().optional(),
+      })
+      .parse(request.body);
+    const detail = await telecallerAdminService.getLeadDetail(id);
+    const order = await crmFarmerService.createManualOrder(detail.lead.farmerId as string, id, {
+      ...body,
+      createdBy: admin.email,
+    });
+    return reply.status(201).send({ ok: true, order });
+  });
+
+  app.get(`${api}/telecaller/orders/catalog`, async (request, reply) => {
+    requireAdmin(request);
+    const q = request.query as { search?: string };
+    const items = await crmFarmerService.getOrderCatalog(q.search);
+    return reply.send({ ok: true, items });
+  });
+
+  app.post(`${api}/telecaller/leads/:id/schedule-visit`, async (request, reply) => {
+    requireAdminRole(request, 'admin', 'manager', 'telecaller');
+    const admin = requireAdmin(request);
+    const { id } = request.params as { id: string };
+    const body = z
+      .object({
+        title: z.string().optional(),
+        dueAt: z.string(),
+        notes: z.string().optional(),
+        blockId: z.string().uuid().optional(),
+      })
+      .parse(request.body);
+    const detail = await telecallerAdminService.getLeadDetail(id);
+    const result = await crmFarmerService.scheduleVisit(
+      detail.lead.farmerId as string,
+      id,
+      { ...body, assignedTo: admin.email }
+    );
+    return reply.status(201).send({ ok: true, ...result });
+  });
+
+  app.get(`${api}/telecaller/leads/:id/export`, async (request, reply) => {
+    requireAdmin(request);
+    const { id } = request.params as { id: string };
+    const q = request.query as { type?: string };
+    const type = (q.type ?? 'lead') as 'lead' | 'recommendations' | 'findings' | 'interactions';
+    const detail = await telecallerAdminService.getLeadDetail(id);
+    const farmerId = detail.lead.farmerId as string;
+    let html = '';
+    if (type === 'lead') {
+      html = crmFarmerService.buildExportHtml('lead', {
+        title: `Farmer — ${detail.lead.farmerName}`,
+        rows: [
+          { label: 'Name', value: String(detail.lead.farmerName) },
+          { label: 'Phone', value: String(detail.lead.phone ?? '') },
+          { label: 'Stage', value: String(detail.lead.stageLabel ?? detail.lead.stage) },
+          { label: 'District', value: String(detail.lead.district ?? '') },
+        ],
+      });
+    } else if (type === 'recommendations') {
+      const recs = await crmFarmerService.listRecommendations(farmerId, 1, 50);
+      html = crmFarmerService.buildExportHtml('recommendations', {
+        title: `Recommendations — ${detail.lead.farmerName}`,
+        table: {
+          cols: ['Date', 'Block', 'Problem', 'Recommendation', 'Status'],
+          rows: recs.recommendations.map((r) => [
+            r.dateLabel ?? '',
+            r.blockName ?? '',
+            r.problem ?? '',
+            r.recommendation ?? '',
+            r.status ?? '',
+          ]),
+        },
+      });
+    } else if (type === 'interactions') {
+      const ix = await crmFarmerService.listInteractions(farmerId, 1, 50);
+      html = crmFarmerService.buildExportHtml('interactions', {
+        title: `Interactions — ${detail.lead.farmerName}`,
+        table: {
+          cols: ['Date', 'Type', 'By', 'Summary', 'Status'],
+          rows: ix.interactions.map((i) => [
+            i.atLabel ?? '',
+            i.typeLabel ?? '',
+            i.by ?? '',
+            String(i.summary ?? '').slice(0, 80),
+            i.status ?? '',
+          ]),
+        },
+      });
+    } else {
+      const ff = await telecallerAdminService.listFieldFindings(farmerId, 1, 50);
+      html = crmFarmerService.buildExportHtml('findings', {
+        title: `Field Findings — ${detail.lead.farmerName}`,
+        table: {
+          cols: ['Date', 'Block', 'Agronomist', 'Observations', 'Disease'],
+          rows: ff.findings.map((f) => [
+            f.visitedLabel ?? '',
+            f.blockName ?? '',
+            f.agronomistName ?? '',
+            String(f.observations ?? '').slice(0, 80),
+            f.diseasePest ?? '',
+          ]),
+        },
+      });
+    }
+    return reply.send({ ok: true, html, filename: `morbeez-${type}-${id.slice(0, 8)}.html` });
+  });
+
+  app.get(`${api}/telecaller/leads/:id/share`, async (request, reply) => {
+    requireAdmin(request);
+    const { id } = request.params as { id: string };
+    const q = request.query as { type?: string; recId?: string };
+    const detail = await telecallerAdminService.getLeadDetail(id);
+    const phone = String(detail.lead.phone ?? '');
+    if (q.type === 'recommendation' && q.recId) {
+      const { data } = await supabase.from('crm_recommendations').select('*').eq('id', q.recId).single();
+      const share = crmFarmerService.buildWhatsAppMessage('recommendation', {
+        problem: data?.problem,
+        recommendation: data?.recommendation,
+        dosage: data?.dosage,
+      }, phone);
+      return reply.send({ ok: true, ...share });
+    }
+    const share = crmFarmerService.buildWhatsAppMessage('lead', {
+      name: detail.lead.farmerName,
+      phone,
+      crop: detail.farmer?.crop,
+      territory: detail.farmer?.territory,
+    }, phone);
+    return reply.send({ ok: true, ...share });
+  });
+
+  app.patch(`${api}/telecaller/field-findings/:id`, async (request, reply) => {
+    requireAdminRole(request, 'admin', 'manager', 'telecaller');
+    const { id } = request.params as { id: string };
+    const body = request.body as Record<string, unknown>;
+    const finding = await telecallerAdminService.updateFieldFinding(id, body);
+    return reply.send({ ok: true, finding });
+  });
+
+  app.post(`${api}/telecaller/field-findings/:id/archive`, async (request, reply) => {
+    requireAdminRole(request, 'admin', 'manager', 'telecaller');
+    const { id } = request.params as { id: string };
+    await crmFarmerService.archiveFieldFinding(id);
+    return reply.send({ ok: true });
   });
 
   app.get(`${api}/inventory`, async (request, reply) => {

@@ -1,6 +1,7 @@
 import { supabase } from '../../lib/supabase.js';
 import { throwIfSupabaseError } from '../../lib/supabase-errors.js';
-import { NotFoundError } from '../../lib/errors.js';
+import { NotFoundError, ValidationError } from '../../lib/errors.js';
+import { shopifyProductsService } from '../shopify/shopify.products.service.js';
 
 export type MasterType =
   | 'crop'
@@ -190,7 +191,7 @@ export const crmFarmerService = {
     const block = await this.getBlock(blockId);
     if (block.farmerId !== farmerId) throw new NotFoundError('Block not found');
 
-    const [soilRes, findingsRes, recsRes] = await Promise.all([
+    const [soilRes, findingsRes, recsRes, soilList, visits, blockRecs, followUps] = await Promise.all([
       supabase
         .from('crm_soil_reports')
         .select('*')
@@ -201,6 +202,7 @@ export const crmFarmerService = {
         .from('crm_field_findings')
         .select('*')
         .eq('block_id', blockId)
+        .is('archived_at', null)
         .order('visited_at', { ascending: false })
         .limit(1),
       supabase
@@ -210,6 +212,10 @@ export const crmFarmerService = {
         .eq('status', 'active')
         .order('created_at', { ascending: false })
         .limit(3),
+      this.listSoilReports(farmerId, blockId),
+      this.listFieldFindingsForBlock(farmerId, blockId, 15),
+      this.listRecommendationsForBlock(farmerId, blockId),
+      this.listBlockFollowUps(farmerId, blockId),
     ]);
 
     const latestSoil = soilRes.data?.[0];
@@ -218,6 +224,15 @@ export const crmFarmerService = {
 
     return {
       block,
+      soilReports: soilList.map((s) => ({
+        id: s.id,
+        reportedLabel: formatDateTime(s.reported_at as string),
+        metrics: s.metrics,
+        pdfUrl: s.pdf_url,
+      })),
+      visits,
+      blockRecommendations: blockRecs,
+      followUps,
       blockInfo: {
         blockName: block.name,
         area: block.area,
@@ -563,33 +578,41 @@ export const crmFarmerService = {
   },
 
   async listFarmerOrders(farmerId: string) {
+    const manual = await this.listManualOrders(farmerId);
     const { data: farmer } = await supabase.from('farmers').select('phone').eq('id', farmerId).single();
     const phone = String(farmer?.phone ?? '').replace(/\D/g, '').slice(-10);
-    if (!phone) return { orders: [] };
 
-    const { data } = await supabase
-      .from('commerce_orders')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .limit(100);
+    const commerce: ReturnType<typeof mapManualOrder>[] = [];
+    if (phone) {
+      const { data } = await supabase
+        .from('commerce_orders')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(100);
+      for (const o of (data ?? []).filter(
+        (row) => String(row.phone ?? '').replace(/\D/g, '').slice(-10) === phone
+      ).slice(0, 20)) {
+        commerce.push({
+          id: o.order_name ?? o.id,
+          orderRef: o.order_name,
+          dateLabel: formatDateTime(o.created_at as string),
+          product: o.order_name ?? 'Order',
+          qty: 1,
+          amount: Number(o.total_amount) || 0,
+          status: 'Delivered',
+          statusTone: 'success',
+          payment: 'Paid Online',
+          deliveryDate: formatDateTime(o.created_at as string) ?? '—',
+          deliveryBy: 'Courier',
+          block: '—',
+          source: 'commerce',
+        });
+      }
+    }
 
-    const orders = (data ?? [])
-      .filter((o) => String(o.phone ?? '').replace(/\D/g, '').slice(-10) === phone)
-      .slice(0, 20)
-      .map((o, i) => ({
-        id: o.order_name ?? `ORD-${i}`,
-        dateLabel: formatDateTime(o.created_at as string),
-        product: o.order_name ?? 'Order',
-        qty: 1,
-        amount: Number(o.total_amount) || 0,
-        status: 'Delivered',
-        statusTone: 'success',
-        payment: 'Paid Online',
-        deliveryDate: formatDateTime(o.created_at as string),
-        deliveryBy: 'Courier',
-        block: 'Block A',
-      }));
-
+    const orders = [...manual, ...commerce].sort(
+      (a, b) => new Date(String(b.dateLabel)).getTime() - new Date(String(a.dateLabel)).getTime()
+    );
     return { orders };
   },
 
@@ -621,7 +644,337 @@ export const crmFarmerService = {
     }
     return this.listBlocks(farmerId);
   },
+
+  async listInteractionsFiltered(
+    farmerId: string,
+    filters: { type?: string; status?: string; blockId?: string },
+    page = 1,
+    limit = 10
+  ) {
+    const from = (page - 1) * limit;
+    let q = supabase
+      .from('interaction_logs')
+      .select('*', { count: 'exact' })
+      .eq('farmer_id', farmerId)
+      .order('created_at', { ascending: false });
+    if (filters.type) q = q.ilike('interaction_type', `%${filters.type}%`);
+    if (filters.status) q = q.eq('status', filters.status);
+    if (filters.blockId) q = q.eq('block_id', filters.blockId);
+    q = q.or('status.is.null,status.neq.archived');
+    const { data, error, count } = await q.range(from, from + limit - 1);
+    throwIfSupabaseError(error, 'Could not load interactions');
+    return {
+      interactions: (data ?? []).map(mapInteraction),
+      pagination: { page, limit, total: count ?? 0, pages: Math.max(1, Math.ceil((count ?? 0) / limit)) },
+    };
+  },
+
+  async updateInteraction(id: string, patch: Record<string, unknown>) {
+    const allowed = ['interaction_type', 'summary', 'content', 'next_action', 'next_action_at', 'status', 'block_id'];
+    const updates: Record<string, unknown> = {};
+    for (const k of allowed) {
+      if (patch[k] !== undefined) updates[k] = patch[k];
+    }
+    const { data, error } = await supabase.from('interaction_logs').update(updates).eq('id', id).select().single();
+    throwIfSupabaseError(error, 'Could not update interaction');
+    return mapInteraction(data);
+  },
+
+  async archiveInteraction(id: string) {
+    return this.updateInteraction(id, { status: 'archived' });
+  },
+
+  async updateRecommendation(id: string, patch: Record<string, unknown>) {
+    const allowed = ['problem', 'recommendation', 'dosage', 'application_method', 'follow_up_at', 'status', 'products'];
+    const updates: Record<string, unknown> = { updated_at: new Date().toISOString() };
+    for (const k of allowed) {
+      if (patch[k] !== undefined) updates[k] = patch[k];
+    }
+    const { data, error } = await supabase.from('crm_recommendations').update(updates).eq('id', id).select('*, farm_blocks(name, crop_name)').single();
+    throwIfSupabaseError(error, 'Could not update recommendation');
+    return mapRecommendation(data);
+  },
+
+  async archiveRecommendation(id: string) {
+    return this.updateRecommendation(id, { status: 'archived' });
+  },
+
+  async listFieldFindingsForBlock(farmerId: string, blockId: string, limit = 20) {
+    const { data, error } = await supabase
+      .from('crm_field_findings')
+      .select('*')
+      .eq('farmer_id', farmerId)
+      .eq('block_id', blockId)
+      .is('archived_at', null)
+      .order('visited_at', { ascending: false })
+      .limit(limit);
+    throwIfSupabaseError(error, 'Could not load visits');
+    return (data ?? []).map((r) => ({
+      id: r.id,
+      visitedLabel: formatDateTime(r.visited_at as string),
+      agronomistName: r.agronomist_name,
+      diseasePest: r.disease_pest,
+      observations: r.observations,
+      spad: ((r.parameters as { label: string; value: string }[]) ?? []).find((p) => p.label === 'SPAD')?.value,
+    }));
+  },
+
+  async archiveFieldFinding(id: string) {
+    const { error } = await supabase
+      .from('crm_field_findings')
+      .update({ archived_at: new Date().toISOString() })
+      .eq('id', id);
+    throwIfSupabaseError(error, 'Could not archive field finding');
+    return { ok: true };
+  },
+
+  async listRecommendationsForBlock(farmerId: string, blockId: string) {
+    const { data, error } = await supabase
+      .from('crm_recommendations')
+      .select('*, farm_blocks(name, crop_name)')
+      .eq('farmer_id', farmerId)
+      .eq('block_id', blockId)
+      .neq('status', 'archived')
+      .order('created_at', { ascending: false })
+      .limit(20);
+    throwIfSupabaseError(error, 'Could not load recommendations');
+    return (data ?? []).map(mapRecommendation);
+  },
+
+  async listBlockFollowUps(farmerId: string, blockId?: string) {
+    let q = supabase
+      .from('crm_tasks')
+      .select('*')
+      .eq('farmer_id', farmerId)
+      .eq('status', 'pending')
+      .order('due_at', { ascending: true })
+      .limit(20);
+    if (blockId) q = q.eq('block_id', blockId);
+    const { data, error } = await q;
+    throwIfSupabaseError(error, 'Could not load follow-ups');
+    return (data ?? []).map((t) => ({
+      id: t.id,
+      title: t.title,
+      dueLabel: formatDateTime(t.due_at as string),
+      taskType: t.task_type,
+      notes: t.notes,
+    }));
+  },
+
+  async scheduleVisit(
+    farmerId: string,
+    leadId: string | null,
+    input: { title?: string; dueAt: string; notes?: string; blockId?: string; assignedTo?: string }
+  ) {
+    const due = new Date(input.dueAt);
+    if (Number.isNaN(due.getTime())) throw new ValidationError('Invalid visit date');
+    const title = input.title?.trim() || 'Field visit';
+    const { data, error } = await supabase
+      .from('crm_tasks')
+      .insert({
+        farmer_id: farmerId,
+        lead_id: leadId,
+        block_id: input.blockId ?? null,
+        assigned_to: input.assignedTo,
+        task_type: 'visit',
+        title,
+        notes: input.notes,
+        due_at: due.toISOString(),
+        status: 'pending',
+      })
+      .select()
+      .single();
+    throwIfSupabaseError(error, 'Could not schedule visit');
+    const ics = buildIcsEvent({
+      uid: String(data.id),
+      title,
+      start: due,
+      description: input.notes ?? 'Scheduled from Morbeez CRM',
+    });
+    return { task: data, icsContent: ics, icsFilename: 'morbeez-visit.ics' };
+  },
+
+  async createManualOrder(
+    farmerId: string,
+    leadId: string | null,
+    input: {
+      blockId?: string;
+      recommendationId?: string;
+      lineItems: { variantId?: number; title: string; quantity: number; price: number }[];
+      paymentMode?: string;
+      deliveryAddress?: string;
+      notes?: string;
+      createdBy?: string;
+    }
+  ) {
+    if (!input.lineItems?.length) throw new ValidationError('Add at least one product');
+    const total = input.lineItems.reduce((s, li) => s + li.price * li.quantity, 0);
+    const orderRef = `CRM-${Date.now().toString(36).toUpperCase()}`;
+    const { data, error } = await supabase
+      .from('crm_manual_orders')
+      .insert({
+        farmer_id: farmerId,
+        lead_id: leadId,
+        block_id: input.blockId,
+        recommendation_id: input.recommendationId,
+        order_ref: orderRef,
+        line_items: input.lineItems,
+        payment_mode: input.paymentMode,
+        delivery_address: input.deliveryAddress,
+        total_amount: total,
+        notes: input.notes,
+        created_by: input.createdBy,
+        status: 'pending',
+      })
+      .select()
+      .single();
+    throwIfSupabaseError(error, 'Could not create order');
+    return mapManualOrder(data);
+  },
+
+  async convertRecommendationToOrder(
+    recommendationId: string,
+    farmerId: string,
+    leadId: string | null,
+    createdBy?: string
+  ) {
+    const { data: rec, error } = await supabase
+      .from('crm_recommendations')
+      .select('*')
+      .eq('id', recommendationId)
+      .eq('farmer_id', farmerId)
+      .single();
+    if (error || !rec) throw new NotFoundError('Recommendation not found');
+    const products = (rec.products as { title?: string; quantity?: number; price?: number }[]) ?? [];
+    const lineItems =
+      products.length > 0
+        ? products.map((p) => ({
+            title: p.title ?? 'Product',
+            quantity: p.quantity ?? 1,
+            price: p.price ?? 0,
+          }))
+        : [{ title: String(rec.recommendation).slice(0, 120), quantity: 1, price: 0 }];
+    const order = await this.createManualOrder(farmerId, leadId, {
+      blockId: rec.block_id as string | undefined,
+      recommendationId,
+      lineItems,
+      notes: `Converted from recommendation: ${rec.problem ?? ''}`,
+      createdBy,
+    });
+    await this.updateRecommendation(recommendationId, { status: 'converted' });
+    return order;
+  },
+
+  async listManualOrders(farmerId: string) {
+    const { data, error } = await supabase
+      .from('crm_manual_orders')
+      .select('*')
+      .eq('farmer_id', farmerId)
+      .order('created_at', { ascending: false })
+      .limit(30);
+    throwIfSupabaseError(error, 'Could not load CRM orders');
+    return (data ?? []).map(mapManualOrder);
+  },
+
+  async getOrderCatalog(search?: string) {
+    const catalog = await shopifyProductsService.getInventoryCatalog(search);
+    return catalog.slice(0, 80).flatMap((p) =>
+      (p.variants ?? []).map((v) => ({
+        productId: p.id,
+        variantId: v.id,
+        title: `${p.title} — ${v.title}`,
+        sku: v.sku,
+        price: Number(v.price) || 0,
+        stock: v.inventory,
+      }))
+    );
+  },
+
+  buildExportHtml(_type: string, payload: Record<string, unknown>) {
+    const title = String(payload.title ?? 'Morbeez CRM Export');
+    const rows = (payload.rows as { label: string; value: string }[]) ?? [];
+    const tableRows =
+      (payload.table as { cols: string[]; rows: string[][] })?.rows
+        ?.map(
+          (r) =>
+            `<tr>${r.map((c) => `<td style="border:1px solid #ddd;padding:6px">${escapeHtmlExport(c)}</td>`).join('')}</tr>`
+        )
+        .join('') ?? '';
+    const tableHead =
+      (payload.table as { cols: string[] })?.cols
+        ?.map((c) => `<th style="border:1px solid #ddd;padding:6px;text-align:left">${escapeHtmlExport(c)}</th>`)
+        .join('') ?? '';
+    return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${escapeHtmlExport(title)}</title>
+<style>body{font-family:Inter,sans-serif;padding:24px;color:#1a1a1a}h1{font-size:20px}dl{display:grid;grid-template-columns:160px 1fr;gap:8px}dt{font-weight:600;color:#555}table{border-collapse:collapse;width:100%;margin-top:16px}@media print{.no-print{display:none}}</style></head>
+<body><h1>${escapeHtmlExport(title)}</h1><p class="no-print"><button onclick="window.print()">Print / Save as PDF</button></p>
+<dl>${rows.map((r) => `<dt>${escapeHtmlExport(r.label)}</dt><dd>${escapeHtmlExport(r.value)}</dd>`).join('')}</dl>
+${tableHead ? `<table><thead><tr>${tableHead}</tr></thead><tbody>${tableRows}</tbody></table>` : ''}
+<p style="margin-top:24px;color:#888;font-size:12px">Generated ${new Date().toLocaleString('en-IN')}</p></body></html>`;
+  },
+
+  buildWhatsAppMessage(type: string, payload: Record<string, unknown>, phone?: string) {
+    let text = '';
+    if (type === 'recommendation') {
+      text = `🌾 *Morbeez Recommendation*\n\n*Problem:* ${payload.problem ?? '—'}\n*Advice:* ${payload.recommendation ?? '—'}\n*Dosage:* ${payload.dosage ?? '—'}\n\nContact your agronomist for details.`;
+    } else if (type === 'lead') {
+      text = `🌾 *Farmer profile — ${payload.name ?? 'Farmer'}*\nPhone: ${payload.phone ?? '—'}\nCrop: ${payload.crop ?? '—'}\nTerritory: ${payload.territory ?? '—'}`;
+    } else {
+      text = String(payload.text ?? 'Shared from Morbeez CRM');
+    }
+    const digits = String(phone ?? '').replace(/\D/g, '').slice(-10);
+    const url = digits ? `https://wa.me/91${digits}?text=${encodeURIComponent(text)}` : null;
+    return { text, url };
+  },
 };
+
+function escapeHtmlExport(s: unknown) {
+  return String(s ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
+function buildIcsEvent(input: { uid: string; title: string; start: Date; description?: string }) {
+  const fmt = (d: Date) =>
+    d
+      .toISOString()
+      .replace(/[-:]/g, '')
+      .replace(/\.\d{3}Z$/, 'Z');
+  const end = new Date(input.start.getTime() + 60 * 60 * 1000);
+  return [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//Morbeez CRM//EN',
+    'BEGIN:VEVENT',
+    `UID:${input.uid}@morbeez.com`,
+    `DTSTAMP:${fmt(new Date())}`,
+    `DTSTART:${fmt(input.start)}`,
+    `DTEND:${fmt(end)}`,
+    `SUMMARY:${input.title.replace(/\n/g, ' ')}`,
+    `DESCRIPTION:${(input.description ?? '').replace(/\n/g, '\\n')}`,
+    'END:VEVENT',
+    'END:VCALENDAR',
+  ].join('\r\n');
+}
+
+function mapManualOrder(r: Record<string, unknown>) {
+  const items = (r.line_items as { title: string; quantity: number }[]) ?? [];
+  return {
+    id: r.order_ref ?? r.id,
+    orderRef: r.order_ref,
+    dateLabel: formatDateTime(r.created_at as string),
+    product: items.map((i) => i.title).join(', ') || 'Order',
+    qty: items.reduce((s, i) => s + (i.quantity || 1), 0),
+    amount: Number(r.total_amount) || 0,
+    status: r.status === 'fulfilled' ? 'Delivered' : r.status === 'confirmed' ? 'Confirmed' : 'Pending',
+    statusTone: r.status === 'fulfilled' ? 'success' : 'info',
+    payment: String(r.payment_mode ?? 'CRM'),
+    deliveryDate: '—',
+    deliveryBy: 'CRM',
+    block: '—',
+    source: 'crm_manual',
+  };
+}
 
 function mapBlock(r: Record<string, unknown>) {
   const soilHealth = String(r.soil_health ?? 'good');

@@ -643,6 +643,27 @@ export declare const telecallerAdminService: {
         photoUrls: string[];
         photoCount: number;
     }>;
+    updateFieldFinding(id: string, patch: Record<string, unknown>): Promise<{
+        id: unknown;
+        visitedAt: unknown;
+        visitedLabel: string | null;
+        blockName: unknown;
+        cropType: unknown;
+        agronomistName: unknown;
+        agronomistRole: unknown;
+        agronomistInitials: string;
+        observations: unknown;
+        parameters: {
+            label: string;
+            value: string;
+        }[];
+        diseasePest: unknown;
+        diseaseTone: unknown;
+        actionTaken: unknown;
+        followUpLabel: string | null;
+        photoUrls: string[];
+        photoCount: number;
+    }>;
     getNavBadges(): Promise<{
         followUpTasks: number;
     }>;
