@@ -3,6 +3,8 @@ export declare const whatsappService: {
     sendTemplate(to: string, templateName: string, params: {
         body: string[];
     }): Promise<void>;
+    /** Ads Gyani webhook — dashboard format { contact, message } or legacy flat / Meta entry */
+    handleAdsGyaniInbound(payload: Record<string, unknown>): Promise<void>;
     handleCloudInbound(payload: Record<string, unknown>): Promise<void>;
     handleCropDoctorMedia(farmerId: string, phone: string, msg: Record<string, unknown>, msgType: string, language: string): Promise<void>;
     classifyAndCreateLead(farmerId: string, text: string): Promise<void>;

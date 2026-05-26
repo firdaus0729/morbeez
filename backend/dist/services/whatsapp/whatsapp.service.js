@@ -9,7 +9,10 @@ import { transcriptionService } from '../ai/transcription.service.js';
 import { cloudWhatsAppProvider } from './providers/cloud.provider.js';
 import { watiWhatsAppProvider } from './providers/wati.provider.js';
 import { interaktWhatsAppProvider } from './providers/interakt.provider.js';
+import { adsgyaniWhatsAppProvider } from './providers/adsgyani.provider.js';
 function getProvider() {
+    if (env.WHATSAPP_PROVIDER === 'adsgyani')
+        return adsgyaniWhatsAppProvider;
     if (env.WHATSAPP_PROVIDER === 'wati')
         return watiWhatsAppProvider;
     if (env.WHATSAPP_PROVIDER === 'interakt')
@@ -17,12 +20,85 @@ function getProvider() {
     return cloudWhatsAppProvider;
 }
 const CROP_DOCTOR_KEYWORDS = /crop|doctor|ginger|വിള|രോഗ|ചിത്ര/i;
+/** Ads Gyani Settings → API & Webhook example: { contact, message } */
+function parseAdsGyaniWebhook(payload) {
+    const contact = payload.contact;
+    const message = payload.message;
+    const fromRaw = String(contact?.phone_number ??
+        payload.from ??
+        payload.phone_number ??
+        payload.wa_id ??
+        payload.sender ??
+        '').replace(/\D/g, '');
+    if (!fromRaw)
+        return null;
+    const msgType = String(message?.type ?? message?.message_type ?? payload.type ?? payload.message_type ?? 'text');
+    const textObj = message?.text;
+    const buttonObj = message?.button;
+    const interactive = message?.interactive;
+    let text = '';
+    if (typeof message?.message_body === 'string')
+        text = message.message_body;
+    else if (textObj?.body)
+        text = textObj.body;
+    else if (typeof message?.body === 'string')
+        text = message.body;
+    else if (buttonObj?.text)
+        text = buttonObj.text;
+    else if (typeof message?.caption === 'string')
+        text = message.caption;
+    else if (interactive) {
+        const btnReply = interactive.button_reply;
+        const listReply = interactive.list_reply;
+        text = btnReply?.title ?? listReply?.title ?? '';
+    }
+    else if (typeof payload.text === 'string')
+        text = payload.text;
+    else if (typeof payload.message === 'string')
+        text = payload.message;
+    else if (typeof payload.body === 'string')
+        text = payload.body;
+    const messageId = String(message?.id ?? message?.wamid ?? message?.message_id ?? payload.id ?? payload.message_id ?? '');
+    return { from: fromRaw, msgType, text, messageId };
+}
 export const whatsappService = {
     async sendText(to, text) {
         await getProvider().sendText(to, text);
     },
     async sendTemplate(to, templateName, params) {
         await getProvider().sendTemplate(to, templateName, params);
+    },
+    /** Ads Gyani webhook — dashboard format { contact, message } or legacy flat / Meta entry */
+    async handleAdsGyaniInbound(payload) {
+        if (payload.entry) {
+            await this.handleCloudInbound(payload);
+            return;
+        }
+        const parsed = parseAdsGyaniWebhook(payload);
+        if (!parsed)
+            return;
+        const { from, msgType, text, messageId } = parsed;
+        const farmer = await farmerService.upsertByPhone({
+            phone: from,
+            preferredLanguage: 'en',
+            source: 'whatsapp',
+        });
+        await supabase.from('interaction_logs').insert({
+            farmer_id: farmer.id,
+            channel: 'whatsapp',
+            direction: 'inbound',
+            message_type: msgType,
+            content: text || msgType,
+            external_message_id: messageId,
+            raw_payload: payload,
+        });
+        if (text && CROP_DOCTOR_KEYWORDS.test(text) && env.ENABLE_AI_CROP_DOCTOR) {
+            await this.sendText(from, 'Send a clear photo of your crop issue for AI-assisted analysis (ginger supported).');
+        }
+        else if (text) {
+            await this.classifyAndCreateLead(farmer.id, text);
+        }
+        await eventBus.publish('whatsapp.message.received', { phone: from, farmerId: farmer.id, text, messageType: msgType }, 'whatsapp');
     },
     async handleCloudInbound(payload) {
         const entry = payload.entry?.[0];

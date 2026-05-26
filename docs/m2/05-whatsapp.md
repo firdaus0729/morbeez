@@ -11,11 +11,22 @@ interface WhatsAppProvider {
 
 | Provider | Env | Use |
 |----------|-----|-----|
-| `cloud` | Meta Cloud API | Production default |
+| `adsgyani` | Ads Gyani (`adsgyani.in`) | **Default** — tenant API + webhook |
+| `cloud` | Meta Cloud API | Direct Meta |
 | `wati` | WATI API | Alternative BSP |
-| `interakt` | M3 stub | Same interface |
+| `interakt` | Interakt API | Alternative BSP |
 
-Set `WHATSAPP_PROVIDER=wati` to swap without code changes.
+Set `WHATSAPP_PROVIDER=adsgyani` and fill `ADS_GYANI_*` vars (see `.env.example`).
+
+### Ads Gyani setup
+
+1. **Settings → API & Webhook**: copy **API Base URL** (`https://adsgyani.in/api`), **Vendor UID** (UUID), **API Access Token**
+2. Set `ADS_GYANI_TENANT` to the Vendor UID (not your business name)
+3. Outbound: `POST /{vendorUid}/contact/send-message` with `phone_number` + `message_body` ([api-docs.pdf](https://adsgyani.in/api-docs.pdf))
+4. Webhook callback: `https://<api>/webhooks/whatsapp/adsgyani` — enable in dashboard
+5. Verify token: `ADS_GYANI_WEBHOOK_VERIFY_TOKEN` (if Ads Gyani asks for one on setup)
+6. Optional: `ADS_GYANI_WEBHOOK_SECRET` if they sign inbound requests
+7. Phone format: `919876543210` (numeric, country code, no `+` or leading `0`)
 
 ## Inbound flow
 
@@ -46,7 +57,7 @@ Farmer message → Meta webhook → verify signature
 - Multilingual replies → `preferred_language` + template locale
 - Telecaller escalation → `leads.priority = urgent`
 
-## Webhook setup (Meta)
+## Webhook setup (Meta — only when `WHATSAPP_PROVIDER=cloud`)
 
 1. Create Meta Business app
 2. Add WhatsApp product
