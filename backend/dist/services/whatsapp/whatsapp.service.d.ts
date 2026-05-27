@@ -24,6 +24,10 @@ export declare const whatsappService: {
             title: string;
         }>;
     }): Promise<void>;
+    /**
+     * Sends menu options as reply buttons (not list/select UI).
+     * WhatsApp allows max 3 buttons per message; larger menus are sent in chunks.
+     */
     sendList(params: {
         to: string;
         header?: string;

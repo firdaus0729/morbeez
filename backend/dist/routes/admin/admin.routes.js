@@ -747,7 +747,7 @@ export async function adminRoutes(app) {
         return reply.send({ ok: true, note });
     });
     app.delete(`${api}/crm/internal-notes/:noteId`, async (request, reply) => {
-        requireAdminRole(request, 'admin', 'manager', 'telecaller', 'agronomist');
+        requireAdmin(request);
         const { noteId } = request.params;
         const note = await crmInternalNotesService.archive(noteId);
         return reply.send({ ok: true, note });

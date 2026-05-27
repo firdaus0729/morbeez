@@ -31,6 +31,7 @@ import { farmerService } from '../../farmer/farmer.service.js';
 import { conversationSessionService } from '../conversation-session.service.js';
 import { mainMenuCopy } from '../scenarios/whatsapp-menu.service.js';
 import { whatsappScenarioRouter } from '../scenarios/whatsapp-scenario-router.service.js';
+import { sendReplyButtonMenu } from '../whatsapp-interactive-menu.service.js';
 import { diagnosisFlowService } from '../scenarios/diagnosis-flow.service.js';
 import { multiPlotService } from '../scenarios/multi-plot.service.js';
 import { aiReuseService } from '../../ai/ai-reuse.service.js';
@@ -154,16 +155,31 @@ export const whatsappInboundPipeline = {
       await hooks.sendWelcomeTemplate(msg.phone, captured.farmerId, msg.profileName).catch(() => {});
     }
 
-    // Scenario 1: New user greeting → language selection (5 languages)
+    // Scenario 1: New user greeting → language selection (5 reply buttons: 3 + 2)
     if (!session.preferred_language && msg.text && isGreeting(msg.text)) {
       const copy = languageSelectCopy();
-      if (send.list) {
-        await send.list({
-          phone: msg.phone,
-          body: copy.body,
-          buttonText: copy.buttonText,
-          sections: [{ title: 'Languages', rows: copy.rows }],
-        });
+      if (send.list || send.buttons) {
+        if (send.list) {
+          await send.list({
+            phone: msg.phone,
+            body: copy.body,
+            buttonText: copy.buttonText,
+            sections: [{ title: 'Languages', rows: copy.rows }],
+          });
+        } else if (send.buttons) {
+          await sendReplyButtonMenu({
+            to: msg.phone,
+            body: copy.body,
+            options: copy.rows.map((r) => ({ id: r.id, title: r.title })),
+            continuationBody: 'Please select your language (continued):',
+            sendButtons: (p) =>
+              send.buttons!({
+                phone: p.to,
+                body: p.body,
+                buttons: p.buttons,
+              }),
+          });
+        }
       } else {
         await send.text(msg.phone, `${copy.body}\n\nReply with: English / Malayalam / Tamil / Kannada / Hindi`);
       }
@@ -181,13 +197,28 @@ export const whatsappInboundPipeline = {
       if (selected && ['en', 'ml', 'ta', 'kn', 'hi'].includes(selected)) {
         await conversationSessionService.setLanguage(captured.farmerId, selected);
         const menu = mainMenuCopy(selected);
-        if (send.list) {
-          await send.list({
-            phone: msg.phone,
-            body: menu.welcome,
-            buttonText: menu.buttonText,
-            sections: [{ title: 'Menu', rows: menu.rows }],
-          });
+        if (send.list || send.buttons) {
+          if (send.list) {
+            await send.list({
+              phone: msg.phone,
+              body: menu.welcome,
+              buttonText: menu.buttonText,
+              sections: [{ title: 'Menu', rows: menu.rows }],
+            });
+          } else if (send.buttons) {
+            await sendReplyButtonMenu({
+              to: msg.phone,
+              body: menu.welcome,
+              options: menu.rows.map((r) => ({ id: r.id, title: r.title })),
+              continuationBody: 'More menu options:',
+              sendButtons: (p) =>
+                send.buttons!({
+                  phone: p.to,
+                  body: p.body,
+                  buttons: p.buttons,
+                }),
+            });
+          }
         } else {
           await send.text(
             msg.phone,

@@ -18,6 +18,7 @@ import { farmerWelcomeService } from './farmer-welcome.service.js';
 import { multiPlotService } from './multi-plot.service.js';
 import { orderWhatsappService } from '../orders/order-whatsapp.service.js';
 import { cultivationLoggingService } from '../cultivation/cultivation-logging.service.js';
+import { sendReplyButtonMenu } from '../whatsapp-interactive-menu.service.js';
 
 const CROP_MEDIA = new Set(['image', 'image_message', 'document']);
 const MENU_IDS = new Set([
@@ -87,13 +88,24 @@ export const whatsappScenarioRouter = {
     }
 
     const list = multiPlotService.buildPlotList(plots, lang);
+    const options = list.sections.flatMap((s) =>
+      s.rows.map((r) => ({ id: r.id, title: r.title }))
+    );
+
     if (send.list) {
-      await send.list({ phone, ...list });
+      await send.list({ phone, body: list.body, buttonText: list.buttonText, sections: list.sections });
     } else if (send.buttons) {
-      await send.buttons({
-        phone,
+      await sendReplyButtonMenu({
+        to: phone,
         body: list.body,
-        buttons: multiPlotService.buildPlotButtons(plots, lang),
+        options,
+        continuationBody: 'More plots — tap a button:',
+        sendButtons: (p) =>
+          send.buttons!({
+            phone: p.to,
+            body: p.body,
+            buttons: p.buttons,
+          }),
       });
     } else {
       const names = plots.map((p) => p.crop_type).join(' / ');
@@ -409,6 +421,19 @@ export const whatsappScenarioRouter = {
         body: menu.welcome,
         buttonText: menu.buttonText,
         sections: [{ title: 'Menu', rows: menu.rows }],
+      });
+    } else if (send.buttons) {
+      await sendReplyButtonMenu({
+        to: phone,
+        body: menu.welcome,
+        options: menu.rows.map((r) => ({ id: r.id, title: r.title })),
+        continuationBody: 'More menu options:',
+        sendButtons: (p) =>
+          send.buttons!({
+            phone: p.to,
+            body: p.body,
+            buttons: p.buttons,
+          }),
       });
     } else {
       await send.text(phone, menu.welcome);

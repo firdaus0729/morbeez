@@ -6,6 +6,7 @@ import { conversationSessionService } from '../conversation-session.service.js';
 import { multiPlotService } from '../scenarios/multi-plot.service.js';
 import { fetchCompactFarmerContext } from '../pipeline/advisory-context.service.js';
 import { whatsappService } from '../whatsapp.service.js';
+import { sendReplyButtonMenu } from '../whatsapp-interactive-menu.service.js';
 import { callbackFlowService } from '../scenarios/callback-flow.service.js';
 import { applicationPrompt, appliedThanks, notYetReminder, outcomeBetter, outcomeNoImprovement, outcomePartial, resultValidationPrompt, sprayLogged, } from './cultivation-logging-copy.js';
 const applicationDays = () => env.CULTIVATION_APPLICATION_DAYS ?? 5;
@@ -113,21 +114,19 @@ export const cultivationLoggingService = {
             });
         }
         catch {
-            await whatsappService.sendList({
+            await sendReplyButtonMenu({
                 to: phone,
                 body,
-                buttonText: lang === 'ml' ? 'തിരഞ്ഞെടുക്കുക' : 'Choose',
-                sections: [
-                    {
-                        title: 'Result',
-                        rows: [
-                            { id: 'cult.better', title: 'Better' },
-                            { id: 'cult.partial', title: 'Partial Improvement' },
-                            { id: 'cult.no_improve', title: 'No Improvement' },
-                            { id: 'cult.agronomist', title: 'Need Agronomist' },
-                        ],
-                    },
+                options: [
+                    { id: 'cult.better', title: 'Better' },
+                    { id: 'cult.partial', title: 'Partial' },
+                    { id: 'cult.no_improve', title: 'No Improve' },
+                    { id: 'cult.agronomist', title: 'Agronomist' },
                 ],
+                continuationBody: lang === 'ml'
+                    ? 'ഫലം എങ്ങനെയാണ്? (തുടർന്ന്)'
+                    : 'How is the crop now? (continued)',
+                sendButtons: (p) => whatsappService.sendButtons(p),
             });
         }
         await conversationSessionService.patchContext(farmerId, {

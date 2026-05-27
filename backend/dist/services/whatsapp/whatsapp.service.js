@@ -6,6 +6,7 @@ import { adsgyaniWhatsAppProvider } from './providers/adsgyani.provider.js';
 import { whatsappInboundPipeline } from './pipeline/whatsapp-inbound.pipeline.js';
 import { whatsappOutboundService } from './whatsapp-outbound.service.js';
 import { logger } from '../../lib/logger.js';
+import { sendReplyButtonMenu } from './whatsapp-interactive-menu.service.js';
 function getProvider() {
     if (env.WHATSAPP_PROVIDER === 'adsgyani')
         return adsgyaniWhatsAppProvider;
@@ -105,17 +106,20 @@ export const whatsappService = {
         }
         await provider.sendButtons(params);
     },
+    /**
+     * Sends menu options as reply buttons (not list/select UI).
+     * WhatsApp allows max 3 buttons per message; larger menus are sent in chunks.
+     */
     async sendList(params) {
-        const provider = getProvider();
-        if (!provider.sendList) {
-            // Fallback: convert list to plain text.
-            const flat = params.sections
-                .flatMap((s) => s.rows.map((r) => `- ${r.title}${r.description ? `: ${r.description}` : ''}`))
-                .join('\n');
-            await this.sendText(params.to, `${params.body}\n\n${flat}`);
-            return;
-        }
-        await provider.sendList(params);
+        const options = params.sections.flatMap((s) => s.rows.map((r) => ({ id: r.id, title: r.title })));
+        const bodyText = params.header ? `${params.header}\n\n${params.body}` : params.body;
+        await sendReplyButtonMenu({
+            to: params.to,
+            body: bodyText,
+            options,
+            continuationBody: 'More options — tap a button below:',
+            sendButtons: (p) => this.sendButtons(p),
+        });
     },
     async sendTemplate(to, templateName, params) {
         await getProvider().sendTemplate(to, templateName, params);
