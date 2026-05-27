@@ -144,8 +144,13 @@ export const whatsappService = {
         const value = changes?.value;
         const messages = value?.messages;
         const contacts = value?.contacts;
-        if (!messages?.length)
+        const statuses = value?.statuses;
+        if (!messages?.length) {
+            if (statuses?.length) {
+                logger.debug({ statusCount: statuses.length }, 'Meta WhatsApp status webhook (delivery/read) — no inbound message');
+            }
             return;
+        }
         for (const msg of messages) {
             try {
                 const from = String(msg.from ?? '');

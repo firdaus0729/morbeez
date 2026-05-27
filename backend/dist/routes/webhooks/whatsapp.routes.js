@@ -5,6 +5,7 @@ import { WebhookVerificationError } from '../../lib/errors.js';
 import { isWebhookDuplicate, logWebhook } from '../../middleware/idempotency.js';
 import { whatsappService } from '../../services/whatsapp/whatsapp.service.js';
 import { logger } from '../../lib/logger.js';
+import { metaWhatsAppIdempotencyKey, summarizeMetaWhatsAppValue, } from '../../lib/meta-whatsapp-webhook.js';
 /** Meta Cloud API webhook subscription (GET hub.challenge). */
 function resolveMetaVerifyChallenge(query) {
     const mode = query['hub.mode'];
@@ -83,12 +84,18 @@ export async function whatsappWebhookRoutes(app) {
             throw err;
         }
         const payload = JSON.parse(raw.toString());
+        const entry = payload.entry?.[0];
+        const value = entry?.changes?.[0]?.value;
+        const summary = summarizeMetaWhatsAppValue(value);
+        const idempotencyKey = metaWhatsAppIdempotencyKey(payload);
         logger.info({
             object: payload.object,
             entries: payload.entry?.length ?? 0,
+            idempotencyKey,
+            ...summary,
         }, 'Meta WhatsApp webhook POST received');
-        const idempotencyKey = JSON.stringify(payload.entry?.[0] ?? payload).slice(0, 128);
         if (await isWebhookDuplicate('whatsapp', idempotencyKey)) {
+            logger.info({ idempotencyKey, ...summary }, 'Meta WhatsApp webhook duplicate skipped');
             return reply.code(200).send({ ok: true, duplicate: true });
         }
         try {

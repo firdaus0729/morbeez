@@ -186,8 +186,17 @@ export const whatsappService = {
     const value = changes?.value as Record<string, unknown> | undefined;
     const messages = value?.messages as Array<Record<string, unknown>> | undefined;
     const contacts = value?.contacts as Array<Record<string, unknown>> | undefined;
+    const statuses = value?.statuses as Array<Record<string, unknown>> | undefined;
 
-    if (!messages?.length) return;
+    if (!messages?.length) {
+      if (statuses?.length) {
+        logger.debug(
+          { statusCount: statuses.length },
+          'Meta WhatsApp status webhook (delivery/read) — no inbound message'
+        );
+      }
+      return;
+    }
 
     for (const msg of messages) {
       try {
