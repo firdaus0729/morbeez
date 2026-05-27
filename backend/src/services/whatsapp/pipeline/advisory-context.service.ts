@@ -1,22 +1,47 @@
 import { supabase } from '../../../lib/supabase.js';
 
 /** Minimal context for OpenAI — avoids sending full chat history (token cost). */
-export async function fetchCompactFarmerContext(farmerId: string): Promise<{
+export async function fetchCompactFarmerContext(
+  farmerId: string,
+  options?: { activePlotId?: string | null }
+): Promise<{
   cropType: string;
   cropStage?: string;
   recentIssues: string;
   lastSpray?: string;
+  activePlotId?: string;
 }> {
-  const { data: crops } = await supabase
-    .from('farmer_crops')
-    .select('crop_type, stage, is_primary')
-    .eq('farmer_id', farmerId)
-    .order('is_primary', { ascending: false })
-    .limit(3);
+  let cropType = 'ginger';
+  let cropStage: string | undefined;
+  let activePlotId: string | undefined;
 
-  const primary = crops?.find((c) => c.is_primary) ?? crops?.[0];
-  const cropType = primary?.crop_type ?? 'ginger';
-  const cropStage = primary?.stage ?? undefined;
+  if (options?.activePlotId) {
+    const { data: plot } = await supabase
+      .from('farmer_crops')
+      .select('id, crop_type, stage')
+      .eq('id', options.activePlotId)
+      .eq('farmer_id', farmerId)
+      .maybeSingle();
+    if (plot) {
+      cropType = plot.crop_type;
+      cropStage = plot.stage ?? undefined;
+      activePlotId = plot.id;
+    }
+  }
+
+  if (!activePlotId) {
+    const { data: crops } = await supabase
+      .from('farmer_crops')
+      .select('id, crop_type, stage, is_primary')
+      .eq('farmer_id', farmerId)
+      .order('is_primary', { ascending: false })
+      .limit(3);
+
+    const primary = crops?.find((c) => c.is_primary) ?? crops?.[0];
+    cropType = primary?.crop_type ?? 'ginger';
+    cropStage = primary?.stage ?? undefined;
+    activePlotId = primary?.id;
+  }
 
   const { data: history } = await supabase
     .from('disease_history')
@@ -49,7 +74,7 @@ export async function fetchCompactFarmerContext(farmerId: string): Promise<{
     }
   }
 
-  return { cropType, cropStage, recentIssues, lastSpray };
+  return { cropType, cropStage, recentIssues, lastSpray, activePlotId };
 }
 
 export function formatCompactHistory(ctx: {

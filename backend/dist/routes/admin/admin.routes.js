@@ -16,6 +16,8 @@ import { consoleSearchService } from '../../services/admin/console-search.servic
 import { productIntelligenceService } from '../../services/admin/product-intelligence.service.js';
 import { shopifyProductsService } from '../../services/shopify/shopify.products.service.js';
 import { whatsappOsAdminService } from '../../services/admin/whatsapp-os-admin.service.js';
+import { whatsappBroadcastAdminService } from '../../services/admin/whatsapp-broadcast-admin.service.js';
+import { crmInternalNotesService } from '../../services/admin/crm-internal-notes.service.js';
 import { requireAdmin, requireAdminRole } from '../../middleware/adminAuth.js';
 import { supabase } from '../../lib/supabase.js';
 import { throwIfSupabaseError } from '../../lib/supabase-errors.js';
@@ -561,6 +563,7 @@ export async function adminRoutes(app) {
             aiPaused: z.boolean().optional(),
             owner: z.enum(['ai', 'telecaller', 'agronomist']).optional(),
             preferredLanguage: z.enum(['en', 'ml', 'ta', 'kn', 'hi']).nullable().optional(),
+            activePlotId: z.string().uuid().nullable().optional(),
         })
             .parse(request.body);
         const session = await whatsappOsAdminService.updateConversationSession(farmerId, body);
@@ -586,6 +589,65 @@ export async function adminRoutes(app) {
             .parse(request.body);
         const row = await whatsappOsAdminService.upsertCropDailyPrice(body);
         return reply.send({ ok: true, price: row });
+    });
+    app.get(`${api}/whatsapp/broadcasts/rules`, async (request, reply) => {
+        requireAdmin(request);
+        const rules = await whatsappBroadcastAdminService.listRules();
+        return reply.send({ ok: true, rules });
+    });
+    app.get(`${api}/whatsapp/broadcasts/deliveries`, async (request, reply) => {
+        requireAdmin(request);
+        const q = request.query;
+        const deliveries = await whatsappBroadcastAdminService.listDeliveries({
+            farmerId: q.farmerId,
+            limit: q.limit ? Number(q.limit) : 50,
+        });
+        return reply.send({ ok: true, deliveries });
+    });
+    app.post(`${api}/whatsapp/broadcasts/run`, async (request, reply) => {
+        requireAdminRole(request, 'admin', 'manager');
+        const body = z
+            .object({
+            farmerId: z.string().uuid().optional(),
+            dryRun: z.boolean().optional(),
+            kinds: z
+                .array(z.enum([
+                'cultivation_schedule',
+                'fertigation_reminder',
+                'pgr_broadcast',
+                'dap_task',
+                'cultivation_knowledge',
+            ]))
+                .optional(),
+        })
+            .parse(request.body ?? {});
+        const result = await whatsappBroadcastAdminService.runBroadcasts(body);
+        return reply.send({ ok: true, result });
+    });
+    app.post(`${api}/whatsapp/broadcasts/rules`, async (request, reply) => {
+        requireAdminRole(request, 'admin', 'manager');
+        const body = z
+            .object({
+            id: z.string().uuid().optional(),
+            cropType: z.string().min(1),
+            broadcastKind: z.enum([
+                'cultivation_schedule',
+                'fertigation_reminder',
+                'pgr_broadcast',
+                'dap_task',
+                'cultivation_knowledge',
+            ]),
+            targetDap: z.number().int().nullable().optional(),
+            dapTolerance: z.number().int().optional(),
+            minDap: z.number().int().nullable().optional(),
+            maxDap: z.number().int().nullable().optional(),
+            weekday: z.number().int().min(1).max(7).nullable().optional(),
+            priority: z.number().int().optional(),
+            active: z.boolean().optional(),
+        })
+            .parse(request.body);
+        const rule = await whatsappBroadcastAdminService.upsertRule(body);
+        return reply.send({ ok: true, rule });
     });
     app.get(`${api}/terminology/tasks`, async (request, reply) => {
         requireAdmin(request);
@@ -629,6 +691,66 @@ export async function adminRoutes(app) {
         const detail = await telecallerAdminService.getLeadDetail(id);
         const finding = await telecallerAdminService.createFieldFinding(detail.lead.farmerId, id, body);
         return reply.status(201).send({ ok: true, finding });
+    });
+    app.get(`${api}/crm/farmers/:farmerId/internal-notes`, async (request, reply) => {
+        requireAdmin(request);
+        const { farmerId } = request.params;
+        const q = request.query;
+        const notes = await crmInternalNotesService.list(farmerId, q.includeArchived === 'true');
+        return reply.send({ ok: true, notes });
+    });
+    app.post(`${api}/crm/farmers/:farmerId/internal-notes`, async (request, reply) => {
+        const admin = requireAdmin(request);
+        const { farmerId } = request.params;
+        const body = z
+            .object({
+            body: z.string().min(1).max(4000),
+            category: z
+                .enum([
+                'general',
+                'preference',
+                'acreage',
+                'disease_pattern',
+                'callback',
+                'commerce',
+            ])
+                .optional(),
+            pinned: z.boolean().optional(),
+        })
+            .parse(request.body);
+        const note = await crmInternalNotesService.create(farmerId, {
+            ...body,
+            author: admin.email,
+        });
+        return reply.status(201).send({ ok: true, note });
+    });
+    app.patch(`${api}/crm/internal-notes/:noteId`, async (request, reply) => {
+        requireAdmin(request);
+        const { noteId } = request.params;
+        const body = z
+            .object({
+            body: z.string().min(1).max(4000).optional(),
+            category: z
+                .enum([
+                'general',
+                'preference',
+                'acreage',
+                'disease_pattern',
+                'callback',
+                'commerce',
+            ])
+                .optional(),
+            pinned: z.boolean().optional(),
+        })
+            .parse(request.body);
+        const note = await crmInternalNotesService.update(noteId, body);
+        return reply.send({ ok: true, note });
+    });
+    app.delete(`${api}/crm/internal-notes/:noteId`, async (request, reply) => {
+        requireAdminRole(request, 'admin', 'manager', 'telecaller', 'agronomist');
+        const { noteId } = request.params;
+        const note = await crmInternalNotesService.archive(noteId);
+        return reply.send({ ok: true, note });
     });
     app.get(`${api}/crm/masters`, async (request, reply) => {
         requireAdmin(request);

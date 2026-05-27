@@ -29,7 +29,7 @@ export declare const ordersAdminService: {
             amount: number;
             currency: string;
             paymentLabel: string;
-            status: "pending" | "delivered" | "processing" | "shipped" | "cancelled";
+            status: "pending" | "processing" | "delivered" | "shipped" | "cancelled";
             financialStatus: string | null;
             fulfillmentStatus: string | null;
             createdAt: string;
@@ -91,7 +91,7 @@ export declare const ordersAdminService: {
         amount: number;
         currency: string;
         paymentLabel: string;
-        status: "pending" | "delivered" | "processing" | "shipped" | "cancelled";
+        status: "pending" | "processing" | "delivered" | "shipped" | "cancelled";
         financialStatus: string | null;
         fulfillmentStatus: string | null;
         createdAt: string;

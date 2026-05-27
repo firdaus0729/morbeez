@@ -1,7 +1,7 @@
 import type { AdvisoryLanguage } from '../ai/types.js';
 import type { SessionContext } from './scenarios/session-context.types.js';
 export type ConversationOwner = 'ai' | 'telecaller' | 'agronomist';
-export type ConversationState = 'language_select' | 'main_menu' | 'onboarding_minimal' | 'diagnosis' | 'diagnosis_awaiting_photos' | 'diagnosis_water_volume' | 'root_photos_requested' | 'soil_flow' | 'terminology_clarify' | 'chimb_followup' | 'human_takeover';
+export type ConversationState = 'language_select' | 'main_menu' | 'onboarding_minimal' | 'diagnosis' | 'diagnosis_awaiting_photos' | 'diagnosis_water_volume' | 'root_photos_requested' | 'soil_flow' | 'terminology_clarify' | 'chimb_followup' | 'plot_select' | 'human_takeover';
 export interface ConversationSession {
     id: string;
     farmer_id: string;
@@ -20,6 +20,7 @@ export declare const conversationSessionService: {
     patchContext(farmerId: string, patch: Partial<SessionContext>): Promise<SessionContext>;
     setLanguage(farmerId: string, language: AdvisoryLanguage): Promise<void>;
     setState(farmerId: string, state: ConversationState, patch?: Record<string, unknown>): Promise<void>;
+    clearActivePlot(farmerId: string): Promise<void>;
     shouldPauseAi(farmerId: string): Promise<boolean>;
 };
 //# sourceMappingURL=conversation-session.service.d.ts.map

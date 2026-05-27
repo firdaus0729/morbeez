@@ -19,6 +19,8 @@ export const whatsappOsAdminService = {
             payload.conversation_owner = patch.owner;
         if (patch.preferredLanguage !== undefined)
             payload.preferred_language = patch.preferredLanguage;
+        if (patch.activePlotId !== undefined)
+            payload.active_plot_id = patch.activePlotId;
         const { data, error } = await supabase
             .from('conversation_sessions')
             .update(payload)

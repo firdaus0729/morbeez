@@ -464,6 +464,17 @@ export declare const crmFarmerService: {
                 source: string;
             }[];
         };
+        internalNotes: {
+            id: unknown;
+            farmerId: unknown;
+            author: unknown;
+            category: unknown;
+            body: unknown;
+            pinned: unknown;
+            archivedAt: unknown;
+            createdAt: unknown;
+            updatedAt: unknown;
+        }[];
     }>;
     listFarmerOrders(farmerId: string): Promise<{
         orders: {

@@ -2,6 +2,7 @@ import { supabase } from '../../lib/supabase.js';
 import { throwIfSupabaseError } from '../../lib/supabase-errors.js';
 import { NotFoundError, ValidationError } from '../../lib/errors.js';
 import { shopifyProductsService } from '../shopify/shopify.products.service.js';
+import { crmInternalNotesService } from './crm-internal-notes.service.js';
 
 export type MasterType =
   | 'crop'
@@ -566,15 +567,17 @@ export const crmFarmerService = {
   async getFarmerCrmBundle(farmerId: string, leadId: string | null, agentEmail?: string) {
     await this.ensureDemoCrmData(farmerId, leadId, agentEmail);
 
-    const [blocks, agronomist, interactions, recommendations, orders] = await Promise.all([
-      this.listBlocks(farmerId),
-      this.getAgronomist(farmerId),
-      this.listInteractions(farmerId, 1, 10),
-      this.listRecommendations(farmerId, 1, 10),
-      this.listFarmerOrders(farmerId),
-    ]);
+    const [blocks, agronomist, interactions, recommendations, orders, internalNotes] =
+      await Promise.all([
+        this.listBlocks(farmerId),
+        this.getAgronomist(farmerId),
+        this.listInteractions(farmerId, 1, 10),
+        this.listRecommendations(farmerId, 1, 10),
+        this.listFarmerOrders(farmerId),
+        crmInternalNotesService.list(farmerId),
+      ]);
 
-    return { blocks, agronomist, interactions, recommendations, orders };
+    return { blocks, agronomist, interactions, recommendations, orders, internalNotes };
   },
 
   async listFarmerOrders(farmerId: string) {

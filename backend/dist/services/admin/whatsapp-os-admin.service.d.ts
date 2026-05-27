@@ -4,6 +4,7 @@ export declare const whatsappOsAdminService: {
         aiPaused?: boolean;
         owner?: "ai" | "telecaller" | "agronomist";
         preferredLanguage?: string | null;
+        activePlotId?: string | null;
     }): Promise<any>;
     listCropDailyPrices(cropType?: string): Promise<any[]>;
     upsertCropDailyPrice(row: {

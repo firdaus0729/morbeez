@@ -1,4 +1,5 @@
 import { supabase } from '../../../lib/supabase.js';
+import { logger } from '../../../lib/logger.js';
 import type { AdvisoryLanguage } from '../../ai/types.js';
 import type { InboundMessage } from '../pipeline/types.js';
 import {
@@ -14,6 +15,9 @@ import { callbackFlowService } from './callback-flow.service.js';
 import { terminologyService } from './terminology.service.js';
 import { diagnosisFlowService } from './diagnosis-flow.service.js';
 import { farmerWelcomeService } from './farmer-welcome.service.js';
+import { multiPlotService } from './multi-plot.service.js';
+import { orderWhatsappService } from '../orders/order-whatsapp.service.js';
+import { cultivationLoggingService } from '../cultivation/cultivation-logging.service.js';
 
 const CROP_MEDIA = new Set(['image', 'image_message', 'document']);
 const MENU_IDS = new Set([
@@ -63,7 +67,70 @@ function isMenuCommand(text: string): boolean {
   return /^(menu|main menu|മെനു|மெனு)$/i.test(text.trim());
 }
 
+function isChangePlotCommand(text: string): boolean {
+  return /^(change plot|switch plot|plot change|മറ്റ് പ്ലോട്ട്|ப்ளாட் மாற்று)$/i.test(text.trim());
+}
+
 export const whatsappScenarioRouter = {
+  async sendPlotPicker(
+    phone: string,
+    farmerId: string,
+    lang: AdvisoryLanguage,
+    send: ScenarioSenders,
+    pendingText?: string
+  ): Promise<void> {
+    const plots = await multiPlotService.listPlots(farmerId);
+    if (plots.length < 2) return;
+
+    if (pendingText) {
+      await conversationSessionService.patchContext(farmerId, { pendingSymptomsText: pendingText });
+    }
+
+    const list = multiPlotService.buildPlotList(plots, lang);
+    if (send.list) {
+      await send.list({ phone, ...list });
+    } else if (send.buttons) {
+      await send.buttons({
+        phone,
+        body: list.body,
+        buttons: multiPlotService.buildPlotButtons(plots, lang),
+      });
+    } else {
+      const names = plots.map((p) => p.crop_type).join(' / ');
+      await send.text(phone, `${list.body}\n\nReply: ${names}`);
+    }
+    await conversationSessionService.setState(farmerId, 'plot_select');
+  },
+
+  async applyPlotSelection(
+    msg: InboundMessage,
+    captured: ScenarioCapture,
+    lang: AdvisoryLanguage,
+    plotId: string,
+    send: ScenarioSenders
+  ): Promise<void> {
+    const plots = await multiPlotService.listPlots(captured.farmerId);
+    const plot = plots.find((p) => p.id === plotId);
+    if (!plot) {
+      await send.text(msg.phone, t('mainMenuHint', lang));
+      return;
+    }
+
+    await multiPlotService.setActivePlot(captured.farmerId, plot);
+    const ctx = await conversationSessionService.getContext(captured.farmerId);
+    await send.text(msg.phone, multiPlotService.plotConfirmedMessage(plot, lang));
+
+    if (ctx.pendingSymptomsText) {
+      await conversationSessionService.patchContext(captured.farmerId, {
+        pendingSymptomsText: undefined,
+      });
+      await conversationSessionService.setState(captured.farmerId, 'diagnosis_awaiting_photos');
+      return;
+    }
+
+    await conversationSessionService.setState(captured.farmerId, 'diagnosis_awaiting_photos');
+  },
+
   async tryRoute(
     msg: InboundMessage,
     captured: ScenarioCapture,
@@ -80,10 +147,92 @@ export const whatsappScenarioRouter = {
     // Scenario 44 — always use stored language
     captured.language = lang;
 
+    // Scenarios 30–31, 37 — cultivation logging
+    if (
+      text.startsWith('cult.') ||
+      /^applied$/i.test(text) ||
+      cultivationLoggingService.isSprayCompletedMessage(text)
+    ) {
+      const cult = await cultivationLoggingService.handleInboundAction({
+        farmerId: captured.farmerId,
+        phone: msg.phone,
+        language: lang,
+        action: text,
+        text,
+      });
+      if (cult.handled) return { handled: true };
+    }
+
+    // Scenarios 35–36 — order tracking & payment buttons
+    if (
+      text.startsWith('order.') ||
+      text.startsWith('pay.') ||
+      /^track\b/i.test(text) ||
+      /order status/i.test(text) ||
+      /^retry$/i.test(text) ||
+      /^cod$/i.test(text)
+    ) {
+      const handled = await orderWhatsappService.handleInboundAction({
+        phone: msg.phone,
+        farmerId: captured.farmerId,
+        language: lang,
+        action: text,
+        text,
+      });
+      if (handled) return { handled: true };
+    }
+
     if (isMenuCommand(text)) {
       await this.showMainMenu(msg.phone, lang, send);
       await conversationSessionService.setState(captured.farmerId, 'main_menu');
       return { handled: true };
+    }
+
+    if (isChangePlotCommand(text)) {
+      await conversationSessionService.clearActivePlot(captured.farmerId);
+      await this.sendPlotPicker(msg.phone, captured.farmerId, lang, send);
+      return { handled: true };
+    }
+
+    // Scenario 29 — plot selection (list/button reply)
+    if (text.startsWith('plot.') || session.state === 'plot_select') {
+      const plots = await multiPlotService.listPlots(captured.farmerId);
+      const selected = multiPlotService.parsePlotSelection(text, plots);
+      if (selected) {
+        await this.applyPlotSelection(msg, captured, lang, selected.id, send);
+        return { handled: true };
+      }
+      if (session.state === 'plot_select') {
+        await this.sendPlotPicker(msg.phone, captured.farmerId, lang, send, text || undefined);
+        return { handled: true };
+      }
+    }
+
+    // Scenario 29 — multi-crop message ("Ginger fine, cardamom has issue")
+    if (text) {
+      const plots = await multiPlotService.listPlots(captured.farmerId);
+      if (plots.length >= 2) {
+        const analysis = multiPlotService.analyzeMultiCropMessage(text, plots);
+        if (analysis.needsPlotPicker) {
+          if (analysis.suggestedPlot && analysis.cropsWithIssue.length === 1) {
+            await multiPlotService.setActivePlot(captured.farmerId, analysis.suggestedPlot);
+            await conversationSessionService.patchContext(captured.farmerId, {
+              pendingSymptomsText: text,
+            });
+            await send.text(
+              msg.phone,
+              multiPlotService.plotConfirmedMessage(analysis.suggestedPlot, lang)
+            );
+            await conversationSessionService.setState(captured.farmerId, 'diagnosis_awaiting_photos');
+            return { handled: true };
+          }
+          await this.sendPlotPicker(msg.phone, captured.farmerId, lang, send, text);
+          return { handled: true };
+        }
+        if (analysis.suggestedPlot && analysis.cropsMentioned.length === 1) {
+          await multiPlotService.setActivePlot(captured.farmerId, analysis.suggestedPlot);
+        }
+      }
     }
 
     // Main menu selection (list reply ids)
@@ -206,11 +355,21 @@ export const whatsappScenarioRouter = {
 
     // Scenario 2 — image in diagnosis flow
     if (CROP_MEDIA.has(msg.msgType)) {
+      const plots = await multiPlotService.listPlots(captured.farmerId);
+      if (plots.length >= 2 && !(await multiPlotService.getActivePlotId(captured.farmerId))) {
+        await this.sendPlotPicker(msg.phone, captured.farmerId, lang, send, msg.text || undefined);
+        return { handled: true };
+      }
+      if (plots.length === 1) {
+        await multiPlotService.setActivePlot(captured.farmerId, plots[0]);
+      }
+
       const diagnosisStates = new Set([
         'diagnosis_awaiting_photos',
         'diagnosis',
         'main_menu',
         'root_photos_requested',
+        'plot_select',
       ]);
       if (diagnosisStates.has(session.state) || session.state === 'main_menu') {
         const { imageCount, shouldRunDiagnosis } = await diagnosisFlowService.recordImageReceived(
@@ -264,13 +423,22 @@ export const whatsappScenarioRouter = {
     send: ScenarioSenders
   ): Promise<void> {
     switch (menuId) {
-      case 'menu.diagnosis':
+      case 'menu.diagnosis': {
+        const plots = await multiPlotService.listPlots(captured.farmerId);
         await conversationSessionService.patchContext(captured.farmerId, {
           diagnosis: { imageCount: 0 },
         });
+        if (plots.length >= 2 && !(await multiPlotService.getActivePlotId(captured.farmerId))) {
+          await this.sendPlotPicker(msg.phone, captured.farmerId, lang, send);
+          break;
+        }
+        if (plots.length === 1) {
+          await multiPlotService.setActivePlot(captured.farmerId, plots[0]);
+        }
         await conversationSessionService.setState(captured.farmerId, 'diagnosis_awaiting_photos');
         await send.text(msg.phone, t('diagnosisPrompt', lang));
         break;
+      }
       case 'menu.weather': {
         const weather = await weatherAlertsService.formatForFarmer(captured.farmerId, lang);
         await send.text(msg.phone, weather);
@@ -373,6 +541,7 @@ export const whatsappScenarioRouter = {
     advisory: import('../../ai/types.js').StructuredAdvisory;
     summary: string;
     send: ScenarioSenders;
+    hasProductRecommendations?: boolean;
   }): Promise<void> {
     await diagnosisFlowService.storeDiagnosisResult(
       params.farmerId,
@@ -414,5 +583,19 @@ export const whatsappScenarioRouter = {
         await params.send.text(params.phone, list.body);
       }
     }
+
+    const hasProducts =
+      params.hasProductRecommendations ??
+      ((params.advisory.dosageGuidance?.length ?? 0) > 0 ||
+        (params.advisory.recommendedProductTags?.length ?? 0) > 0);
+
+    await cultivationLoggingService
+      .onAdvisoryCompleted({
+        farmerId: params.farmerId,
+        sessionId: params.sessionId,
+        language: params.lang,
+        hasProductRecommendations: hasProducts,
+      })
+      .catch((err) => logger.error({ err }, 'Cultivation follow-up schedule failed'));
   },
 };

@@ -5,6 +5,7 @@ import { whatsappService } from '../services/whatsapp/whatsapp.service.js';
 import { createTelecallerTask } from '../services/whatsapp/pipeline/telecaller-tasks.service.js';
 import { env } from '../config/env.js';
 import { supabase } from '../lib/supabase.js';
+import { orderWhatsappService } from '../services/whatsapp/orders/order-whatsapp.service.js';
 /** Wire domain reactions — keep thin; logic lives in services */
 export function registerEventHandlers() {
     eventBus.on('shopify.order.paid', async (event) => {
@@ -26,6 +27,55 @@ export function registerEventHandlers() {
     });
     eventBus.on('shopify.order.fulfilled', async (event) => {
         logger.info({ orderId: event.payload.shopifyOrderId, tracking: event.payload.trackingNumber }, 'Order fulfilled');
+        if (env.ENABLE_WHATSAPP_ORDER_ALERTS !== false) {
+            await orderWhatsappService
+                .notifyDispatchedFromEvent({
+                shopifyOrderId: event.payload.shopifyOrderId,
+                awb: event.payload.trackingNumber,
+                phone: event.payload.phone,
+                orderName: event.payload.orderName,
+            })
+                .catch((err) => logger.error({ err }, 'Order fulfilled WhatsApp failed'));
+        }
+    });
+    eventBus.on('shipment.created', async (event) => {
+        if (env.ENABLE_WHATSAPP_ORDER_ALERTS === false)
+            return;
+        await orderWhatsappService
+            .notifyDispatchedFromEvent({
+            shopifyOrderId: event.payload.shopifyOrderId,
+            awb: event.payload.awb,
+            phone: event.payload.phone,
+            orderName: event.payload.orderName,
+        })
+            .catch((err) => logger.error({ err }, 'Shipment created WhatsApp failed'));
+    });
+    eventBus.on('shipment.dispatched', async (event) => {
+        if (env.ENABLE_WHATSAPP_ORDER_ALERTS === false)
+            return;
+        await orderWhatsappService
+            .notifyDispatchedFromEvent({
+            shopifyOrderId: event.payload.shopifyOrderId,
+            awb: event.payload.awb,
+            phone: event.payload.phone,
+        })
+            .catch((err) => logger.error({ err }, 'Shipment dispatched WhatsApp failed'));
+    });
+    eventBus.on('order.payment.failed', async (event) => {
+        if (env.ENABLE_WHATSAPP_ORDER_ALERTS === false)
+            return;
+        const phone = event.payload.phone;
+        if (!phone)
+            return;
+        await orderWhatsappService
+            .sendPaymentFailed({
+            phone,
+            checkoutSessionId: event.payload.checkoutSessionId,
+            receipt: event.payload.receipt,
+            amountPaise: event.payload.amountPaise,
+            razorpayOrderId: event.payload.razorpayOrderId,
+        })
+            .catch((err) => logger.error({ err }, 'Payment failed WhatsApp failed'));
     });
     eventBus.on('advisory.escalated', async (event) => {
         const farmerId = event.payload.farmerId;

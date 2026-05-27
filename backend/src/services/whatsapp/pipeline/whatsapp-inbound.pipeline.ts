@@ -32,6 +32,8 @@ import { conversationSessionService } from '../conversation-session.service.js';
 import { mainMenuCopy } from '../scenarios/whatsapp-menu.service.js';
 import { whatsappScenarioRouter } from '../scenarios/whatsapp-scenario-router.service.js';
 import { diagnosisFlowService } from '../scenarios/diagnosis-flow.service.js';
+import { multiPlotService } from '../scenarios/multi-plot.service.js';
+import { aiReuseService } from '../../ai/ai-reuse.service.js';
 import type { InboundMessage } from './types.js';
 
 const CROP_MEDIA_TYPES = new Set(['image', 'image_message', 'document']);
@@ -325,14 +327,26 @@ export const whatsappInboundPipeline = {
     sendText: (phone: string, text: string) => Promise<void>,
     senders?: Senders
   ): Promise<void> {
-    const usage = await aiUsageControlService.checkAndConsume({
+    const activePlotId = await multiPlotService.getActivePlotId(captured.farmerId);
+    const ctxPeek = await fetchCompactFarmerContext(captured.farmerId, { activePlotId });
+    const willReuse = await aiReuseService.peekMatch({
       farmerId: captured.farmerId,
-      kind: 'image',
-      isPremium: captured.isPremium,
+      cropType: ctxPeek.cropType,
+      symptomsText: msg.text || undefined,
+      activePlotId,
+      compactHistory: formatCompactHistory(ctxPeek),
     });
-    if (!usage.allowed) {
-      await sendText(captured.phone, aiUsageControlService.usageLimitMessage(captured.language, usage.reason));
-      return;
+
+    if (!willReuse) {
+      const usage = await aiUsageControlService.checkAndConsume({
+        farmerId: captured.farmerId,
+        kind: 'image',
+        isPremium: captured.isPremium,
+      });
+      if (!usage.allowed) {
+        await sendText(captured.phone, aiUsageControlService.usageLimitMessage(captured.language, usage.reason));
+        return;
+      }
     }
 
     const media = await extractInboundMedia({
@@ -412,14 +426,26 @@ export const whatsappInboundPipeline = {
       ) && msg.text.trim().length >= 25;
 
     if (env.ENABLE_AI_CROP_DOCTOR && agriDiagnosisIntent) {
-      const usage = await aiUsageControlService.checkAndConsume({
+      const activePlotId = await multiPlotService.getActivePlotId(captured.farmerId);
+      const ctxPeek = await fetchCompactFarmerContext(captured.farmerId, { activePlotId });
+      const willReuse = await aiReuseService.peekMatch({
         farmerId: captured.farmerId,
-        kind: 'text',
-        isPremium: captured.isPremium,
+        cropType: ctxPeek.cropType,
+        symptomsText: msg.text,
+        activePlotId,
+        compactHistory: formatCompactHistory(ctxPeek),
       });
-      if (!usage.allowed) {
-        await sendText(captured.phone, aiUsageControlService.usageLimitMessage(captured.language, usage.reason));
-        return;
+
+      if (!willReuse) {
+        const usage = await aiUsageControlService.checkAndConsume({
+          farmerId: captured.farmerId,
+          kind: 'text',
+          isPremium: captured.isPremium,
+        });
+        if (!usage.allowed) {
+          await sendText(captured.phone, aiUsageControlService.usageLimitMessage(captured.language, usage.reason));
+          return;
+        }
       }
       await this.runDiagnosis({
         farmerId: captured.farmerId,
@@ -482,15 +508,22 @@ export const whatsappInboundPipeline = {
     send?: Senders;
   }): Promise<void> {
     try {
-      const ctx = await fetchCompactFarmerContext(params.farmerId);
+      const activePlotId = await multiPlotService.getActivePlotId(params.farmerId);
+      const sessCtx = await conversationSessionService.getContext(params.farmerId);
+      const ctx = await fetchCompactFarmerContext(params.farmerId, { activePlotId });
       const compactHistory = formatCompactHistory(ctx);
+
+      const symptomsText =
+        params.symptomsText?.trim() ||
+        sessCtx.pendingSymptomsText ||
+        undefined;
 
       const result = await cropDoctorService.diagnose({
         farmerId: params.farmerId,
         cropType: ctx.cropType,
         cropStage: ctx.cropStage,
         language: params.language,
-        symptomsText: params.symptomsText,
+        symptomsText,
         voiceTranscript: params.voiceTranscript,
         imageBase64: params.imageBase64,
         imageMimeType: params.imageMimeType,
@@ -505,7 +538,22 @@ export const whatsappInboundPipeline = {
       }
 
       let reply = localizedSummary(result.advisory, params.language);
+      if (sessCtx.activePlotLabel) {
+        reply = `📍 ${sessCtx.activePlotLabel}\n\n${reply}`;
+      }
       reply += '\n\n— Morbeez AI-assisted advisory (not a guaranteed diagnosis).';
+      if (result.reused) {
+        reply +=
+          params.language === 'ml'
+            ? '\n\n(സമാനമായ മുൻ കേസിൽ നിന്നുള്ള ശുപാർശ — വേഗത്തിലുള്ള മറുപ്)'
+            : '\n\n(Based on a similar successful case in your region — fast reply)';
+      }
+
+      if (sessCtx.pendingSymptomsText) {
+        await conversationSessionService.patchContext(params.farmerId, {
+          pendingSymptomsText: undefined,
+        });
+      }
 
       if (result.escalated) {
         reply += '\n\nOur agronomist team will review your case shortly.';
@@ -528,6 +576,7 @@ export const whatsappInboundPipeline = {
           advisory: result.advisory,
           summary: reply,
           send: params.send,
+          hasProductRecommendations: (result.productRecommendations?.length ?? 0) > 0,
         });
       }
     } catch (err) {

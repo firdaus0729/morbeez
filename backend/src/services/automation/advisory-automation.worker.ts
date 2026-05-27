@@ -3,6 +3,8 @@ import { logger } from '../../lib/logger.js';
 import { supabase } from '../../lib/supabase.js';
 import { whatsappService } from '../whatsapp/whatsapp.service.js';
 import { farmerService } from '../farmer/farmer.service.js';
+import { cultivationLoggingService } from '../whatsapp/cultivation/cultivation-logging.service.js';
+import type { AdvisoryLanguage } from '../ai/types.js';
 
 const POLL_MS = 60_000;
 
@@ -38,6 +40,22 @@ async function processJob(job: {
       { sessionId: job.payload.sessionId }
     );
     logger.info({ farmerId: job.farmer_id }, 'Callback reminder — telecaller queue');
+  } else if (job.job_type === 'cultivation_application_prompt') {
+    await cultivationLoggingService.sendApplicationPrompt(
+      farmer.phone,
+      job.farmer_id,
+      (lang as AdvisoryLanguage) ?? 'en'
+    );
+  } else if (job.job_type === 'cultivation_result_validation') {
+    const activityId = String(job.payload.activityId ?? '');
+    if (activityId) {
+      await cultivationLoggingService.sendResultValidationPrompt(
+        farmer.phone,
+        job.farmer_id,
+        (lang as AdvisoryLanguage) ?? 'en',
+        activityId
+      );
+    }
   }
 
   await supabase

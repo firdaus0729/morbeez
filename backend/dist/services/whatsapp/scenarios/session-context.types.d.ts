@@ -12,5 +12,16 @@ export interface SessionContext {
     chimbDrainage?: 'yes' | 'no' | 'unsure';
     activeMenu?: string;
     lastImageHash?: string;
+    activeCropType?: string;
+    activePlotLabel?: string;
+    /** Symptoms text saved while farmer picks a plot (Scenario 29) */
+    pendingSymptomsText?: string;
+    /** Checkout retry after payment failed (Scenario 36) */
+    pendingCheckoutSessionId?: string;
+    pendingRazorpayOrderId?: string;
+    /** Cultivation follow-ups (30–31) */
+    pendingCultivationPrompt?: 'application' | 'result';
+    pendingResultActivityId?: string;
+    lastAdvisorySessionId?: string;
 }
 //# sourceMappingURL=session-context.types.d.ts.map

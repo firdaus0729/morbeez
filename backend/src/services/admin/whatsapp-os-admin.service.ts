@@ -15,12 +15,18 @@ export const whatsappOsAdminService = {
 
   async updateConversationSession(
     farmerId: string,
-    patch: { aiPaused?: boolean; owner?: 'ai' | 'telecaller' | 'agronomist'; preferredLanguage?: string | null }
+    patch: {
+      aiPaused?: boolean;
+      owner?: 'ai' | 'telecaller' | 'agronomist';
+      preferredLanguage?: string | null;
+      activePlotId?: string | null;
+    }
   ) {
     const payload: Record<string, unknown> = { updated_at: new Date().toISOString() };
     if (patch.aiPaused !== undefined) payload.ai_paused = patch.aiPaused;
     if (patch.owner) payload.conversation_owner = patch.owner;
     if (patch.preferredLanguage !== undefined) payload.preferred_language = patch.preferredLanguage;
+    if (patch.activePlotId !== undefined) payload.active_plot_id = patch.activePlotId;
 
     const { data, error } = await supabase
       .from('conversation_sessions')

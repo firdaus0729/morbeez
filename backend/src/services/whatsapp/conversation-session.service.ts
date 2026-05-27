@@ -15,6 +15,7 @@ export type ConversationState =
   | 'soil_flow'
   | 'terminology_clarify'
   | 'chimb_followup'
+  | 'plot_select'
   | 'human_takeover';
 
 export interface ConversationSession {
@@ -45,7 +46,7 @@ export const conversationSessionService = {
         { onConflict: 'farmer_id,channel' }
       )
       .select(
-        'id, farmer_id, channel, state, preferred_language, conversation_owner, ai_paused, last_menu_at, last_ai_at, context'
+        'id, farmer_id, channel, state, preferred_language, conversation_owner, ai_paused, last_menu_at, last_ai_at, active_plot_id, context'
       )
       .single();
 
@@ -103,6 +104,18 @@ export const conversationSessionService = {
     if (error) {
       logger.error({ error, farmerId, state }, 'Failed to update conversation session');
     }
+  },
+
+  async clearActivePlot(farmerId: string): Promise<void> {
+    const now = new Date().toISOString();
+    await supabase
+      .from('conversation_sessions')
+      .update({ active_plot_id: null, updated_at: now })
+      .eq('farmer_id', farmerId)
+      .eq('channel', 'whatsapp');
+    const ctx = await this.getContext(farmerId);
+    const { activeCropType: _a, activePlotLabel: _b, ...rest } = ctx;
+    await this.patchContext(farmerId, rest);
   },
 
   async shouldPauseAi(farmerId: string): Promise<boolean> {

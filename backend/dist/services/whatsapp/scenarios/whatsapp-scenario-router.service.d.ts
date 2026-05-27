@@ -44,6 +44,8 @@ export type ScenarioRouterResult = {
     duplicateImage: true;
 };
 export declare const whatsappScenarioRouter: {
+    sendPlotPicker(phone: string, farmerId: string, lang: AdvisoryLanguage, send: ScenarioSenders, pendingText?: string): Promise<void>;
+    applyPlotSelection(msg: InboundMessage, captured: ScenarioCapture, lang: AdvisoryLanguage, plotId: string, send: ScenarioSenders): Promise<void>;
     tryRoute(msg: InboundMessage, captured: ScenarioCapture, session: ConversationSession, send: ScenarioSenders): Promise<ScenarioRouterResult>;
     showMainMenu(phone: string, lang: AdvisoryLanguage, send: ScenarioSenders): Promise<void>;
     handleMenuSelection(msg: InboundMessage, captured: ScenarioCapture, lang: AdvisoryLanguage, menuId: string, send: ScenarioSenders): Promise<void>;
@@ -57,6 +59,7 @@ export declare const whatsappScenarioRouter: {
         advisory: import("../../ai/types.js").StructuredAdvisory;
         summary: string;
         send: ScenarioSenders;
+        hasProductRecommendations?: boolean;
     }): Promise<void>;
 };
 //# sourceMappingURL=whatsapp-scenario-router.service.d.ts.map

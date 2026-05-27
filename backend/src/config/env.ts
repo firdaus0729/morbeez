@@ -104,6 +104,26 @@ const envSchema = z.object({
     .string()
     .transform((v) => v !== 'false')
     .default('true'),
+  ENABLE_WHATSAPP_BROADCASTS: z
+    .string()
+    .transform((v) => v !== 'false')
+    .default('true'),
+  WHATSAPP_BROADCAST_MAX_PER_DAY: z.coerce.number().default(2),
+  WHATSAPP_BROADCAST_KIND_COOLDOWN_HOURS: z.coerce.number().default(72),
+  ENABLE_WHATSAPP_ORDER_ALERTS: z
+    .string()
+    .transform((v) => v !== 'false')
+    .default('true'),
+  ENABLE_CULTIVATION_FOLLOW_UPS: z
+    .string()
+    .transform((v) => v !== 'false')
+    .default('true'),
+  CULTIVATION_APPLICATION_DAYS: z.coerce.number().default(5),
+  CULTIVATION_RESULT_DAYS: z.coerce.number().default(10),
+  ENABLE_AI_REUSE_CACHE: z
+    .string()
+    .transform((v) => v !== 'false')
+    .default('true'),
   AI_ESCALATION_THRESHOLD: z.coerce.number().min(0).max(1).default(0.65),
   AI_DAILY_TEXT_LIMIT_FREE: z.coerce.number().default(10),
   AI_DAILY_TEXT_LIMIT_PREMIUM: z.coerce.number().default(100),

@@ -65,6 +65,8 @@ export interface DiagnoseResult {
   productRecommendations: ProductRecommendation[];
   escalated: boolean;
   escalationId?: string;
+  /** Scenario 38 — served from advisory_reuse_cases without OpenAI */
+  reused?: boolean;
 }
 
 export interface ProductRecommendation {

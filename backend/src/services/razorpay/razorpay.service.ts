@@ -87,6 +87,38 @@ export const razorpayService = {
 
     if (event === 'payment.failed') {
       await eventBus.publish('payment.razorpay.failed', { paymentId, status }, 'razorpay');
+
+      const orderId = entity.order_id != null ? String(entity.order_id) : '';
+      if (orderId) {
+        const { data: session } = await supabase
+          .from('checkout_sessions')
+          .select('id, receipt, amount_paise, customer, status')
+          .eq('razorpay_order_id', orderId)
+          .maybeSingle();
+
+        if (session && session.status !== 'paid') {
+          await supabase
+            .from('checkout_sessions')
+            .update({ status: 'failed', updated_at: new Date().toISOString() })
+            .eq('id', session.id);
+
+          const customer = session.customer as { phone?: string } | undefined;
+          const phone = customer?.phone?.replace(/\D/g, '');
+          if (phone) {
+            await eventBus.publish(
+              'order.payment.failed',
+              {
+                phone: phone.length === 10 ? `91${phone}` : phone,
+                checkoutSessionId: session.id,
+                receipt: session.receipt,
+                amountPaise: session.amount_paise,
+                razorpayOrderId: orderId,
+              },
+              'razorpay'
+            );
+          }
+        }
+      }
     }
   },
 };

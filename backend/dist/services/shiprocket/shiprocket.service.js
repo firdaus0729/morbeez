@@ -39,29 +39,68 @@ export const shiprocketService = {
             weight: 0.5,
         };
         const result = await shiprocketRequest('/v1/external/orders/create/adhoc', { method: 'POST', body: JSON.stringify(payload) });
+        const awb = result.awb_code ?? null;
         await supabase.from('shipment_events').insert({
             shopify_order_id: shopifyOrderId,
             provider: 'shiprocket',
             shipment_id: String(result.shipment_id),
-            awb: result.awb_code ?? null,
+            awb,
             status: 'created',
             courier: 'auto',
             raw_payload: result,
         });
-        await eventBus.publish('shipment.created', { shopifyOrderId, shipmentId: result.shipment_id, awb: result.awb_code }, 'shiprocket');
+        const { data: orderRow } = await supabase
+            .from('commerce_orders')
+            .select('phone, order_name')
+            .eq('shopify_order_id', shopifyOrderId)
+            .maybeSingle();
+        await eventBus.publish('shipment.created', {
+            shopifyOrderId,
+            shipmentId: result.shipment_id,
+            awb,
+            phone: orderRow?.phone ?? order.phone,
+            orderName: orderRow?.order_name ?? order.name,
+        }, 'shiprocket');
     },
     async handleTrackingWebhook(body) {
         const awb = String(body.awb ?? '');
         const status = String(body.current_status ?? body.shipment_status ?? 'unknown');
+        const orderId = body.order_id != null ? String(body.order_id) : undefined;
         await supabase.from('shipment_events').insert({
+            shopify_order_id: orderId,
             provider: 'shiprocket',
             awb,
             status,
             event_type: 'tracking.update',
             raw_payload: body,
         });
-        if (status.toLowerCase().includes('delivered')) {
-            await eventBus.publish('shipment.delivered', { awb, status }, 'shiprocket');
+        if (orderId) {
+            await supabase
+                .from('commerce_orders')
+                .update({
+                tracking_awb: awb || undefined,
+                fulfillment_status: status,
+                updated_at: new Date().toISOString(),
+            })
+                .eq('shopify_order_id', orderId);
+        }
+        else if (awb) {
+            await supabase
+                .from('commerce_orders')
+                .update({
+                tracking_awb: awb,
+                fulfillment_status: status,
+                updated_at: new Date().toISOString(),
+            })
+                .eq('tracking_awb', awb);
+        }
+        const statusLower = status.toLowerCase();
+        if (/pick|ship|dispatch|out for delivery|in transit|transit/.test(statusLower) &&
+            !statusLower.includes('delivered')) {
+            await eventBus.publish('shipment.dispatched', { awb, status, shopifyOrderId: orderId }, 'shiprocket');
+        }
+        if (statusLower.includes('delivered')) {
+            await eventBus.publish('shipment.delivered', { awb, status, shopifyOrderId: orderId }, 'shiprocket');
         }
     },
 };

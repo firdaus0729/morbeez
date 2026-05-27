@@ -12,6 +12,8 @@ import { recommendationService } from './recommendation.service.js';
 import { escalationService } from './escalation.service.js';
 import type { DiagnoseInput, DiagnoseResult, StructuredAdvisory } from './types.js';
 import { env } from '../../config/env.js';
+import { aiReuseService, buildSymptomKey } from './ai-reuse.service.js';
+import { computeDap } from '../whatsapp/broadcasts/dap.service.js';
 
 async function getFarmerHistory(farmerId: string): Promise<string> {
   const { data } = await supabase
@@ -86,6 +88,25 @@ export const cropDoctorService = {
     if (sessionErr) throw sessionErr;
 
     const sessionId = session.id;
+
+    const reused = await aiReuseService.tryReuse(input, sessionId);
+    if (reused) {
+      await persistRecommendations(sessionId, reused.productRecommendations);
+      await supabase.from('disease_history').insert({
+        farmer_id: input.farmerId,
+        session_id: sessionId,
+        crop_type: input.cropType,
+        issue_label: reused.advisory.probableIssue,
+        severity: reused.advisory.confidence < 0.5 ? 'high' : reused.advisory.confidence < 0.7 ? 'medium' : 'low',
+      });
+      await eventBus.publish(
+        'advisory.completed',
+        { sessionId, farmerId: input.farmerId, escalated: false, confidence: reused.advisory.confidence, reused: true },
+        'crop-doctor'
+      );
+      return { ...reused, reused: true };
+    }
+
     let plantIdResult = null;
 
     const farmerHistory =
@@ -200,6 +221,37 @@ export const cropDoctorService = {
     if (env.ENABLE_ADVISORY_FOLLOW_UPS) {
       await this.scheduleFollowUp(input.farmerId, sessionId, input.language);
     }
+
+    const { data: farmerRow } = await supabase
+      .from('farmers')
+      .select('district')
+      .eq('id', input.farmerId)
+      .maybeSingle();
+
+    const { data: cropRow } = await supabase
+      .from('farmer_crops')
+      .select('planted_at, created_at')
+      .eq('farmer_id', input.farmerId)
+      .order('is_primary', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    const dap = computeDap(
+      cropRow?.planted_at as string | null,
+      cropRow?.created_at as string | null
+    );
+
+    await aiReuseService.indexSuccessfulCase({
+      sessionId,
+      farmerId: input.farmerId,
+      cropType: input.cropType,
+      district: farmerRow?.district ? String(farmerRow.district).toLowerCase() : null,
+      dap,
+      symptomKey: buildSymptomKey(input.symptomsText, input.voiceTranscript, input.compactHistory),
+      advisory,
+      products: productRecommendations,
+      escalated,
+    });
 
     return {
       sessionId,
