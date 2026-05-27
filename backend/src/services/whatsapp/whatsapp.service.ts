@@ -113,6 +113,20 @@ export const whatsappService = {
     }
   },
 
+  async sendButtons(params: {
+    to: string;
+    body: string;
+    buttons: Array<{ id: string; title: string }>;
+  }): Promise<void> {
+    const provider = getProvider() as WhatsAppProvider;
+    if (!provider.sendButtons) {
+      const labels = params.buttons.map((b) => b.title).join(' / ');
+      await this.sendText(params.to, `${params.body}\n\nReply: ${labels}`);
+      return;
+    }
+    await provider.sendButtons(params);
+  },
+
   async sendList(params: {
     to: string;
     header?: string;
@@ -171,6 +185,12 @@ export const whatsappService = {
             body: p.body,
             buttonText: p.buttonText,
             sections: p.sections,
+          }),
+        buttons: (p) =>
+          this.sendButtons({
+            to: p.phone,
+            body: p.body,
+            buttons: p.buttons,
           }),
       },
       {
@@ -250,6 +270,12 @@ export const whatsappService = {
               body: p.body,
               buttonText: p.buttonText,
               sections: p.sections,
+            }),
+          buttons: (p) =>
+            this.sendButtons({
+              to: p.phone,
+              body: p.body,
+              buttons: p.buttons,
             }),
         },
           {

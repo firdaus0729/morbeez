@@ -16,6 +16,14 @@ type Senders = {
             }>;
         }>;
     }) => Promise<void>;
+    buttons?: (params: {
+        phone: string;
+        body: string;
+        buttons: Array<{
+            id: string;
+            title: string;
+        }>;
+    }) => Promise<void>;
 };
 export declare const whatsappInboundPipeline: {
     process(msg: InboundMessage, send: Senders, hooks?: {
@@ -32,7 +40,7 @@ export declare const whatsappInboundPipeline: {
         phone: string;
         language: AdvisoryLanguage;
         isPremium: boolean;
-    }, sendText: (phone: string, text: string) => Promise<void>): Promise<void>;
+    }, sendText: (phone: string, text: string) => Promise<void>, senders?: Senders): Promise<void>;
     processText(msg: InboundMessage, captured: {
         farmerId: string;
         phone: string;
@@ -55,7 +63,9 @@ export declare const whatsappInboundPipeline: {
         voiceTranscript?: string;
         imageBase64?: string;
         imageMimeType?: string;
+        channel?: "whatsapp" | "api" | "web";
         sendText: (phone: string, text: string) => Promise<void>;
+        send?: Senders;
     }): Promise<void>;
 };
 export {};

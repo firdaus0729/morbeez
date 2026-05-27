@@ -41,6 +41,50 @@ export const whatsappOsAdminService = {
     return data;
   },
 
+  async listCropDailyPrices(cropType?: string) {
+    const today = new Date().toISOString().slice(0, 10);
+    let q = supabase
+      .from('crop_daily_prices')
+      .select('*')
+      .eq('price_date', today)
+      .eq('active', true)
+      .order('market_name');
+    if (cropType) q = q.eq('crop_type', cropType);
+    const { data, error } = await q;
+    throwIfSupabaseError(error, 'Could not load crop prices');
+    return data ?? [];
+  },
+
+  async upsertCropDailyPrice(row: {
+    cropType: string;
+    marketName: string;
+    district?: string;
+    pricePerKg: number;
+    lastYearPricePerKg?: number;
+    priceDate?: string;
+  }) {
+    const priceDate = row.priceDate ?? new Date().toISOString().slice(0, 10);
+    const { data, error } = await supabase
+      .from('crop_daily_prices')
+      .upsert(
+        {
+          crop_type: row.cropType,
+          market_name: row.marketName,
+          district: row.district ?? null,
+          price_per_kg: row.pricePerKg,
+          last_year_price_per_kg: row.lastYearPricePerKg ?? null,
+          price_date: priceDate,
+          active: true,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'crop_type,market_name,price_date' }
+      )
+      .select('*')
+      .single();
+    throwIfSupabaseError(error, 'Could not save crop price');
+    return data;
+  },
+
   async listTerminologyReviewTasks(status: string = 'open') {
     const allowed = new Set(['open', 'in_review', 'resolved', 'dismissed', 'all']);
     const s = allowed.has(status) ? status : 'open';

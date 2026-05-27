@@ -5,6 +5,15 @@ export declare const whatsappOsAdminService: {
         owner?: "ai" | "telecaller" | "agronomist";
         preferredLanguage?: string | null;
     }): Promise<any>;
+    listCropDailyPrices(cropType?: string): Promise<any[]>;
+    upsertCropDailyPrice(row: {
+        cropType: string;
+        marketName: string;
+        district?: string;
+        pricePerKg: number;
+        lastYearPricePerKg?: number;
+        priceDate?: string;
+    }): Promise<any>;
     listTerminologyReviewTasks(status?: string): Promise<any[]>;
 };
 //# sourceMappingURL=whatsapp-os-admin.service.d.ts.map

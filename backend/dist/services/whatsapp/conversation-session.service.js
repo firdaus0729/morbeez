@@ -11,11 +11,33 @@ export const conversationSessionService = {
             state: 'language_select',
             updated_at: now,
         }, { onConflict: 'farmer_id,channel' })
-            .select('id, farmer_id, channel, state, preferred_language, conversation_owner, ai_paused, last_menu_at, last_ai_at')
+            .select('id, farmer_id, channel, state, preferred_language, conversation_owner, ai_paused, last_menu_at, last_ai_at, context')
             .single();
         if (error)
             throw error;
-        return data;
+        const row = data;
+        row.context = (row.context ?? {});
+        return row;
+    },
+    async getContext(farmerId) {
+        const { data } = await supabase
+            .from('conversation_sessions')
+            .select('context')
+            .eq('farmer_id', farmerId)
+            .eq('channel', 'whatsapp')
+            .maybeSingle();
+        return (data?.context ?? {});
+    },
+    async patchContext(farmerId, patch) {
+        const current = await this.getContext(farmerId);
+        const next = { ...current, ...patch };
+        const now = new Date().toISOString();
+        await supabase
+            .from('conversation_sessions')
+            .update({ context: next, updated_at: now })
+            .eq('farmer_id', farmerId)
+            .eq('channel', 'whatsapp');
+        return next;
     },
     async setLanguage(farmerId, language) {
         const now = new Date().toISOString();

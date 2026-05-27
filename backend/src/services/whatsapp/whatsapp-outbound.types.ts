@@ -12,4 +12,9 @@ export interface WhatsAppProvider {
       rows: Array<{ id: string; title: string; description?: string }>;
     }>;
   }) => Promise<void>;
+  sendButtons?: (params: {
+    to: string;
+    body: string;
+    buttons: Array<{ id: string; title: string }>;
+  }) => Promise<void>;
 }

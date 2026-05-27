@@ -566,6 +566,27 @@ export async function adminRoutes(app) {
         const session = await whatsappOsAdminService.updateConversationSession(farmerId, body);
         return reply.send({ ok: true, session });
     });
+    app.get(`${api}/whatsapp/crop-prices`, async (request, reply) => {
+        requireAdmin(request);
+        const q = request.query;
+        const prices = await whatsappOsAdminService.listCropDailyPrices(q.crop);
+        return reply.send({ ok: true, prices });
+    });
+    app.post(`${api}/whatsapp/crop-prices`, async (request, reply) => {
+        requireAdminRole(request, 'admin', 'manager');
+        const body = z
+            .object({
+            cropType: z.string().min(1),
+            marketName: z.string().min(1),
+            district: z.string().optional(),
+            pricePerKg: z.number().positive(),
+            lastYearPricePerKg: z.number().positive().optional(),
+            priceDate: z.string().optional(),
+        })
+            .parse(request.body);
+        const row = await whatsappOsAdminService.upsertCropDailyPrice(body);
+        return reply.send({ ok: true, price: row });
+    });
     app.get(`${api}/terminology/tasks`, async (request, reply) => {
         requireAdmin(request);
         const q = request.query;

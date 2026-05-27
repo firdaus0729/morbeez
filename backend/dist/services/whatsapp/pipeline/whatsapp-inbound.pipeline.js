@@ -17,6 +17,9 @@ import { shopifyLinksService } from '../../shopify/shopify-links.service.js';
 import { whatsappConversationalService } from '../whatsapp-conversational.service.js';
 import { farmerService } from '../../farmer/farmer.service.js';
 import { conversationSessionService } from '../conversation-session.service.js';
+import { mainMenuCopy } from '../scenarios/whatsapp-menu.service.js';
+import { whatsappScenarioRouter } from '../scenarios/whatsapp-scenario-router.service.js';
+import { diagnosisFlowService } from '../scenarios/diagnosis-flow.service.js';
 const CROP_MEDIA_TYPES = new Set(['image', 'image_message', 'document']);
 const VOICE_TYPES = new Set(['audio', 'voice', 'audio_message']);
 function localizedSummary(advisory, language) {
@@ -56,66 +59,6 @@ function languageSelectCopy() {
             { id: 'lang.hi', title: 'Hindi' },
         ],
     };
-}
-function mainMenuCopy(language) {
-    const map = {
-        en: {
-            welcome: 'Welcome to Morbeez Agriculture Assistant 🌱\n\nHow can we help you today?',
-            buttonText: 'Choose',
-            rows: [
-                { id: 'menu.diagnosis', title: 'Disease Diagnosis', description: 'Send crop photo / symptoms' },
-                { id: 'menu.weather', title: 'Weather Alerts', description: 'Rain / humidity / spray suitability' },
-                { id: 'menu.prices', title: 'Daily Prices', description: 'Today’s crop prices' },
-                { id: 'menu.soil', title: 'Soil Testing', description: 'Sample + report help' },
-                { id: 'menu.expert', title: 'Talk to Expert', description: 'Callback from our team' },
-            ],
-        },
-        ml: {
-            welcome: 'മോർബീസ് അഗ്രികൾച്ചർ അസിസ്റ്റന്റിലേക്ക് സ്വാഗതം 🌱\n\nഇന്ന് നിങ്ങളെ എങ്ങനെ സഹായിക്കാം?',
-            buttonText: 'തിരഞ്ഞെടുക്കുക',
-            rows: [
-                { id: 'menu.diagnosis', title: 'Disease Diagnosis', description: 'വിളയുടെ ഫോട്ടോ / ലക്ഷണങ്ങൾ' },
-                { id: 'menu.weather', title: 'Weather Alerts', description: 'മഴ / ഈർപ്പം / സ്പ്രേ' },
-                { id: 'menu.prices', title: 'Daily Prices', description: 'ഇന്നത്തെ വില' },
-                { id: 'menu.soil', title: 'Soil Testing', description: 'സാമ്പിൾ / റിപ്പോർട്ട്' },
-                { id: 'menu.expert', title: 'Talk to Expert', description: 'ടീം കോൾബാക്ക്' },
-            ],
-        },
-        ta: {
-            welcome: 'Morbeez Agriculture Assistant-க்கு வரவேற்கிறோம் 🌱\n\nஇன்று எப்படி உதவலாம்?',
-            buttonText: 'தேர்ந்தெடுக்கவும்',
-            rows: [
-                { id: 'menu.diagnosis', title: 'Disease Diagnosis', description: 'பயிர் புகைப்படம் / அறிகுறிகள்' },
-                { id: 'menu.weather', title: 'Weather Alerts', description: 'மழை / ஈரப்பதம் / ஸ்ப்ரே' },
-                { id: 'menu.prices', title: 'Daily Prices', description: 'இன்றைய விலை' },
-                { id: 'menu.soil', title: 'Soil Testing', description: 'மண் பரிசோதனை' },
-                { id: 'menu.expert', title: 'Talk to Expert', description: 'எங்கள் குழு அழைக்கும்' },
-            ],
-        },
-        kn: {
-            welcome: 'Morbeez Agriculture Assistantಗೆ ಸ್ವಾಗತ 🌱\n\nಇಂದು ಹೇಗೆ ಸಹಾಯ ಮಾಡಲಿ?',
-            buttonText: 'ಆಯ್ಕೆಮಾಡಿ',
-            rows: [
-                { id: 'menu.diagnosis', title: 'Disease Diagnosis', description: 'ಬೆಳೆ ಫೋಟೋ / ಲಕ್ಷಣಗಳು' },
-                { id: 'menu.weather', title: 'Weather Alerts', description: 'ಮಳೆ / ತೇವಾಂಶ / ಸ್ಪ್ರೇ' },
-                { id: 'menu.prices', title: 'Daily Prices', description: 'ಇಂದಿನ ಬೆಲೆ' },
-                { id: 'menu.soil', title: 'Soil Testing', description: 'ಮಣ್ಣಿನ ಪರೀಕ್ಷೆ' },
-                { id: 'menu.expert', title: 'Talk to Expert', description: 'ನಮ್ಮ ತಂಡ ಕರೆಮಾಡುತ್ತದೆ' },
-            ],
-        },
-        hi: {
-            welcome: 'Morbeez Agriculture Assistant में आपका स्वागत है 🌱\n\nआज हम कैसे मदद कर सकते हैं?',
-            buttonText: 'चुनें',
-            rows: [
-                { id: 'menu.diagnosis', title: 'Disease Diagnosis', description: 'फसल फोटो / लक्षण' },
-                { id: 'menu.weather', title: 'Weather Alerts', description: 'बारिश / नमी / स्प्रे' },
-                { id: 'menu.prices', title: 'Daily Prices', description: 'आज के दाम' },
-                { id: 'menu.soil', title: 'Soil Testing', description: 'मिट्टी जांच' },
-                { id: 'menu.expert', title: 'Talk to Expert', description: 'हमारी टीम कॉल करेगी' },
-            ],
-        },
-    };
-    return map[language] ?? map.en;
 }
 async function classifyCommercialLead(farmerId, text) {
     const lower = text.toLowerCase();
@@ -205,6 +148,21 @@ export const whatsappInboundPipeline = {
                 return;
             }
         }
+        const activeLang = (session.preferred_language ?? captured.language);
+        captured.language = activeLang;
+        const routeResult = await whatsappScenarioRouter.tryRoute(msg, captured, session, send);
+        if (routeResult.handled && 'runDiagnosis' in routeResult && routeResult.runDiagnosis) {
+            if (routeResult.welcomePrefix) {
+                await send.text(msg.phone, routeResult.welcomePrefix);
+            }
+            await this.processImage(msg, { ...captured, language: activeLang }, send.text, send);
+            await eventBus.publish('whatsapp.message.received', { phone: msg.phone, farmerId: captured.farmerId, text: msg.text, messageType: msg.msgType }, 'whatsapp');
+            return;
+        }
+        if (routeResult.handled) {
+            await eventBus.publish('whatsapp.message.received', { phone: msg.phone, farmerId: captured.farmerId, text: msg.text, messageType: msg.msgType }, 'whatsapp');
+            return;
+        }
         if (!env.ENABLE_AI_CROP_DOCTOR) {
             if (msg.text)
                 await classifyCommercialLead(captured.farmerId, msg.text);
@@ -227,7 +185,7 @@ export const whatsappInboundPipeline = {
             await this.processVoice(msg, captured, send.text);
         }
         else if (CROP_MEDIA_TYPES.has(msg.msgType)) {
-            await this.processImage(msg, captured, send.text);
+            await this.processImage(msg, captured, send.text, send);
         }
         else if (msg.text) {
             await this.processText(msg, captured, send.text);
@@ -267,7 +225,7 @@ export const whatsappInboundPipeline = {
             sendText,
         });
     },
-    async processImage(msg, captured, sendText) {
+    async processImage(msg, captured, sendText, senders) {
         const usage = await aiUsageControlService.checkAndConsume({
             farmerId: captured.farmerId,
             kind: 'image',
@@ -293,7 +251,8 @@ export const whatsappInboundPipeline = {
             return;
         }
         if (await isDuplicateImage(captured.farmerId, quality.contentHash)) {
-            await sendText(captured.phone, imageQualityMessage(captured.language, 'duplicate'));
+            const ctx = await conversationSessionService.getContext(captured.farmerId);
+            await sendText(captured.phone, diagnosisFlowService.duplicateImageReply(captured.language, ctx.diagnosis?.lastAdvisorySummary));
             return;
         }
         await recordImageHash(captured.farmerId, quality.contentHash);
@@ -304,7 +263,9 @@ export const whatsappInboundPipeline = {
             imageBase64: media.imageBase64,
             imageMimeType: media.imageMimeType,
             symptomsText: msg.text || undefined,
+            channel: 'whatsapp',
             sendText,
+            send: senders,
         });
     },
     async processText(msg, captured, sendText) {
@@ -378,7 +339,7 @@ export const whatsappInboundPipeline = {
                 voiceTranscript: params.voiceTranscript,
                 imageBase64: params.imageBase64,
                 imageMimeType: params.imageMimeType,
-                channel: 'whatsapp',
+                channel: params.channel ?? 'whatsapp',
                 compactHistory,
             });
             const safety = validateAdvisorySafety(result.advisory, params.language);
@@ -395,6 +356,17 @@ export const whatsappInboundPipeline = {
             if (productBlock)
                 reply += `\n\n${productBlock}`;
             await this.sendAndLog(params.farmerId, params.phone, reply.slice(0, 4000), params.sendText);
+            if (params.channel === 'whatsapp' && params.send) {
+                await whatsappScenarioRouter.afterDiagnosis({
+                    phone: params.phone,
+                    farmerId: params.farmerId,
+                    lang: params.language,
+                    sessionId: result.sessionId,
+                    advisory: result.advisory,
+                    summary: reply,
+                    send: params.send,
+                });
+            }
         }
         catch (err) {
             logger.error({ err, farmerId: params.farmerId }, 'WhatsApp pipeline diagnosis failed');

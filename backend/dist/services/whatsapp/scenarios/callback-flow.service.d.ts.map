@@ -1,0 +1,1 @@
+{"version":3,"file":"callback-flow.service.d.ts","sourceRoot":"","sources":["../../../../src/services/whatsapp/scenarios/callback-flow.service.ts"],"names":[],"mappings":"AAGA,OAAO,KAAK,EAAE,gBAAgB,EAAE,MAAM,mBAAmB,CAAC;AAE1D,sCAAsC;AACtC,eAAO,MAAM,mBAAmB;6BACC,MAAM,YAAY,gBAAgB,UAAU,MAAM,GAAG,OAAO,CAAC,MAAM,CAAC;CAiCpG,CAAC"}

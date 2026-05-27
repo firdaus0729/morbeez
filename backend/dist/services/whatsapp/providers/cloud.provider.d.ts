@@ -18,5 +18,14 @@ export declare const cloudWhatsAppProvider: {
             }>;
         }>;
     }): Promise<void>;
+    /** Quick-reply buttons (max 3). */
+    sendButtons(params: {
+        to: string;
+        body: string;
+        buttons: Array<{
+            id: string;
+            title: string;
+        }>;
+    }): Promise<void>;
 };
 //# sourceMappingURL=cloud.provider.d.ts.map

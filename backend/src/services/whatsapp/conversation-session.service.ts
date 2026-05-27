@@ -1,6 +1,7 @@
 import { supabase } from '../../lib/supabase.js';
 import { logger } from '../../lib/logger.js';
 import type { AdvisoryLanguage } from '../ai/types.js';
+import type { SessionContext } from './scenarios/session-context.types.js';
 
 export type ConversationOwner = 'ai' | 'telecaller' | 'agronomist';
 export type ConversationState =
@@ -8,7 +9,12 @@ export type ConversationState =
   | 'main_menu'
   | 'onboarding_minimal'
   | 'diagnosis'
+  | 'diagnosis_awaiting_photos'
+  | 'diagnosis_water_volume'
   | 'root_photos_requested'
+  | 'soil_flow'
+  | 'terminology_clarify'
+  | 'chimb_followup'
   | 'human_takeover';
 
 export interface ConversationSession {
@@ -21,6 +27,7 @@ export interface ConversationSession {
   ai_paused: boolean;
   last_menu_at: string | null;
   last_ai_at: string | null;
+  context: SessionContext;
 }
 
 export const conversationSessionService = {
@@ -38,12 +45,36 @@ export const conversationSessionService = {
         { onConflict: 'farmer_id,channel' }
       )
       .select(
-        'id, farmer_id, channel, state, preferred_language, conversation_owner, ai_paused, last_menu_at, last_ai_at'
+        'id, farmer_id, channel, state, preferred_language, conversation_owner, ai_paused, last_menu_at, last_ai_at, context'
       )
       .single();
 
     if (error) throw error;
-    return data as unknown as ConversationSession;
+    const row = data as unknown as ConversationSession;
+    row.context = (row.context ?? {}) as SessionContext;
+    return row;
+  },
+
+  async getContext(farmerId: string): Promise<SessionContext> {
+    const { data } = await supabase
+      .from('conversation_sessions')
+      .select('context')
+      .eq('farmer_id', farmerId)
+      .eq('channel', 'whatsapp')
+      .maybeSingle();
+    return (data?.context ?? {}) as SessionContext;
+  },
+
+  async patchContext(farmerId: string, patch: Partial<SessionContext>): Promise<SessionContext> {
+    const current = await this.getContext(farmerId);
+    const next = { ...current, ...patch };
+    const now = new Date().toISOString();
+    await supabase
+      .from('conversation_sessions')
+      .update({ context: next, updated_at: now })
+      .eq('farmer_id', farmerId)
+      .eq('channel', 'whatsapp');
+    return next;
   },
 
   async setLanguage(farmerId: string, language: AdvisoryLanguage): Promise<void> {

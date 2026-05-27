@@ -119,4 +119,44 @@ export const cloudWhatsAppProvider = {
       throw new AppError('WhatsApp list send failed', res.status, 'WHATSAPP_LIST_FAILED', err);
     }
   },
+
+  /** Quick-reply buttons (max 3). */
+  async sendButtons(params: {
+    to: string;
+    body: string;
+    buttons: Array<{ id: string; title: string }>;
+  }): Promise<void> {
+    if (!env.WHATSAPP_PHONE_NUMBER_ID || !env.WHATSAPP_ACCESS_TOKEN) {
+      throw new AppError('WhatsApp Cloud API not configured', 503, 'WHATSAPP_NOT_CONFIGURED');
+    }
+
+    const phone = params.to.replace(/\D/g, '');
+    const res = await fetch(`${GRAPH}/${env.WHATSAPP_PHONE_NUMBER_ID}/messages`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${env.WHATSAPP_ACCESS_TOKEN}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        messaging_product: 'whatsapp',
+        to: phone,
+        type: 'interactive',
+        interactive: {
+          type: 'button',
+          body: { text: params.body.slice(0, 1024) },
+          action: {
+            buttons: params.buttons.slice(0, 3).map((b) => ({
+              type: 'reply',
+              reply: { id: b.id.slice(0, 256), title: b.title.slice(0, 20) },
+            })),
+          },
+        },
+      }),
+    });
+
+    if (!res.ok) {
+      const err = await res.text();
+      throw new AppError('WhatsApp buttons send failed', res.status, 'WHATSAPP_BUTTONS_FAILED', err);
+    }
+  },
 };

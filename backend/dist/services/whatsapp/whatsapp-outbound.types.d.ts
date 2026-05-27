@@ -18,5 +18,13 @@ export interface WhatsAppProvider {
             }>;
         }>;
     }) => Promise<void>;
+    sendButtons?: (params: {
+        to: string;
+        body: string;
+        buttons: Array<{
+            id: string;
+            title: string;
+        }>;
+    }) => Promise<void>;
 }
 //# sourceMappingURL=whatsapp-outbound.types.d.ts.map

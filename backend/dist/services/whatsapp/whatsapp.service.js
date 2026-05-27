@@ -96,6 +96,15 @@ export const whatsappService = {
             throw err;
         }
     },
+    async sendButtons(params) {
+        const provider = getProvider();
+        if (!provider.sendButtons) {
+            const labels = params.buttons.map((b) => b.title).join(' / ');
+            await this.sendText(params.to, `${params.body}\n\nReply: ${labels}`);
+            return;
+        }
+        await provider.sendButtons(params);
+    },
     async sendList(params) {
         const provider = getProvider();
         if (!provider.sendList) {
@@ -133,6 +142,11 @@ export const whatsappService = {
                 body: p.body,
                 buttonText: p.buttonText,
                 sections: p.sections,
+            }),
+            buttons: (p) => this.sendButtons({
+                to: p.phone,
+                body: p.body,
+                buttons: p.buttons,
             }),
         }, {
             sendWelcomeTemplate: (phone, farmerId, profileName) => this.sendWelcomeTemplate({ phone, farmerId, profileName }),
@@ -195,6 +209,11 @@ export const whatsappService = {
                         body: p.body,
                         buttonText: p.buttonText,
                         sections: p.sections,
+                    }),
+                    buttons: (p) => this.sendButtons({
+                        to: p.phone,
+                        body: p.body,
+                        buttons: p.buttons,
                     }),
                 }, {
                     sendWelcomeTemplate: (phone, farmerId, profileName) => this.sendWelcomeTemplate({ phone, farmerId, profileName }),
