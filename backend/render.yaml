@@ -1,0 +1,15 @@
+# Render Blueprint — Morbeez API + React console
+# https://render.com/docs/blueprint-spec
+
+services:
+  - type: web
+    name: morbeez-api
+    runtime: node
+    rootDir: backend
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NPM_CONFIG_PRODUCTION
+        value: "false"

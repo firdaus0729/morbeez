@@ -12,6 +12,17 @@ npm install
 npm run dev
 ```
 
+## Deploy on Render
+
+| Setting | Value |
+|---------|--------|
+| **Root directory** | `backend` (not `console-ui`) |
+| **Build command** | `npm install && npm run build` |
+| **Start command** | `npm start` |
+
+Set **`NPM_CONFIG_PRODUCTION=false`** (or use `backend/render.yaml`) so Vite/Tailwind install during build.  
+The build runs `install:ui` for `console-ui` and `field-pwa`, then compiles the API and both frontends.
+
 Health: `GET http://localhost:3000/health`
 
 ## API folder structure

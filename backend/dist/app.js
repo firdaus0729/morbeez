@@ -96,7 +96,7 @@ export async function buildApp() {
         await app.register(fastifyStatic, {
             root: fieldPwaStaticRoot,
             prefix: fieldPrefix,
-            decorateReply: true,
+            decorateReply: false,
         });
         app.get('/field', async (_request, reply) => reply.redirect(fieldPrefix));
     }
