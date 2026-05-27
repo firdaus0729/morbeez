@@ -17,15 +17,9 @@ export function registerEventHandlers() {
             });
         }
     });
+    /* Pipeline already sends OpenAI replies. Legacy handler used non-existent welcome_farmer template. */
     eventBus.on('whatsapp.message.received', async (event) => {
-        const phone = event.payload.phone;
-        if (!phone)
-            return;
-        if (env.ENABLE_WHATSAPP_AUTO_REPLY) {
-            await whatsappService.sendTemplate(phone, 'welcome_farmer', {
-                body: ['Thank you for contacting Morbeez. Our team will respond shortly.'],
-            });
-        }
+        logger.debug({ phone: event.payload.phone, farmerId: event.payload.farmerId }, 'WhatsApp message processed');
     });
     eventBus.on('quotation.requested', async (event) => {
         logger.info({ eventId: event.id }, 'Quotation requested — telecaller queue (M2)');

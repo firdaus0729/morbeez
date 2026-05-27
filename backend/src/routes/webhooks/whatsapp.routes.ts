@@ -92,9 +92,26 @@ export async function whatsappWebhookRoutes(app: FastifyInstance): Promise<void>
 
   app.post('/webhooks/whatsapp', async (request, reply) => {
     const raw = request.body as Buffer;
-    verifyWhatsAppWebhook(raw, request.headers['x-hub-signature-256'] as string);
+    const sig = request.headers['x-hub-signature-256'] as string | undefined;
+
+    try {
+      verifyWhatsAppWebhook(raw, sig);
+    } catch (err) {
+      logger.warn(
+        { hasSignature: Boolean(sig) },
+        'Meta webhook signature verification failed — check WHATSAPP_APP_SECRET on Render'
+      );
+      throw err;
+    }
 
     const payload = JSON.parse(raw.toString()) as Record<string, unknown>;
+    logger.info(
+      {
+        object: payload.object,
+        entries: (payload.entry as unknown[])?.length ?? 0,
+      },
+      'Meta WhatsApp webhook POST received'
+    );
     const idempotencyKey = JSON.stringify(
       (payload.entry as unknown[])?.[0] ?? payload
     ).slice(0, 128);
