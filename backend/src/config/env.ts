@@ -15,7 +15,9 @@ const envSchema = z.object({
   SHOPIFY_ADMIN_API_ACCESS_TOKEN: z.string().min(1),
   SHOPIFY_API_VERSION: z.string().default('2024-10'),
   SHOPIFY_WEBHOOK_SECRET: z.string().min(1),
+  SHOPIFY_APP_CLIENT_ID: z.string().optional(),
   SHOPIFY_APP_CLIENT_SECRET: z.string().optional(),
+  SHOPIFY_APP_SCOPES: z.string().default('write_app_proxy'),
 
   RAZORPAY_KEY_ID: z.string().optional(),
   RAZORPAY_KEY_SECRET: z.string().optional(),
