@@ -58,6 +58,8 @@ declare const envSchema: z.ZodObject<{
     ENABLE_RAZORPAY_CHECKOUT: z.ZodDefault<z.ZodEffects<z.ZodString, boolean, string>>;
     CHECKOUT_SUCCESS_PATH: z.ZodDefault<z.ZodString>;
     ENABLE_WHATSAPP_AUTO_REPLY: z.ZodDefault<z.ZodEffects<z.ZodString, boolean, string>>;
+    /** OpenAI text replies for WhatsApp (greetings, general chat). Default on unless false. */
+    ENABLE_WHATSAPP_OPENAI_REPLY: z.ZodDefault<z.ZodEffects<z.ZodString, boolean, string>>;
     ENABLE_OUTBOX_WORKER: z.ZodDefault<z.ZodEffects<z.ZodString, boolean, string>>;
     ENABLE_AI_CROP_DOCTOR: z.ZodDefault<z.ZodEffects<z.ZodString, boolean, string>>;
     ENABLE_ADVISORY_FOLLOW_UPS: z.ZodDefault<z.ZodEffects<z.ZodString, boolean, string>>;
@@ -97,6 +99,7 @@ declare const envSchema: z.ZodObject<{
     ENABLE_RAZORPAY_CHECKOUT: boolean;
     CHECKOUT_SUCCESS_PATH: string;
     ENABLE_WHATSAPP_AUTO_REPLY: boolean;
+    ENABLE_WHATSAPP_OPENAI_REPLY: boolean;
     ENABLE_OUTBOX_WORKER: boolean;
     ENABLE_AI_CROP_DOCTOR: boolean;
     ENABLE_ADVISORY_FOLLOW_UPS: boolean;
@@ -200,6 +203,7 @@ declare const envSchema: z.ZodObject<{
     ENABLE_RAZORPAY_CHECKOUT?: string | undefined;
     CHECKOUT_SUCCESS_PATH?: string | undefined;
     ENABLE_WHATSAPP_AUTO_REPLY?: string | undefined;
+    ENABLE_WHATSAPP_OPENAI_REPLY?: string | undefined;
     ENABLE_OUTBOX_WORKER?: string | undefined;
     ENABLE_AI_CROP_DOCTOR?: string | undefined;
     ENABLE_ADVISORY_FOLLOW_UPS?: string | undefined;
@@ -241,6 +245,7 @@ export declare const env: {
     ENABLE_RAZORPAY_CHECKOUT: boolean;
     CHECKOUT_SUCCESS_PATH: string;
     ENABLE_WHATSAPP_AUTO_REPLY: boolean;
+    ENABLE_WHATSAPP_OPENAI_REPLY: boolean;
     ENABLE_OUTBOX_WORKER: boolean;
     ENABLE_AI_CROP_DOCTOR: boolean;
     ENABLE_ADVISORY_FOLLOW_UPS: boolean;

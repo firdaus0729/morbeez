@@ -1,7 +1,7 @@
 import { supabase } from '../../lib/supabase.js';
 import { NotFoundError, ValidationError } from '../../lib/errors.js';
 import { eventBus } from '../../events/bus.js';
-import { isValidIndianPhone, normalizePhone } from '../../lib/phone.js';
+import { isValidIndianPhone, normalizePhone, normalizeWhatsAppWaId } from '../../lib/phone.js';
 export const farmerService = {
     async upsertByPhone(input) {
         const phone = normalizePhone(input.phone);
@@ -17,6 +17,27 @@ export const farmerService = {
             state: input.state ?? null,
             shopify_customer_id: input.shopifyCustomerId ?? null,
             source: input.source ?? 'api',
+            updated_at: new Date().toISOString(),
+        }, { onConflict: 'phone' })
+            .select()
+            .single();
+        if (error)
+            throw error;
+        await eventBus.publish('farmer.upserted', { farmerId: data.id, phone }, 'farmer-service');
+        return data;
+    },
+    /** WhatsApp wa_id — accepts 10-digit Indian numbers from Meta without strict pre-check. */
+    async upsertFromWhatsApp(input) {
+        const phone = normalizeWhatsAppWaId(input.phone);
+        if (phone.length < 8)
+            throw new ValidationError('Invalid WhatsApp phone number');
+        const { data, error } = await supabase
+            .from('farmers')
+            .upsert({
+            phone,
+            name: input.name ?? null,
+            preferred_language: input.preferredLanguage ?? 'en',
+            source: 'whatsapp',
             updated_at: new Date().toISOString(),
         }, { onConflict: 'phone' })
             .select()

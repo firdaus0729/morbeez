@@ -22,6 +22,14 @@ export declare const whatsappInboundPipeline: {
         language: AdvisoryLanguage;
         isPremium: boolean;
     }, sendText: (phone: string, text: string) => Promise<void>): Promise<void>;
+    /** OpenAI chat for greetings/help; full Crop Doctor when symptoms are detailed. */
+    replyToText(msg: InboundMessage, captured: {
+        farmerId: string;
+        phone: string;
+        language: AdvisoryLanguage;
+        isPremium: boolean;
+    }, sendText: (phone: string, text: string) => Promise<void>): Promise<void>;
+    sendAndLog(farmerId: string, phone: string, text: string, sendText: (phone: string, text: string) => Promise<void>): Promise<void>;
     runDiagnosis(params: {
         farmerId: string;
         phone: string;

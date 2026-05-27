@@ -15,6 +15,12 @@ export interface FarmerCropInput {
 }
 export declare const farmerService: {
     upsertByPhone(input: FarmerInput): Promise<any>;
+    /** WhatsApp wa_id — accepts 10-digit Indian numbers from Meta without strict pre-check. */
+    upsertFromWhatsApp(input: {
+        phone: string;
+        name?: string;
+        preferredLanguage?: string;
+    }): Promise<any>;
     upsertFromShopifyCustomer(input: {
         shopifyCustomerId: string;
         phone: string;

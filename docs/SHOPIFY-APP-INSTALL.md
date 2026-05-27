@@ -21,6 +21,10 @@ the **App URL** in Partner Dashboard is set to the **storefront** (or left blank
 
 Release the version, then reinstall on the store.
 
+**Important:** App URL and Allowed redirection URL must use the **same host** (`morbeez-api.onrender.com`). If App URL is still `morbeez.myshopify.com`, OAuth fails with:
+
+`The redirect_uri and application url must have matching hosts`
+
 ## Render env
 
 ```env

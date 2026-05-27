@@ -2,11 +2,10 @@ import { supabase } from '../../../lib/supabase.js';
 import { farmerService } from '../../farmer/farmer.service.js';
 export const leadCaptureService = {
     async captureAndIdentify(msg, language) {
-        const farmer = await farmerService.upsertByPhone({
+        const farmer = await farmerService.upsertFromWhatsApp({
             phone: msg.phone,
             name: msg.profileName,
             preferredLanguage: language,
-            source: 'whatsapp',
         });
         if (farmer.preferred_language !== language) {
             await supabase

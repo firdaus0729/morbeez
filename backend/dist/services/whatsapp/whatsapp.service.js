@@ -5,6 +5,7 @@ import { interaktWhatsAppProvider } from './providers/interakt.provider.js';
 import { adsgyaniWhatsAppProvider } from './providers/adsgyani.provider.js';
 import { whatsappInboundPipeline } from './pipeline/whatsapp-inbound.pipeline.js';
 import { whatsappOutboundService } from './whatsapp-outbound.service.js';
+import { logger } from '../../lib/logger.js';
 function getProvider() {
     if (env.WHATSAPP_PROVIDER === 'adsgyani')
         return adsgyaniWhatsAppProvider;
@@ -86,7 +87,14 @@ function toInboundFromAdsGyani(payload, parsed) {
 export const whatsappService = {
     getProvider,
     async sendText(to, text) {
-        await getProvider().sendText(to, text);
+        try {
+            await getProvider().sendText(to, text);
+            logger.info({ to: to.replace(/\d(?=\d{4})/g, '*'), chars: text.length }, 'WhatsApp outbound sent');
+        }
+        catch (err) {
+            logger.error({ err, to }, 'WhatsApp outbound failed');
+            throw err;
+        }
     },
     async sendTemplate(to, templateName, params) {
         await getProvider().sendTemplate(to, templateName, params);
@@ -118,31 +126,47 @@ export const whatsappService = {
         if (!messages?.length)
             return;
         for (const msg of messages) {
-            const from = String(msg.from ?? '');
-            const msgType = String(msg.type ?? 'text');
-            const text = msg.text?.body ??
-                msg.button?.text ??
-                msg.image?.caption ??
-                '';
-            const contact = contacts?.find((c) => String(c.wa_id) === from);
-            const profile = contact?.profile;
-            const inbound = {
-                channel: 'whatsapp_cloud',
-                phone: from,
-                messageId: String(msg.id ?? ''),
-                msgType,
-                text,
-                profileName: profile?.name,
-                rawPayload: msg,
-                messageObject: msg,
-                attribution: {
-                    referralSource: 'whatsapp',
-                    campaignSource: value?.metadata?.campaign_id,
-                },
-            };
-            await whatsappInboundPipeline.process(inbound, (phone, t) => this.sendText(phone, t), {
-                sendWelcomeTemplate: (phone, farmerId, profileName) => this.sendWelcomeTemplate({ phone, farmerId, profileName }),
-            });
+            try {
+                const from = String(msg.from ?? '');
+                if (!from)
+                    continue;
+                const msgType = String(msg.type ?? 'text');
+                let text = msg.text?.body ??
+                    msg.button?.text ??
+                    '';
+                const interactive = msg.interactive;
+                if (!text && interactive) {
+                    const btn = interactive.button_reply;
+                    const list = interactive.list_reply;
+                    text = btn?.title ?? list?.title ?? '';
+                }
+                if (!text) {
+                    text = msg.image?.caption ?? '';
+                }
+                const contact = contacts?.find((c) => String(c.wa_id) === from);
+                const profile = contact?.profile;
+                logger.info({ from, msgType, hasText: Boolean(text) }, 'WhatsApp Cloud inbound message');
+                const inbound = {
+                    channel: 'whatsapp_cloud',
+                    phone: from,
+                    messageId: String(msg.id ?? ''),
+                    msgType,
+                    text: text ?? '',
+                    profileName: profile?.name,
+                    rawPayload: msg,
+                    messageObject: msg,
+                    attribution: {
+                        referralSource: 'whatsapp',
+                        campaignSource: value?.metadata?.campaign_id,
+                    },
+                };
+                await whatsappInboundPipeline.process(inbound, (phone, t) => this.sendText(phone, t), {
+                    sendWelcomeTemplate: (phone, farmerId, profileName) => this.sendWelcomeTemplate({ phone, farmerId, profileName }),
+                });
+            }
+            catch (err) {
+                logger.error({ err, msgId: msg.id }, 'WhatsApp inbound message processing failed');
+            }
         }
     },
 };

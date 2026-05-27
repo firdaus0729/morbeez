@@ -114,14 +114,24 @@ export async function shopifyOAuthRoutes(app) {
     app.get('/auth/shopify/install', async (request, reply) => {
         const shop = request.query.shop ?? env.SHOPIFY_STORE_DOMAIN;
         if (!clientId) {
-            return reply.code(500).send({ error: 'SHOPIFY_APP_CLIENT_ID not configured' });
+            return reply
+                .code(500)
+                .type('text/html')
+                .send('<h1>Missing SHOPIFY_APP_CLIENT_ID</h1><p>Add Partner app Client ID to Render env and redeploy.</p>');
+        }
+        const redirectUri = `${apiBase}/auth/shopify/callback`;
+        const appUrl = `${apiBase}/auth/shopify/installed`;
+        if (env.NODE_ENV === 'production' && apiBase.includes('localhost')) {
+            return reply.type('text/html').send(`<h1>API_BASE_URL not set on Render</h1>
+<p>Set <code>API_BASE_URL=https://morbeez-api.onrender.com</code> and redeploy.</p>
+<p>OAuth would use redirect: <code>${redirectUri}</code></p>`);
         }
         const scopes = env.SHOPIFY_APP_SCOPES;
-        const redirectUri = `${apiBase}/auth/shopify/callback`;
         const url = new URL(`https://${shop}/admin/oauth/authorize`);
         url.searchParams.set('client_id', clientId);
         url.searchParams.set('scope', scopes);
         url.searchParams.set('redirect_uri', redirectUri);
+        logger.info({ shop, redirectUri, appUrl }, 'Shopify OAuth install redirect');
         return reply.redirect(url.toString());
     });
 }

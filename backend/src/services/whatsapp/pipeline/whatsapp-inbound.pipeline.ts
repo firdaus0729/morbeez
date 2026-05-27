@@ -26,6 +26,8 @@ import {
 import { validateAdvisorySafety } from './safety-validation.service.js';
 import { extractInboundMedia } from './media-extract.service.js';
 import { shopifyLinksService } from '../../shopify/shopify-links.service.js';
+import { whatsappConversationalService } from '../whatsapp-conversational.service.js';
+import { farmerService } from '../../farmer/farmer.service.js';
 import type { InboundMessage } from './types.js';
 
 const CROP_MEDIA_TYPES = new Set(['image', 'image_message', 'document']);
@@ -87,6 +89,7 @@ export const whatsappInboundPipeline = {
 
     if (!env.ENABLE_AI_CROP_DOCTOR) {
       if (msg.text) await classifyCommercialLead(captured.farmerId, msg.text);
+      await this.replyToText(msg, captured, sendText);
       await eventBus.publish(
         'whatsapp.message.received',
         { phone: msg.phone, farmerId: captured.farmerId, text: msg.text, messageType: msg.msgType },
@@ -234,21 +237,42 @@ export const whatsappInboundPipeline = {
     captured: { farmerId: string; phone: string; language: AdvisoryLanguage; isPremium: boolean },
     sendText: (phone: string, text: string) => Promise<void>
   ): Promise<void> {
-    const usage = await aiUsageControlService.checkAndConsume({
-      farmerId: captured.farmerId,
-      kind: 'text',
-      isPremium: captured.isPremium,
-    });
-    if (!usage.allowed) {
-      await sendText(captured.phone, aiUsageControlService.usageLimitMessage(captured.language, usage.reason));
+    await this.replyToText(msg, captured, sendText);
+  },
+
+  /** OpenAI chat for greetings/help; full Crop Doctor when symptoms are detailed. */
+  async replyToText(
+    msg: InboundMessage,
+    captured: { farmerId: string; phone: string; language: AdvisoryLanguage; isPremium: boolean },
+    sendText: (phone: string, text: string) => Promise<void>
+  ): Promise<void> {
+    if (!msg.text?.trim()) {
+      await sendText(
+        captured.phone,
+        captured.language === 'ml'
+          ? 'ദയവായി ടെക്സ്റ്റ് അയയ്ക്കുക, വിളയുടെ ഫോട്ടോ, അല്ലെങ്കിൽ വോയ്സ് നോട്ട്.'
+          : 'Please send a text message, crop photo, or voice note.'
+      );
       return;
     }
 
-    const agriIntent =
-      /crop|doctor|disease|pest|leaf|വിള|രോഗ|பயிர|ಬೆಳೆ|फसल/i.test(msg.text) ||
-      msg.text.length > 40;
+    await classifyCommercialLead(captured.farmerId, msg.text);
 
-    if (agriIntent) {
+    const agriDiagnosisIntent =
+      /crop|doctor|disease|pest|leaf|yellow|wilt|spot|fungus|symptom|ginger|pepper|വിള|രോഗ|കീട|பயிர|ಬೆಳೆ|फसल/i.test(
+        msg.text
+      ) && msg.text.trim().length >= 25;
+
+    if (env.ENABLE_AI_CROP_DOCTOR && agriDiagnosisIntent) {
+      const usage = await aiUsageControlService.checkAndConsume({
+        farmerId: captured.farmerId,
+        kind: 'text',
+        isPremium: captured.isPremium,
+      });
+      if (!usage.allowed) {
+        await sendText(captured.phone, aiUsageControlService.usageLimitMessage(captured.language, usage.reason));
+        return;
+      }
       await this.runDiagnosis({
         farmerId: captured.farmerId,
         phone: captured.phone,
@@ -256,15 +280,45 @@ export const whatsappInboundPipeline = {
         symptomsText: msg.text,
         sendText,
       });
-    } else {
-      await classifyCommercialLead(captured.farmerId, msg.text);
-      await sendText(
-        captured.phone,
-        captured.language === 'ml'
-          ? 'വിള പ്രശ്നത്തിന്റെ ഫോട്ടോ അയയ്ക്കുക, അല്ലെങ്കിൽ "quote" / "call" ടൈപ്പ് ചെയ്യുക.'
-          : 'Send a crop photo for AI advisory, or type "quote" for prices / "call" for callback.'
-      );
+      return;
     }
+
+    if (whatsappConversationalService.isEnabled()) {
+      const usage = await aiUsageControlService.checkAndConsume({
+        farmerId: captured.farmerId,
+        kind: 'text',
+        isPremium: captured.isPremium,
+      });
+      if (!usage.allowed) {
+        await sendText(captured.phone, aiUsageControlService.usageLimitMessage(captured.language, usage.reason));
+        return;
+      }
+
+      const reply = await whatsappConversationalService.generateReply({
+        userMessage: msg.text,
+        language: captured.language,
+        farmerName: msg.profileName,
+      });
+      await this.sendAndLog(captured.farmerId, captured.phone, reply, sendText);
+      return;
+    }
+
+    await sendText(
+      captured.phone,
+      captured.language === 'ml'
+        ? 'നമസ്കാരം! മോർബീസ് ക്രോപ്പ് ഡോക്ടർ. വിളയുടെ ഫോട്ടോ അയയ്ക്കുക അല്ലെങ്കിൽ പ്രശ്നം വിവരിക്കുക.'
+        : 'Hello from Morbeez Crop Doctor! Send a crop photo or describe your crop problem (crop name + symptoms).'
+    );
+  },
+
+  async sendAndLog(
+    farmerId: string,
+    phone: string,
+    text: string,
+    sendText: (phone: string, text: string) => Promise<void>
+  ): Promise<void> {
+    await sendText(phone, text);
+    await farmerService.logInteraction(farmerId, 'whatsapp', 'outbound', text.slice(0, 500)).catch(() => {});
   },
 
   async runDiagnosis(params: {
@@ -313,7 +367,7 @@ export const whatsappInboundPipeline = {
       );
       if (productBlock) reply += `\n\n${productBlock}`;
 
-      await params.sendText(params.phone, reply.slice(0, 4000));
+      await this.sendAndLog(params.farmerId, params.phone, reply.slice(0, 4000), params.sendText);
     } catch (err) {
       logger.error({ err, farmerId: params.farmerId }, 'WhatsApp pipeline diagnosis failed');
       await params.sendText(

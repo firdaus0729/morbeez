@@ -79,6 +79,11 @@ const envSchema = z.object({
     .string()
     .transform((v) => v === 'true')
     .default('false'),
+  /** OpenAI text replies for WhatsApp (greetings, general chat). Default on unless false. */
+  ENABLE_WHATSAPP_OPENAI_REPLY: z
+    .string()
+    .transform((v) => v !== 'false')
+    .default('true'),
   ENABLE_OUTBOX_WORKER: z
     .string()
     .transform((v) => v !== 'false')

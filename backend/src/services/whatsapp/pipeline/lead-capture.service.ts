@@ -5,11 +5,10 @@ import type { AdvisoryLanguage } from '../../ai/types.js';
 
 export const leadCaptureService = {
   async captureAndIdentify(msg: InboundMessage, language: AdvisoryLanguage) {
-    const farmer = await farmerService.upsertByPhone({
+    const farmer = await farmerService.upsertFromWhatsApp({
       phone: msg.phone,
       name: msg.profileName,
       preferredLanguage: language,
-      source: 'whatsapp',
     });
 
     if (farmer.preferred_language !== language) {

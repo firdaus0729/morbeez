@@ -5,6 +5,7 @@ import { interaktWhatsAppProvider } from './providers/interakt.provider.js';
 import { adsgyaniWhatsAppProvider } from './providers/adsgyani.provider.js';
 import { whatsappInboundPipeline } from './pipeline/whatsapp-inbound.pipeline.js';
 import { whatsappOutboundService } from './whatsapp-outbound.service.js';
+import { logger } from '../../lib/logger.js';
 import type { InboundMessage } from './pipeline/types.js';
 
 function getProvider() {
@@ -102,7 +103,13 @@ export const whatsappService = {
   getProvider,
 
   async sendText(to: string, text: string): Promise<void> {
-    await getProvider().sendText(to, text);
+    try {
+      await getProvider().sendText(to, text);
+      logger.info({ to: to.replace(/\d(?=\d{4})/g, '*'), chars: text.length }, 'WhatsApp outbound sent');
+    } catch (err) {
+      logger.error({ err, to }, 'WhatsApp outbound failed');
+      throw err;
+    }
   },
 
   async sendTemplate(to: string, templateName: string, params: { body: string[] }): Promise<void> {
@@ -153,40 +160,56 @@ export const whatsappService = {
     if (!messages?.length) return;
 
     for (const msg of messages) {
-      const from = String(msg.from ?? '');
-      const msgType = String(msg.type ?? 'text');
-      const text =
-        (msg.text as Record<string, string> | undefined)?.body ??
-        (msg.button as Record<string, string> | undefined)?.text ??
-        (msg.image as Record<string, string> | undefined)?.caption ??
-        '';
+      try {
+        const from = String(msg.from ?? '');
+        if (!from) continue;
 
-      const contact = contacts?.find((c) => String(c.wa_id) === from);
-      const profile = contact?.profile as Record<string, string> | undefined;
-
-      const inbound: InboundMessage = {
-        channel: 'whatsapp_cloud',
-        phone: from,
-        messageId: String(msg.id ?? ''),
-        msgType,
-        text,
-        profileName: profile?.name,
-        rawPayload: msg as Record<string, unknown>,
-        messageObject: msg as Record<string, unknown>,
-        attribution: {
-          referralSource: 'whatsapp',
-          campaignSource: (value?.metadata as Record<string, string> | undefined)?.campaign_id,
-        },
-      };
-
-      await whatsappInboundPipeline.process(
-        inbound,
-        (phone, t) => this.sendText(phone, t),
-        {
-          sendWelcomeTemplate: (phone, farmerId, profileName) =>
-            this.sendWelcomeTemplate({ phone, farmerId, profileName }),
+        const msgType = String(msg.type ?? 'text');
+        let text =
+          (msg.text as Record<string, string> | undefined)?.body ??
+          (msg.button as Record<string, string> | undefined)?.text ??
+          '';
+        const interactive = msg.interactive as Record<string, unknown> | undefined;
+        if (!text && interactive) {
+          const btn = interactive.button_reply as Record<string, string> | undefined;
+          const list = interactive.list_reply as Record<string, string> | undefined;
+          text = btn?.title ?? list?.title ?? '';
         }
-      );
+        if (!text) {
+          text = (msg.image as Record<string, string> | undefined)?.caption ?? '';
+        }
+
+        const contact = contacts?.find((c) => String(c.wa_id) === from);
+        const profile = contact?.profile as Record<string, string> | undefined;
+
+        logger.info({ from, msgType, hasText: Boolean(text) }, 'WhatsApp Cloud inbound message');
+
+        const inbound: InboundMessage = {
+          channel: 'whatsapp_cloud',
+          phone: from,
+          messageId: String(msg.id ?? ''),
+          msgType,
+          text: text ?? '',
+          profileName: profile?.name,
+          rawPayload: msg as Record<string, unknown>,
+          messageObject: msg as Record<string, unknown>,
+          attribution: {
+            referralSource: 'whatsapp',
+            campaignSource: (value?.metadata as Record<string, string> | undefined)?.campaign_id,
+          },
+        };
+
+        await whatsappInboundPipeline.process(
+          inbound,
+          (phone, t) => this.sendText(phone, t),
+          {
+            sendWelcomeTemplate: (phone, farmerId, profileName) =>
+              this.sendWelcomeTemplate({ phone, farmerId, profileName }),
+          }
+        );
+      } catch (err) {
+        logger.error({ err, msgId: msg.id }, 'WhatsApp inbound message processing failed');
+      }
     }
   },
 };
