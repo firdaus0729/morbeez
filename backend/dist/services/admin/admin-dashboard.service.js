@@ -261,8 +261,8 @@ export const adminDashboardService = {
                 combos: true,
                 flashSales: true,
                 aiAdvisory: true,
-                whatsapp: false,
-                analytics: false,
+                whatsapp: true,
+                analytics: true,
             },
         };
     },

@@ -19,8 +19,11 @@ export const whatsappOsAdminService = {
             payload.conversation_owner = patch.owner;
         if (patch.preferredLanguage !== undefined)
             payload.preferred_language = patch.preferredLanguage;
-        if (patch.activePlotId !== undefined)
-            payload.active_plot_id = patch.activePlotId;
+        const blockId = patch.activeBlockId ?? patch.activePlotId;
+        if (blockId !== undefined) {
+            payload.active_block_id = blockId;
+            payload.active_plot_id = blockId;
+        }
         const { data, error } = await supabase
             .from('conversation_sessions')
             .update(payload)
@@ -83,6 +86,26 @@ export const whatsappOsAdminService = {
         const { data, error } = await q;
         throwIfSupabaseError(error, 'Could not load terminology tasks');
         return data ?? [];
+    },
+    async updateTerminologyTask(id, patch) {
+        const payload = { status: patch.status };
+        if (patch.assignedTo !== undefined)
+            payload.assigned_to = patch.assignedTo;
+        if (patch.resolutionMeaning !== undefined)
+            payload.resolution_meaning = patch.resolutionMeaning;
+        if (patch.status === 'resolved' || patch.status === 'dismissed') {
+            payload.resolved_at = new Date().toISOString();
+            if (patch.resolvedBy)
+                payload.resolved_by = patch.resolvedBy;
+        }
+        const { data, error } = await supabase
+            .from('terminology_review_tasks')
+            .update(payload)
+            .eq('id', id)
+            .select('*, farmers(phone, name, district, state, preferred_language)')
+            .single();
+        throwIfSupabaseError(error, 'Could not update terminology task');
+        return data;
     },
 };
 //# sourceMappingURL=whatsapp-os-admin.service.js.map

@@ -14,6 +14,7 @@ import type { DiagnoseInput, DiagnoseResult, StructuredAdvisory } from './types.
 import { env } from '../../config/env.js';
 import { aiReuseService, buildSymptomKey } from './ai-reuse.service.js';
 import { computeDap } from '../whatsapp/broadcasts/dap.service.js';
+import { recommendationRecordsService } from '../core/recommendation-records.service.js';
 
 async function getFarmerHistory(farmerId: string): Promise<string> {
   const { data } = await supabase
@@ -229,15 +230,15 @@ export const cropDoctorService = {
       .maybeSingle();
 
     const { data: cropRow } = await supabase
-      .from('farmer_crops')
-      .select('planted_at, created_at')
+      .from('farm_blocks')
+      .select('planting_date, created_at')
       .eq('farmer_id', input.farmerId)
       .order('is_primary', { ascending: false })
       .limit(1)
       .maybeSingle();
 
     const dap = computeDap(
-      cropRow?.planted_at as string | null,
+      cropRow?.planting_date as string | null,
       cropRow?.created_at as string | null
     );
 
@@ -251,6 +252,24 @@ export const cropDoctorService = {
       advisory,
       products: productRecommendations,
       escalated,
+    });
+
+    const activeBlockId = (input as { activePlotId?: string | null }).activePlotId;
+    const recText =
+      input.language === 'ml' && advisory.farmerSummaryMl
+        ? advisory.farmerSummaryMl
+        : advisory.farmerSummaryEn || advisory.probableIssue;
+
+    await recommendationRecordsService.create({
+      farmerId: input.farmerId,
+      blockId: activeBlockId ?? undefined,
+      aiSessionId: sessionId,
+      source: 'ai',
+      issueDetected: advisory.probableIssue,
+      recommendationText: recText,
+      products: productRecommendations,
+      language: input.language,
+      status: 'draft',
     });
 
     return {

@@ -92,20 +92,23 @@ export const farmerService = {
   },
 
   async getById(id: string) {
-    const { data, error } = await supabase.from('farmers').select('*, farmer_crops(*)').eq('id', id).single();
+    const { data, error } = await supabase.from('farmers').select('*, farm_blocks(*)').eq('id', id).single();
     if (error || !data) throw new NotFoundError('Farmer not found');
     return data;
   },
 
   async addCrop(farmerId: string, crop: FarmerCropInput) {
     const { data, error } = await supabase
-      .from('farmer_crops')
+      .from('farm_blocks')
       .insert({
         farmer_id: farmerId,
-        crop_type: crop.cropType,
-        acreage: crop.acreage ?? null,
+        name: `${crop.cropType} Block`,
+        crop_name: crop.cropType,
+        crop_type: crop.cropType.toLowerCase(),
+        acreage_decimal: crop.acreage ?? null,
         stage: crop.stage ?? null,
         is_primary: crop.isPrimary ?? false,
+        planting_date: new Date().toISOString().slice(0, 10),
       })
       .select()
       .single();

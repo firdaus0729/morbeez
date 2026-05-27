@@ -1,33 +1,36 @@
 import { supabase } from '../../../lib/supabase.js';
+import { blockService } from '../../core/block.service.js';
 /** Minimal context for OpenAI — avoids sending full chat history (token cost). */
 export async function fetchCompactFarmerContext(farmerId, options) {
+    const blockId = options?.activeBlockId ?? options?.activePlotId;
     let cropType = 'ginger';
     let cropStage;
-    let activePlotId;
-    if (options?.activePlotId) {
-        const { data: plot } = await supabase
-            .from('farmer_crops')
-            .select('id, crop_type, stage')
-            .eq('id', options.activePlotId)
-            .eq('farmer_id', farmerId)
-            .maybeSingle();
-        if (plot) {
-            cropType = plot.crop_type;
-            cropStage = plot.stage ?? undefined;
-            activePlotId = plot.id;
+    let activeBlockId;
+    let dap;
+    if (blockId) {
+        const block = await blockService.getById(blockId, farmerId);
+        if (block) {
+            cropType = block.crop_type;
+            cropStage = block.stage ?? undefined;
+            activeBlockId = block.id;
+            dap = block.dap;
         }
     }
-    if (!activePlotId) {
-        const { data: crops } = await supabase
-            .from('farmer_crops')
-            .select('id, crop_type, stage, is_primary')
-            .eq('farmer_id', farmerId)
-            .order('is_primary', { ascending: false })
-            .limit(3);
-        const primary = crops?.find((c) => c.is_primary) ?? crops?.[0];
-        cropType = primary?.crop_type ?? 'ginger';
-        cropStage = primary?.stage ?? undefined;
-        activePlotId = primary?.id;
+    if (!activeBlockId) {
+        const primary = await blockService.getPrimaryBlock(farmerId);
+        if (primary) {
+            cropType = primary.crop_type;
+            cropStage = primary.stage ?? undefined;
+            activeBlockId = primary.id;
+            dap = primary.dap;
+        }
+        else {
+            const ensured = await blockService.ensureDefaultBlock(farmerId);
+            cropType = ensured.crop_type;
+            cropStage = ensured.stage ?? undefined;
+            activeBlockId = ensured.id;
+            dap = ensured.dap;
+        }
     }
     const { data: history } = await supabase
         .from('disease_history')
@@ -56,10 +59,20 @@ export async function fetchCompactFarmerContext(farmerId, options) {
             lastSpray = JSON.stringify(recs[0].dosage_schedule).slice(0, 200);
         }
     }
-    return { cropType, cropStage, recentIssues, lastSpray, activePlotId };
+    return {
+        cropType,
+        cropStage,
+        recentIssues,
+        lastSpray,
+        activePlotId: activeBlockId,
+        activeBlockId,
+        dap,
+    };
 }
 export function formatCompactHistory(ctx) {
     const parts = [`Recent issues: ${ctx.recentIssues}`];
+    if (ctx.dap != null)
+        parts.push(`DAP: ${ctx.dap}`);
     if (ctx.lastSpray)
         parts.push(`Last spray guidance: ${ctx.lastSpray}`);
     return parts.join('\n');

@@ -34,14 +34,14 @@ export const broadcastEngineService = {
                 matches.push({
                     rule,
                     crop,
-                    dap: computeDap(crop.planted_at, crop.created_at),
+                    dap: computeDap(crop.planting_date ?? crop.planted_at ?? null, crop.created_at),
                 });
                 continue;
             }
             for (const crop of crops) {
                 if (rule.crop_type !== 'all' && crop.crop_type !== rule.crop_type)
                     continue;
-                const dap = computeDap(crop.planted_at, crop.created_at);
+                const dap = computeDap(crop.planting_date ?? crop.planted_at ?? null, crop.created_at);
                 if (dapInTargetRange(dap, rule)) {
                     matches.push({ rule, crop, dap });
                     break;
@@ -147,7 +147,7 @@ export const broadcastEngineService = {
         }
         let farmerQuery = supabase
             .from('farmers')
-            .select('id, phone, preferred_language, district, farmer_crops(crop_type, planted_at, created_at, is_primary)')
+            .select('id, phone, preferred_language, district, farm_blocks(crop_type, planting_date, created_at, is_primary, archived_at)')
             .not('phone', 'is', null);
         if (options?.farmerId) {
             farmerQuery = farmerQuery.eq('id', options.farmerId);
@@ -163,7 +163,7 @@ export const broadcastEngineService = {
                 continue;
             result.farmersScanned++;
             const language = (row.preferred_language ?? 'en');
-            const crops = row.farmer_crops ?? [];
+            const crops = (row.farm_blocks ?? []).filter((b) => !b.archived_at);
             if (!crops.length)
                 continue;
             const farmer = {

@@ -10,6 +10,7 @@ import { escalationService } from './escalation.service.js';
 import { env } from '../../config/env.js';
 import { aiReuseService, buildSymptomKey } from './ai-reuse.service.js';
 import { computeDap } from '../whatsapp/broadcasts/dap.service.js';
+import { recommendationRecordsService } from '../core/recommendation-records.service.js';
 async function getFarmerHistory(farmerId) {
     const { data } = await supabase
         .from('disease_history')
@@ -190,13 +191,13 @@ export const cropDoctorService = {
             .eq('id', input.farmerId)
             .maybeSingle();
         const { data: cropRow } = await supabase
-            .from('farmer_crops')
-            .select('planted_at, created_at')
+            .from('farm_blocks')
+            .select('planting_date, created_at')
             .eq('farmer_id', input.farmerId)
             .order('is_primary', { ascending: false })
             .limit(1)
             .maybeSingle();
-        const dap = computeDap(cropRow?.planted_at, cropRow?.created_at);
+        const dap = computeDap(cropRow?.planting_date, cropRow?.created_at);
         await aiReuseService.indexSuccessfulCase({
             sessionId,
             farmerId: input.farmerId,
@@ -207,6 +208,21 @@ export const cropDoctorService = {
             advisory,
             products: productRecommendations,
             escalated,
+        });
+        const activeBlockId = input.activePlotId;
+        const recText = input.language === 'ml' && advisory.farmerSummaryMl
+            ? advisory.farmerSummaryMl
+            : advisory.farmerSummaryEn || advisory.probableIssue;
+        await recommendationRecordsService.create({
+            farmerId: input.farmerId,
+            blockId: activeBlockId ?? undefined,
+            aiSessionId: sessionId,
+            source: 'ai',
+            issueDetected: advisory.probableIssue,
+            recommendationText: recText,
+            products: productRecommendations,
+            language: input.language,
+            status: 'draft',
         });
         return {
             sessionId,

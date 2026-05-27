@@ -3,7 +3,7 @@ import { env } from '../../config/env.js';
 import { supabase } from '../../lib/supabase.js';
 import { aiLogService } from './ai-log.service.js';
 import { recommendationService } from './recommendation.service.js';
-import { computeDap } from '../whatsapp/broadcasts/dap.service.js';
+import { blockService } from '../core/block.service.js';
 const MIN_CONFIDENCE = 0.65;
 export function buildSymptomKey(...parts) {
     const raw = parts
@@ -25,21 +25,14 @@ async function getFarmerDistrict(farmerId) {
     const { data } = await supabase.from('farmers').select('district').eq('id', farmerId).maybeSingle();
     return data?.district ? String(data.district).trim().toLowerCase() : null;
 }
-async function getFarmerDap(farmerId, activePlotId) {
-    let q = supabase
-        .from('farmer_crops')
-        .select('planted_at, created_at, is_primary')
-        .eq('farmer_id', farmerId);
-    if (activePlotId) {
-        q = q.eq('id', activePlotId);
+async function getFarmerDap(farmerId, activeBlockId) {
+    if (activeBlockId) {
+        const block = await blockService.getById(activeBlockId, farmerId);
+        if (block)
+            return block.dap;
     }
-    else {
-        q = q.order('is_primary', { ascending: false });
-    }
-    const { data } = await q.limit(1).maybeSingle();
-    if (!data)
-        return 0;
-    return computeDap(data.planted_at, data.created_at);
+    const primary = await blockService.getPrimaryBlock(farmerId);
+    return primary?.dap ?? 0;
 }
 export const aiReuseService = {
     async peekMatch(input) {

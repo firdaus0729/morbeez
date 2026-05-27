@@ -17,19 +17,7 @@ export const farmerWelcomeService = {
     const crop = ctx.cropType.charAt(0).toUpperCase() + ctx.cropType.slice(1);
     const stage = ctx.cropStage ? ` — ${ctx.cropStage}` : '';
 
-    let dapLine = '';
-    const { data: cropRow } = await supabase
-      .from('farmer_crops')
-      .select('stage, created_at')
-      .eq('farmer_id', farmerId)
-      .eq('is_primary', true)
-      .maybeSingle();
-
-    if (cropRow?.created_at) {
-      const planted = new Date(cropRow.created_at);
-      const dap = Math.floor((Date.now() - planted.getTime()) / (24 * 60 * 60 * 1000));
-      if (dap > 0 && dap < 400) dapLine = `\n${crop} — ${dap} DAP`;
-    }
+    const dapLine = ctx.dap && ctx.dap > 0 && ctx.dap < 400 ? `\n${crop} — ${ctx.dap} DAP` : '';
 
     const risk =
       ctx.recentIssues !== 'none'

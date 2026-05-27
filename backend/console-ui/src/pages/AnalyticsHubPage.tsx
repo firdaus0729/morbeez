@@ -1,0 +1,456 @@
+import { useCallback, useEffect, useState } from 'react';
+import { api } from '../lib/api';
+
+const base = '/console/api/v1/os/analytics';
+
+type Tab = 'geography' | 'retention' | 'broadcasts' | 'recommendations';
+
+type Summary = {
+  periodDays: number;
+  kpis: {
+    farmers: number;
+    activeFarmers30d: number;
+    retentionRate30d: number;
+    broadcastsSent: number;
+    broadcastFailureRate: number;
+    recommendationsTotal: number;
+    recommendationSuccessRate: number;
+    topDistrict: string;
+  };
+  geography: {
+    districts: Array<{
+      district: string;
+      farmers: number;
+      blocks: number;
+      recommendations: number;
+      broadcastsSent: number;
+      intensity: number;
+      pincodeCount: number;
+    }>;
+    pincodeFirstNote?: string;
+  };
+  retention: {
+    totalFarmers: number;
+    active7d: number;
+    active30d: number;
+    rate7d: number;
+    rate30d: number;
+    inactive90d: number;
+    signupCohortByWeek: Array<{ label: string; signups: number }>;
+  };
+  broadcasts: {
+    totals: { sent: number; failed: number; skipped: number; failureRate: number };
+    byKind: Array<{ kind: string; sent: number; failed: number; skipped: number; total: number }>;
+    dailySent: number[];
+    dailyLabels: string[];
+  };
+  recommendations: {
+    totals: {
+      created: number;
+      communicated: number;
+      withOutcome: number;
+      successRate: number;
+      approvalRate: number;
+    };
+    byStatus: Array<{ status: string; count: number }>;
+    byOutcome: Array<{ outcome: string; count: number }>;
+    funnel: Array<{ stage: string; count: number }>;
+  };
+};
+
+type PincodeRow = {
+  pincode: string;
+  village: string | null;
+  taluk: string;
+  farmers: number;
+  recommendations: number;
+};
+
+const TABS: Array<{ id: Tab; label: string }> = [
+  { id: 'geography', label: 'District heatmap' },
+  { id: 'retention', label: 'Retention' },
+  { id: 'broadcasts', label: 'Broadcasts' },
+  { id: 'recommendations', label: 'Recommendations' },
+];
+
+export function AnalyticsHubPage() {
+  const [days, setDays] = useState(30);
+  const [tab, setTab] = useState<Tab>('geography');
+  const [data, setData] = useState<Summary | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [selectedDistrict, setSelectedDistrict] = useState<string | null>(null);
+  const [pincodes, setPincodes] = useState<PincodeRow[]>([]);
+  const [pinLoading, setPinLoading] = useState(false);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const d = await api<{ ok: boolean } & Summary>(`${base}/summary?days=${days}`);
+      setData(d);
+      setSelectedDistrict(null);
+      setPincodes([]);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to load analytics');
+    } finally {
+      setLoading(false);
+    }
+  }, [days]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  async function drillDistrict(district: string) {
+    setSelectedDistrict(district);
+    setPinLoading(true);
+    try {
+      const d = await api<{ ok: boolean; pincodes: PincodeRow[] }>(
+        `${base}/geography/${encodeURIComponent(district)}/pincodes?days=${days}`
+      );
+      setPincodes(d.pincodes ?? []);
+    } catch {
+      setPincodes([]);
+    } finally {
+      setPinLoading(false);
+    }
+  }
+
+  const k = data?.kpis;
+
+  return (
+    <div>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold text-slate-900">Analytics</h1>
+          <p className="mt-1 text-sm text-slate-600">
+            Pincode-first geography, farmer retention, WhatsApp broadcasts, recommendation outcomes
+          </p>
+        </div>
+        <label className="text-sm text-slate-600">
+          Period
+          <select
+            className="ml-2 rounded-lg border border-slate-200 px-2 py-1.5"
+            value={days}
+            onChange={(e) => setDays(Number(e.target.value))}
+          >
+            {[7, 14, 30, 60, 90].map((d) => (
+              <option key={d} value={d}>
+                Last {d} days
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+
+      {error ? <p className="mt-4 text-sm text-red-600">{error}</p> : null}
+
+      {k && !loading ? (
+        <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <KpiCard label="Farmers" value={String(k.farmers)} sub={`${k.retentionRate30d}% active 30d`} />
+          <KpiCard label="Broadcasts sent" value={String(k.broadcastsSent)} sub={`${k.broadcastFailureRate}% failed`} />
+          <KpiCard
+            label="Recommendations"
+            value={String(k.recommendationsTotal)}
+            sub={`${k.recommendationSuccessRate}% positive outcomes`}
+          />
+          <KpiCard label="Top district" value={k.topDistrict} sub="by activity score" />
+        </div>
+      ) : null}
+
+      <div className="mt-6 flex flex-wrap gap-2 border-b border-slate-200 pb-2">
+        {TABS.map((t) => (
+          <button
+            key={t.id}
+            type="button"
+            onClick={() => setTab(t.id)}
+            className={`rounded-lg px-3 py-1.5 text-sm ${
+              tab === t.id
+                ? 'bg-emerald-50 font-medium text-emerald-800'
+                : 'text-slate-600 hover:bg-slate-50'
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {loading ? (
+        <p className="mt-8 text-sm text-slate-500">Loading…</p>
+      ) : !data ? null : (
+        <div className="mt-6">
+          {tab === 'geography' ? (
+            <div className="space-y-6">
+              {data.geography.pincodeFirstNote ? (
+                <p className="text-xs text-slate-500">{data.geography.pincodeFirstNote}</p>
+              ) : null}
+              <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+                <table className="w-full text-left text-sm">
+                  <thead className="bg-slate-50 text-xs uppercase text-slate-500">
+                    <tr>
+                      <th className="px-4 py-3">District</th>
+                      <th className="px-4 py-3">Intensity</th>
+                      <th className="px-4 py-3">Farmers</th>
+                      <th className="px-4 py-3">Blocks</th>
+                      <th className="px-4 py-3">Recs</th>
+                      <th className="px-4 py-3">Broadcasts</th>
+                      <th className="px-4 py-3">Pincodes</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {data.geography.districts.map((d) => (
+                      <tr key={d.district} className="border-t border-slate-100">
+                        <td className="px-4 py-3">
+                          <button
+                            type="button"
+                            className="font-medium text-emerald-700 hover:underline"
+                            onClick={() => drillDistrict(d.district)}
+                          >
+                            {d.district}
+                          </button>
+                        </td>
+                        <td className="px-4 py-3">
+                          <HeatBar intensity={d.intensity} />
+                        </td>
+                        <td className="px-4 py-3">{d.farmers}</td>
+                        <td className="px-4 py-3">{d.blocks}</td>
+                        <td className="px-4 py-3">{d.recommendations}</td>
+                        <td className="px-4 py-3">{d.broadcastsSent}</td>
+                        <td className="px-4 py-3">{d.pincodeCount}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {data.geography.districts.length === 0 ? (
+                  <p className="px-4 py-8 text-center text-sm text-slate-500">
+                    No geography data — assign pincodes to farmers in Intelligence hub.
+                  </p>
+                ) : null}
+              </div>
+
+              {selectedDistrict ? (
+                <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                  <h2 className="font-medium text-slate-900">
+                    Pincode breakdown — {selectedDistrict}
+                  </h2>
+                  {pinLoading ? (
+                    <p className="mt-2 text-sm text-slate-500">Loading pincodes…</p>
+                  ) : (
+                    <table className="mt-3 w-full text-left text-sm">
+                      <thead className="text-xs uppercase text-slate-500">
+                        <tr>
+                          <th className="py-2">Pincode</th>
+                          <th className="py-2">Village</th>
+                          <th className="py-2">Taluk</th>
+                          <th className="py-2">Farmers</th>
+                          <th className="py-2">Recs ({days}d)</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {pincodes.map((p) => (
+                          <tr key={p.pincode} className="border-t border-slate-50">
+                            <td className="py-2 font-mono text-xs">{p.pincode}</td>
+                            <td className="py-2">{p.village ?? '—'}</td>
+                            <td className="py-2">{p.taluk}</td>
+                            <td className="py-2">{p.farmers}</td>
+                            <td className="py-2">{p.recommendations}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+                </section>
+              ) : null}
+            </div>
+          ) : null}
+
+          {tab === 'retention' ? (
+            <div className="grid gap-6 lg:grid-cols-2">
+              <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+                <h2 className="font-medium text-slate-900">Active farmers</h2>
+                <dl className="mt-4 space-y-3 text-sm">
+                  <Row label="Total farmers" value={data.retention.totalFarmers} />
+                  <Row label="Active (7 days)" value={`${data.retention.active7d} (${data.retention.rate7d}%)`} />
+                  <Row label="Active (30 days)" value={`${data.retention.active30d} (${data.retention.rate30d}%)`} />
+                  <Row label="Inactive 90+ days" value={data.retention.inactive90d} />
+                </dl>
+                <p className="mt-4 text-xs text-slate-500">
+                  Active = login or CRM interaction in the window.
+                </p>
+              </section>
+              <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+                <h2 className="font-medium text-slate-900">New signups by week</h2>
+                <div className="mt-4 space-y-2">
+                  {data.retention.signupCohortByWeek.map((w) => (
+                    <div key={w.label} className="flex items-center gap-3 text-sm">
+                      <span className="w-16 shrink-0 text-slate-500">{w.label}</span>
+                      <div className="flex-1 rounded-full bg-slate-100">
+                        <div
+                          className="h-2 rounded-full bg-emerald-500"
+                          style={{
+                            width: `${Math.min(100, (w.signups / Math.max(1, ...data.retention.signupCohortByWeek.map((x) => x.signups))) * 100)}%`,
+                          }}
+                        />
+                      </div>
+                      <span className="w-8 text-right font-medium">{w.signups}</span>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            </div>
+          ) : null}
+
+          {tab === 'broadcasts' ? (
+            <div className="space-y-6">
+              <div className="grid gap-3 sm:grid-cols-3">
+                <KpiCard label="Sent" value={String(data.broadcasts.totals.sent)} />
+                <KpiCard label="Failed" value={String(data.broadcasts.totals.failed)} />
+                <KpiCard label="Skipped" value={String(data.broadcasts.totals.skipped)} />
+              </div>
+              <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                <h2 className="font-medium text-slate-900">Daily sends (last 14 days)</h2>
+                <MiniBarChart labels={data.broadcasts.dailyLabels} values={data.broadcasts.dailySent} />
+              </section>
+              <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+                <h2 className="border-b border-slate-100 px-4 py-3 text-sm font-medium">By broadcast kind</h2>
+                <table className="w-full text-left text-sm">
+                  <thead className="bg-slate-50 text-xs uppercase text-slate-500">
+                    <tr>
+                      <th className="px-4 py-3">Kind</th>
+                      <th className="px-4 py-3">Sent</th>
+                      <th className="px-4 py-3">Failed</th>
+                      <th className="px-4 py-3">Skipped</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {data.broadcasts.byKind.map((b) => (
+                      <tr key={b.kind} className="border-t border-slate-100">
+                        <td className="px-4 py-3">{b.kind.replace(/_/g, ' ')}</td>
+                        <td className="px-4 py-3">{b.sent}</td>
+                        <td className="px-4 py-3">{b.failed}</td>
+                        <td className="px-4 py-3">{b.skipped}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </section>
+            </div>
+          ) : null}
+
+          {tab === 'recommendations' ? (
+            <div className="space-y-6">
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <KpiCard label="Created" value={String(data.recommendations.totals.created)} />
+                <KpiCard label="Approval rate" value={`${data.recommendations.totals.approvalRate}%`} />
+                <KpiCard label="Communicated" value={String(data.recommendations.totals.communicated)} />
+                <KpiCard label="Success rate" value={`${data.recommendations.totals.successRate}%`} />
+              </div>
+              <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                <h2 className="font-medium text-slate-900">Workflow funnel</h2>
+                <div className="mt-4 space-y-2">
+                  {data.recommendations.funnel.map((f) => (
+                    <div key={f.stage} className="flex items-center gap-3 text-sm">
+                      <span className="w-36 shrink-0 text-slate-600">{f.stage}</span>
+                      <div className="flex-1 rounded-full bg-slate-100">
+                        <div
+                          className="h-2 rounded-full bg-violet-500"
+                          style={{
+                            width: `${Math.min(100, (f.count / Math.max(1, data.recommendations.totals.created)) * 100)}%`,
+                          }}
+                        />
+                      </div>
+                      <span className="w-10 text-right font-medium">{f.count}</span>
+                    </div>
+                  ))}
+                </div>
+              </section>
+              <div className="grid gap-6 lg:grid-cols-2">
+                <StatusTable title="By status" rows={data.recommendations.byStatus} />
+                <StatusTable title="By outcome" rows={data.recommendations.byOutcome.map((o) => ({ status: o.outcome, count: o.count }))} />
+              </div>
+            </div>
+          ) : null}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function KpiCard({ label, value, sub }: { label: string; value: string; sub?: string }) {
+  return (
+    <article className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+      <p className="text-xs uppercase tracking-wide text-slate-500">{label}</p>
+      <p className="mt-2 text-2xl font-semibold text-slate-900">{value}</p>
+      {sub ? <p className="mt-1 text-xs text-slate-500">{sub}</p> : null}
+    </article>
+  );
+}
+
+function Row({ label, value }: { label: string; value: string | number }) {
+  return (
+    <div className="flex justify-between gap-4">
+      <dt className="text-slate-600">{label}</dt>
+      <dd className="font-medium text-slate-900">{value}</dd>
+    </div>
+  );
+}
+
+function HeatBar({ intensity }: { intensity: number }) {
+  return (
+    <div className="flex items-center gap-2">
+      <div className="h-2 w-24 overflow-hidden rounded-full bg-slate-100">
+        <div
+          className="h-full rounded-full bg-emerald-500"
+          style={{ width: `${Math.min(100, intensity)}%` }}
+        />
+      </div>
+      <span className="text-xs text-slate-500">{intensity}</span>
+    </div>
+  );
+}
+
+function MiniBarChart({ labels, values }: { labels: string[]; values: number[] }) {
+  const max = Math.max(1, ...values);
+  return (
+    <div className="mt-4 flex items-end gap-1 overflow-x-auto pb-2" style={{ minHeight: 120 }}>
+      {values.map((v, i) => (
+        <div key={labels[i] ?? i} className="flex min-w-[2rem] flex-1 flex-col items-center gap-1">
+          <div
+            className="w-full rounded-t bg-emerald-400"
+            style={{ height: `${Math.max(4, (v / max) * 96)}px` }}
+            title={String(v)}
+          />
+          <span className="text-[10px] text-slate-500">{labels[i]}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function StatusTable({
+  title,
+  rows,
+}: {
+  title: string;
+  rows: Array<{ status: string; count: number }>;
+}) {
+  return (
+    <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+      <h2 className="border-b border-slate-100 px-4 py-3 text-sm font-medium">{title}</h2>
+      <table className="w-full text-left text-sm">
+        <tbody>
+          {rows.map((r) => (
+            <tr key={r.status} className="border-t border-slate-100">
+              <td className="px-4 py-2 capitalize">{r.status.replace(/_/g, ' ')}</td>
+              <td className="px-4 py-2 text-right font-medium">{r.count}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      {rows.length === 0 ? (
+        <p className="px-4 py-6 text-center text-sm text-slate-500">No data in this period.</p>
+      ) : null}
+    </section>
+  );
+}

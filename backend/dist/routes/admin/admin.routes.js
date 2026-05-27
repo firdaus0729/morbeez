@@ -18,6 +18,15 @@ import { shopifyProductsService } from '../../services/shopify/shopify.products.
 import { whatsappOsAdminService } from '../../services/admin/whatsapp-os-admin.service.js';
 import { whatsappBroadcastAdminService } from '../../services/admin/whatsapp-broadcast-admin.service.js';
 import { crmInternalNotesService } from '../../services/admin/crm-internal-notes.service.js';
+import { osFoundationRoutes } from './os-foundation.routes.js';
+import { osOperationsRoutes } from './os-operations.routes.js';
+import { osTelecallerRoutes } from './os-telecaller.routes.js';
+import { osIntelligenceRoutes } from './os-intelligence.routes.js';
+import { osAgronomistRoutes } from './os-agronomist.routes.js';
+import { osFieldRoutes } from './os-field.routes.js';
+import { osAnalyticsRoutes } from './os-analytics.routes.js';
+import { osSettingsRoutes } from './os-settings.routes.js';
+import { getModulesForRole, canApproveRecommendations } from '../../lib/rbac.js';
 import { requireAdmin, requireAdminRole } from '../../middleware/adminAuth.js';
 import { supabase } from '../../lib/supabase.js';
 import { throwIfSupabaseError } from '../../lib/supabase-errors.js';
@@ -146,7 +155,14 @@ export async function adminRoutes(app) {
     app.get(`${api}/auth/me`, async (request, reply) => {
         const admin = requireAdmin(request);
         const profile = await adminAuthService.me(admin.id);
-        return reply.send({ ok: true, admin: profile });
+        const role = String(profile.role);
+        const modules = await getModulesForRole(role);
+        return reply.send({
+            ok: true,
+            admin: profile,
+            modules,
+            canApproveRecommendations: canApproveRecommendations(role),
+        });
     });
     app.get(`${api}/stats`, async (request, reply) => {
         requireAdmin(request);
@@ -564,6 +580,7 @@ export async function adminRoutes(app) {
             owner: z.enum(['ai', 'telecaller', 'agronomist']).optional(),
             preferredLanguage: z.enum(['en', 'ml', 'ta', 'kn', 'hi']).nullable().optional(),
             activePlotId: z.string().uuid().nullable().optional(),
+            activeBlockId: z.string().uuid().nullable().optional(),
         })
             .parse(request.body);
         const session = await whatsappOsAdminService.updateConversationSession(farmerId, body);
@@ -1270,5 +1287,13 @@ export async function adminRoutes(app) {
         }, admin.id);
         return reply.send({ ok: true, intelligence });
     });
+    await app.register(osFoundationRoutes);
+    await app.register(osOperationsRoutes);
+    await app.register(osTelecallerRoutes);
+    await app.register(osIntelligenceRoutes);
+    await app.register(osAgronomistRoutes);
+    await app.register(osFieldRoutes);
+    await app.register(osAnalyticsRoutes);
+    await app.register(osSettingsRoutes);
 }
 //# sourceMappingURL=admin.routes.js.map

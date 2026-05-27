@@ -1,6 +1,7 @@
 import { supabase } from '../../../lib/supabase.js';
 import type { AdvisoryLanguage } from '../../ai/types.js';
 import { conversationSessionService } from '../conversation-session.service.js';
+import { blockService } from '../../core/block.service.js';
 
 export interface FarmerPlot {
   id: string;
@@ -49,30 +50,49 @@ function plotDisplayName(plot: FarmerPlot, lang: AdvisoryLanguage): string {
 
 export const multiPlotService = {
   async listPlots(farmerId: string): Promise<FarmerPlot[]> {
-    const { data } = await supabase
-      .from('farmer_crops')
-      .select('id, crop_type, stage, acreage, plot_label, is_primary')
-      .eq('farmer_id', farmerId)
-      .order('is_primary', { ascending: false });
-
-    return (data ?? []) as FarmerPlot[];
+    const blocks = await blockService.listByFarmer(farmerId);
+    if (blocks.length === 0) {
+      const created = await blockService.ensureDefaultBlock(farmerId);
+      return [
+        {
+          id: created.id,
+          crop_type: created.crop_type,
+          stage: created.stage,
+          acreage: created.acreage_decimal,
+          plot_label: created.plot_label,
+          is_primary: created.is_primary,
+        },
+      ];
+    }
+    return blocks.map((b) => ({
+      id: b.id,
+      crop_type: b.crop_type,
+      stage: b.stage,
+      acreage: b.acreage_decimal,
+      plot_label: b.plot_label,
+      is_primary: b.is_primary,
+    }));
   },
 
   async getActivePlotId(farmerId: string): Promise<string | null> {
     const { data } = await supabase
       .from('conversation_sessions')
-      .select('active_plot_id')
+      .select('active_block_id, active_plot_id')
       .eq('farmer_id', farmerId)
       .eq('channel', 'whatsapp')
       .maybeSingle();
-    return data?.active_plot_id ?? null;
+    return data?.active_block_id ?? data?.active_plot_id ?? null;
   },
 
   async setActivePlot(farmerId: string, plot: FarmerPlot): Promise<void> {
     const now = new Date().toISOString();
     await supabase
       .from('conversation_sessions')
-      .update({ active_plot_id: plot.id, updated_at: now })
+      .update({
+        active_block_id: plot.id,
+        active_plot_id: plot.id,
+        updated_at: now,
+      })
       .eq('farmer_id', farmerId)
       .eq('channel', 'whatsapp');
 

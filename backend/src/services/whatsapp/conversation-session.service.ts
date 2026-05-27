@@ -46,7 +46,7 @@ export const conversationSessionService = {
         { onConflict: 'farmer_id,channel' }
       )
       .select(
-        'id, farmer_id, channel, state, preferred_language, conversation_owner, ai_paused, last_menu_at, last_ai_at, active_plot_id, context'
+        'id, farmer_id, channel, state, preferred_language, conversation_owner, ai_paused, last_menu_at, last_ai_at, active_plot_id, active_block_id, context'
       )
       .single();
 
@@ -110,7 +110,7 @@ export const conversationSessionService = {
     const now = new Date().toISOString();
     await supabase
       .from('conversation_sessions')
-      .update({ active_plot_id: null, updated_at: now })
+      .update({ active_plot_id: null, active_block_id: null, updated_at: now })
       .eq('farmer_id', farmerId)
       .eq('channel', 'whatsapp');
     const ctx = await this.getContext(farmerId);

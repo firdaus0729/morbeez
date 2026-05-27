@@ -264,7 +264,11 @@ export const telecallerAdminService = {
     const farmerId = String(data.farmer_id);
 
     const [cropsRes, tasksRes, callsRes, interactionsRes, ordersRes] = await Promise.all([
-      supabase.from('farmer_crops').select('crop_type, acreage, is_primary').eq('farmer_id', farmerId),
+      supabase
+        .from('farm_blocks')
+        .select('id, crop_type, acreage, is_primary, name, plot_label, planting_date')
+        .eq('farmer_id', farmerId)
+        .order('is_primary', { ascending: false }),
       supabase
         .from('crm_tasks')
         .select('*')
@@ -329,7 +333,8 @@ export const telecallerAdminService = {
 
     timeline.sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime());
 
-    const crops = (cropsRes.data ?? []).map((c) => String(c.crop_type));
+    const blocks = cropsRes.data ?? [];
+    const crops = blocks.map((c) => String(c.crop_type));
     const primaryCrop = crops[0] ?? '—';
     const nextTask = (tasksRes.data ?? []).find((t) => t.status === 'pending');
 
@@ -354,10 +359,17 @@ export const telecallerAdminService = {
         rating: lead.leadScore,
       },
       farmOverview: {
-        totalBlocks: metadata.totalBlocks ?? 1,
+        totalBlocks: blocks.length || Number(metadata.totalBlocks) || 1,
         totalArea: metadata.totalArea ?? '—',
         primaryCrop,
         soilType: metadata.soilType ?? 'Loamy',
+        blocks: blocks.map((b) => ({
+          id: String((b as { id: string }).id),
+          name: String((b as { name?: string }).name ?? (b as { plot_label?: string }).plot_label ?? 'Block'),
+          cropType: String(b.crop_type),
+          acreage: b.acreage,
+          isPrimary: Boolean(b.is_primary),
+        })),
       },
       soilReport: {
         reportId: metadata.soilReportId ?? '—',
@@ -855,7 +867,10 @@ export const telecallerAdminService = {
       diseasePest?: string;
       diseaseTone?: string;
       actionTaken?: string;
-      parameters?: { label: string; value: string }[];
+      parameters?: Array<{ label: string; value: string; key?: string }>;
+      photoUrls?: string[];
+      agronomistName?: string;
+      agronomistRole?: string;
     }
   ) {
     const { data, error } = await supabase
@@ -866,19 +881,18 @@ export const telecallerAdminService = {
         block_id: input.blockId ?? null,
         block_name: input.blockName,
         crop_type: input.cropType,
-        agronomist_name: 'Field Agronomist',
-        agronomist_role: 'Field Agronomist',
+        agronomist_name: input.agronomistName ?? 'Field Agronomist',
+        agronomist_role: input.agronomistRole ?? 'Field Agronomist',
         observations: input.observations,
         disease_pest: input.diseasePest ?? 'Pending review',
         disease_tone: input.diseaseTone ?? 'warning',
         action_taken: input.actionTaken,
-        parameters: input.parameters ?? [
-          { label: 'Leaf Stage', value: 'Vegetative' },
-          { label: 'SPAD', value: '42' },
-          { label: 'Soil Moisture', value: '55%' },
-        ],
+        parameters:
+          input.parameters && input.parameters.length > 0
+            ? input.parameters
+            : [{ label: 'Visit', value: 'Recorded from field PWA' }],
         follow_up_at: new Date(Date.now() + 7 * 86400000).toISOString(),
-        photo_urls: [],
+        photo_urls: input.photoUrls ?? [],
       })
       .select()
       .single();

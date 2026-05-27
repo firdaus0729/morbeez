@@ -75,13 +75,14 @@ export const broadcastThrottleService = {
       return { allowed: false, reason: 'duplicate_kind' };
     }
 
-    // Irrelevant crop: skip crop-specific broadcast if farmer has no matching crop
+    // Irrelevant crop: skip crop-specific broadcast if farmer has no matching block crop
     if (params.cropType !== 'all') {
       const { count } = await supabase
-        .from('farmer_crops')
+        .from('farm_blocks')
         .select('id', { count: 'exact', head: true })
         .eq('farmer_id', params.farmerId)
-        .eq('crop_type', params.cropType);
+        .eq('crop_type', params.cropType)
+        .is('archived_at', null);
 
       if (!count) {
         return { allowed: false, reason: 'crop_not_relevant' };

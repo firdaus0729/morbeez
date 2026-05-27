@@ -97,10 +97,17 @@ export declare const telecallerAdminService: {
             rating: number;
         };
         farmOverview: {
-            totalBlocks: {};
+            totalBlocks: number;
             totalArea: {};
             primaryCrop: string;
             soilType: {};
+            blocks: {
+                id: string;
+                name: string;
+                cropType: string;
+                acreage: any;
+                isPrimary: boolean;
+            }[];
         };
         soilReport: {
             reportId: {};
@@ -194,10 +201,17 @@ export declare const telecallerAdminService: {
             rating: number;
         };
         farmOverview: {
-            totalBlocks: {};
+            totalBlocks: number;
             totalArea: {};
             primaryCrop: string;
             soilType: {};
+            blocks: {
+                id: string;
+                name: string;
+                cropType: string;
+                acreage: any;
+                isPrimary: boolean;
+            }[];
         };
         soilReport: {
             reportId: {};
@@ -288,10 +302,17 @@ export declare const telecallerAdminService: {
             rating: number;
         };
         farmOverview: {
-            totalBlocks: {};
+            totalBlocks: number;
             totalArea: {};
             primaryCrop: string;
             soilType: {};
+            blocks: {
+                id: string;
+                name: string;
+                cropType: string;
+                acreage: any;
+                isPrimary: boolean;
+            }[];
         };
         soilReport: {
             reportId: {};
@@ -376,10 +397,17 @@ export declare const telecallerAdminService: {
             rating: number;
         };
         farmOverview: {
-            totalBlocks: {};
+            totalBlocks: number;
             totalArea: {};
             primaryCrop: string;
             soilType: {};
+            blocks: {
+                id: string;
+                name: string;
+                cropType: string;
+                acreage: any;
+                isPrimary: boolean;
+            }[];
         };
         soilReport: {
             reportId: {};
@@ -475,10 +503,17 @@ export declare const telecallerAdminService: {
             rating: number;
         };
         farmOverview: {
-            totalBlocks: {};
+            totalBlocks: number;
             totalArea: {};
             primaryCrop: string;
             soilType: {};
+            blocks: {
+                id: string;
+                name: string;
+                cropType: string;
+                acreage: any;
+                isPrimary: boolean;
+            }[];
         };
         soilReport: {
             reportId: {};
@@ -618,10 +653,14 @@ export declare const telecallerAdminService: {
         diseasePest?: string;
         diseaseTone?: string;
         actionTaken?: string;
-        parameters?: {
+        parameters?: Array<{
             label: string;
             value: string;
-        }[];
+            key?: string;
+        }>;
+        photoUrls?: string[];
+        agronomistName?: string;
+        agronomistRole?: string;
     }): Promise<{
         id: unknown;
         visitedAt: unknown;

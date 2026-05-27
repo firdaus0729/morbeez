@@ -26,9 +26,11 @@ interface FarmerTarget {
 }
 interface CropRow {
     crop_type: string;
-    planted_at: string | null;
+    planting_date: string | null;
+    planted_at?: string | null;
     created_at: string;
     is_primary: boolean | null;
+    archived_at?: string | null;
 }
 export declare const broadcastEngineService: {
     loadActiveRules(): Promise<BroadcastRule[]>;
