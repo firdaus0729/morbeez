@@ -7,6 +7,7 @@ import { whatsappInboundPipeline } from './pipeline/whatsapp-inbound.pipeline.js
 import { whatsappOutboundService } from './whatsapp-outbound.service.js';
 import { logger } from '../../lib/logger.js';
 import type { InboundMessage } from './pipeline/types.js';
+import type { WhatsAppProvider } from './whatsapp-outbound.types.js';
 
 function getProvider() {
   if (env.WHATSAPP_PROVIDER === 'adsgyani') return adsgyaniWhatsAppProvider;
@@ -112,6 +113,25 @@ export const whatsappService = {
     }
   },
 
+  async sendList(params: {
+    to: string;
+    header?: string;
+    body: string;
+    buttonText: string;
+    sections: Array<{ title: string; rows: Array<{ id: string; title: string; description?: string }> }>;
+  }): Promise<void> {
+    const provider = getProvider() as WhatsAppProvider;
+    if (!provider.sendList) {
+      // Fallback: convert list to plain text.
+      const flat = params.sections
+        .flatMap((s) => s.rows.map((r) => `- ${r.title}${r.description ? `: ${r.description}` : ''}`))
+        .join('\n');
+      await this.sendText(params.to, `${params.body}\n\n${flat}`);
+      return;
+    }
+    await provider.sendList(params);
+  },
+
   async sendTemplate(to: string, templateName: string, params: { body: string[] }): Promise<void> {
     await getProvider().sendTemplate(to, templateName, params);
   },
@@ -142,7 +162,17 @@ export const whatsappService = {
 
     await whatsappInboundPipeline.process(
       toInboundFromAdsGyani(payload, parsed),
-      (phone, text) => this.sendText(phone, text),
+      {
+        text: (phone, text) => this.sendText(phone, text),
+        list: (p) =>
+          this.sendList({
+            to: p.phone,
+            header: p.header,
+            body: p.body,
+            buttonText: p.buttonText,
+            sections: p.sections,
+          }),
+      },
       {
         sendWelcomeTemplate: (phone, farmerId, profileName) =>
           this.sendWelcomeTemplate({ phone, farmerId, profileName }),
@@ -173,7 +203,8 @@ export const whatsappService = {
         if (!text && interactive) {
           const btn = interactive.button_reply as Record<string, string> | undefined;
           const list = interactive.list_reply as Record<string, string> | undefined;
-          text = btn?.title ?? list?.title ?? '';
+          // Prefer stable IDs for state machines (language/menu), fallback to title.
+          text = btn?.id ?? list?.id ?? btn?.title ?? list?.title ?? '';
         }
         if (!text) {
           text = (msg.image as Record<string, string> | undefined)?.caption ?? '';
@@ -201,7 +232,17 @@ export const whatsappService = {
 
         await whatsappInboundPipeline.process(
           inbound,
-          (phone, t) => this.sendText(phone, t),
+        {
+          text: (phone, t) => this.sendText(phone, t),
+          list: (p) =>
+            this.sendList({
+              to: p.phone,
+              header: p.header,
+              body: p.body,
+              buttonText: p.buttonText,
+              sections: p.sections,
+            }),
+        },
           {
             sendWelcomeTemplate: (phone, farmerId, profileName) =>
               this.sendWelcomeTemplate({ phone, farmerId, profileName }),

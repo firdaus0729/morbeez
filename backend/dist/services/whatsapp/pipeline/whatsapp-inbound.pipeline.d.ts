@@ -1,7 +1,24 @@
 import type { AdvisoryLanguage } from '../../ai/types.js';
 import type { InboundMessage } from './types.js';
+type Senders = {
+    text: (phone: string, text: string) => Promise<void>;
+    list?: (params: {
+        phone: string;
+        header?: string;
+        body: string;
+        buttonText: string;
+        sections: Array<{
+            title: string;
+            rows: Array<{
+                id: string;
+                title: string;
+                description?: string;
+            }>;
+        }>;
+    }) => Promise<void>;
+};
 export declare const whatsappInboundPipeline: {
-    process(msg: InboundMessage, sendText: (phone: string, text: string) => Promise<void>, hooks?: {
+    process(msg: InboundMessage, send: Senders, hooks?: {
         sendWelcomeTemplate?: (phone: string, farmerId: string, profileName?: string) => Promise<boolean>;
     }): Promise<void>;
     processVoice(msg: InboundMessage, captured: {
@@ -41,4 +58,5 @@ export declare const whatsappInboundPipeline: {
         sendText: (phone: string, text: string) => Promise<void>;
     }): Promise<void>;
 };
+export {};
 //# sourceMappingURL=whatsapp-inbound.pipeline.d.ts.map

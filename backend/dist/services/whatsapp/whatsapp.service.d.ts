@@ -16,6 +16,20 @@ export declare function parseAdsGyaniWebhook(payload: Record<string, unknown>): 
 export declare const whatsappService: {
     getProvider: typeof getProvider;
     sendText(to: string, text: string): Promise<void>;
+    sendList(params: {
+        to: string;
+        header?: string;
+        body: string;
+        buttonText: string;
+        sections: Array<{
+            title: string;
+            rows: Array<{
+                id: string;
+                title: string;
+                description?: string;
+            }>;
+        }>;
+    }): Promise<void>;
     sendTemplate(to: string, templateName: string, params: {
         body: string[];
     }): Promise<void>;

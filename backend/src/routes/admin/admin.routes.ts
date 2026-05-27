@@ -16,6 +16,7 @@ import { crmFarmerService } from '../../services/admin/crm-farmer.service.js';
 import { consoleSearchService } from '../../services/admin/console-search.service.js';
 import { productIntelligenceService } from '../../services/admin/product-intelligence.service.js';
 import { shopifyProductsService } from '../../services/shopify/shopify.products.service.js';
+import { whatsappOsAdminService } from '../../services/admin/whatsapp-os-admin.service.js';
 import { requireAdmin, requireAdminRole } from '../../middleware/adminAuth.js';
 import { supabase } from '../../lib/supabase.js';
 import { throwIfSupabaseError } from '../../lib/supabase-errors.js';
@@ -669,6 +670,35 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
       admin.email
     );
     return reply.send({ ok: true, ...result });
+  });
+
+  // ─── WhatsApp OS controls (pause AI, set owner, set language) ─────────
+  app.get(`${api}/whatsapp/:farmerId/session`, async (request, reply) => {
+    requireAdmin(request);
+    const { farmerId } = request.params as { farmerId: string };
+    const session = await whatsappOsAdminService.getConversationSession(farmerId);
+    return reply.send({ ok: true, session });
+  });
+
+  app.patch(`${api}/whatsapp/:farmerId/session`, async (request, reply) => {
+    requireAdminRole(request, 'admin', 'manager');
+    const { farmerId } = request.params as { farmerId: string };
+    const body = z
+      .object({
+        aiPaused: z.boolean().optional(),
+        owner: z.enum(['ai', 'telecaller', 'agronomist']).optional(),
+        preferredLanguage: z.enum(['en', 'ml', 'ta', 'kn', 'hi']).nullable().optional(),
+      })
+      .parse(request.body);
+    const session = await whatsappOsAdminService.updateConversationSession(farmerId, body);
+    return reply.send({ ok: true, session });
+  });
+
+  app.get(`${api}/terminology/tasks`, async (request, reply) => {
+    requireAdmin(request);
+    const q = request.query as { status?: string };
+    const tasks = await whatsappOsAdminService.listTerminologyReviewTasks(q.status ?? 'open');
+    return reply.send({ ok: true, tasks });
   });
 
   app.get(`${api}/search`, async (request, reply) => {

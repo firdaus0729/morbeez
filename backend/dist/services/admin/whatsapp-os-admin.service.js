@@ -1,0 +1,53 @@
+import { supabase } from '../../lib/supabase.js';
+import { throwIfSupabaseError } from '../../lib/supabase-errors.js';
+export const whatsappOsAdminService = {
+    async getConversationSession(farmerId) {
+        const { data, error } = await supabase
+            .from('conversation_sessions')
+            .select('*')
+            .eq('farmer_id', farmerId)
+            .eq('channel', 'whatsapp')
+            .maybeSingle();
+        throwIfSupabaseError(error, 'Could not load conversation session');
+        return data;
+    },
+    async updateConversationSession(farmerId, patch) {
+        const payload = { updated_at: new Date().toISOString() };
+        if (patch.aiPaused !== undefined)
+            payload.ai_paused = patch.aiPaused;
+        if (patch.owner)
+            payload.conversation_owner = patch.owner;
+        if (patch.preferredLanguage !== undefined)
+            payload.preferred_language = patch.preferredLanguage;
+        const { data, error } = await supabase
+            .from('conversation_sessions')
+            .update(payload)
+            .eq('farmer_id', farmerId)
+            .eq('channel', 'whatsapp')
+            .select('*')
+            .single();
+        throwIfSupabaseError(error, 'Could not update conversation session');
+        if (patch.preferredLanguage) {
+            await supabase
+                .from('farmers')
+                .update({ preferred_language: patch.preferredLanguage, updated_at: new Date().toISOString() })
+                .eq('id', farmerId);
+        }
+        return data;
+    },
+    async listTerminologyReviewTasks(status = 'open') {
+        const allowed = new Set(['open', 'in_review', 'resolved', 'dismissed', 'all']);
+        const s = allowed.has(status) ? status : 'open';
+        let q = supabase
+            .from('terminology_review_tasks')
+            .select('*, farmers(phone, name, district, state, preferred_language)')
+            .order('created_at', { ascending: false })
+            .limit(100);
+        if (s !== 'all')
+            q = q.eq('status', s);
+        const { data, error } = await q;
+        throwIfSupabaseError(error, 'Could not load terminology tasks');
+        return data ?? [];
+    },
+};
+//# sourceMappingURL=whatsapp-os-admin.service.js.map

@@ -46,6 +46,28 @@ export async function healthRoutes(app) {
         }
         return reply.send(base);
     });
+    /** Last Meta WhatsApp webhook deliveries logged in Supabase (proves Meta → API). */
+    app.get('/health/whatsapp-webhooks', async (_req, reply) => {
+        const { data, error } = await supabase
+            .from('webhook_logs')
+            .select('created_at, status, topic, error_message')
+            .eq('provider', 'whatsapp')
+            .order('created_at', { ascending: false })
+            .limit(10);
+        if (error) {
+            return reply.code(503).send({ ok: false, error: error.message });
+        }
+        const last = data?.[0];
+        return reply.send({
+            ok: true,
+            hint: 'If recentWebhooks is empty after you message +917676026318, Meta is NOT calling your API.',
+            recentCount: data?.length ?? 0,
+            lastReceivedAt: last?.created_at ?? null,
+            lastStatus: last?.status ?? null,
+            lastError: last?.error_message ?? null,
+            recent: data ?? [],
+        });
+    });
     app.get('/health/db', async (_req, reply) => {
         const { error } = await supabase.from('farmers').select('id').limit(1);
         if (error) {

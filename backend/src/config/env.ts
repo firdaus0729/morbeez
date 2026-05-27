@@ -88,6 +88,10 @@ const envSchema = z.object({
     .string()
     .transform((v) => v !== 'false')
     .default('true'),
+  ENABLE_RETENTION_CLEANUP: z
+    .string()
+    .transform((v) => v !== 'false')
+    .default('true'),
   ENABLE_AI_CROP_DOCTOR: z
     .string()
     .transform((v) => v === 'true')

@@ -61,6 +61,7 @@ declare const envSchema: z.ZodObject<{
     /** OpenAI text replies for WhatsApp (greetings, general chat). Default on unless false. */
     ENABLE_WHATSAPP_OPENAI_REPLY: z.ZodDefault<z.ZodEffects<z.ZodString, boolean, string>>;
     ENABLE_OUTBOX_WORKER: z.ZodDefault<z.ZodEffects<z.ZodString, boolean, string>>;
+    ENABLE_RETENTION_CLEANUP: z.ZodDefault<z.ZodEffects<z.ZodString, boolean, string>>;
     ENABLE_AI_CROP_DOCTOR: z.ZodDefault<z.ZodEffects<z.ZodString, boolean, string>>;
     ENABLE_ADVISORY_FOLLOW_UPS: z.ZodDefault<z.ZodEffects<z.ZodString, boolean, string>>;
     ENABLE_ADVISORY_AUTOMATION: z.ZodDefault<z.ZodEffects<z.ZodString, boolean, string>>;
@@ -101,6 +102,7 @@ declare const envSchema: z.ZodObject<{
     ENABLE_WHATSAPP_AUTO_REPLY: boolean;
     ENABLE_WHATSAPP_OPENAI_REPLY: boolean;
     ENABLE_OUTBOX_WORKER: boolean;
+    ENABLE_RETENTION_CLEANUP: boolean;
     ENABLE_AI_CROP_DOCTOR: boolean;
     ENABLE_ADVISORY_FOLLOW_UPS: boolean;
     ENABLE_ADVISORY_AUTOMATION: boolean;
@@ -205,6 +207,7 @@ declare const envSchema: z.ZodObject<{
     ENABLE_WHATSAPP_AUTO_REPLY?: string | undefined;
     ENABLE_WHATSAPP_OPENAI_REPLY?: string | undefined;
     ENABLE_OUTBOX_WORKER?: string | undefined;
+    ENABLE_RETENTION_CLEANUP?: string | undefined;
     ENABLE_AI_CROP_DOCTOR?: string | undefined;
     ENABLE_ADVISORY_FOLLOW_UPS?: string | undefined;
     ENABLE_ADVISORY_AUTOMATION?: string | undefined;
@@ -247,6 +250,7 @@ export declare const env: {
     ENABLE_WHATSAPP_AUTO_REPLY: boolean;
     ENABLE_WHATSAPP_OPENAI_REPLY: boolean;
     ENABLE_OUTBOX_WORKER: boolean;
+    ENABLE_RETENTION_CLEANUP: boolean;
     ENABLE_AI_CROP_DOCTOR: boolean;
     ENABLE_ADVISORY_FOLLOW_UPS: boolean;
     ENABLE_ADVISORY_AUTOMATION: boolean;
