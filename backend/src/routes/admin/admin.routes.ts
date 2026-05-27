@@ -475,6 +475,29 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
     });
   });
 
+  app.get(`${api}/staff/workspace`, async (request, reply) => {
+    requireAdmin(request);
+    const { staffAdminService } = await import('../../services/admin/staff-admin.service.js');
+    const workspace = await staffAdminService.getWorkspace();
+    return reply.send({ ok: true, ...workspace });
+  });
+
+  app.get(`${api}/staff/:id`, async (request, reply) => {
+    requireAdmin(request);
+    const { staffAdminService } = await import('../../services/admin/staff-admin.service.js');
+    const { AppError } = await import('../../lib/errors.js');
+    const { id } = request.params as { id: string };
+    if (id === 'workspace') {
+      const workspace = await staffAdminService.getWorkspace();
+      return reply.send({ ok: true, ...workspace });
+    }
+    const detail = await staffAdminService.getEmployeeDetail(id);
+    if (!detail) {
+      throw new AppError('Employee not found', 404, 'NOT_FOUND');
+    }
+    return reply.send({ ok: true, ...detail });
+  });
+
   app.get(`${api}/farmers`, async (request, reply) => {
     requireAdmin(request);
     const q = request.query as {

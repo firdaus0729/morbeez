@@ -15,9 +15,9 @@ export function throwIfSupabaseError(error: PostgrestError | null, context: stri
     );
   }
 
-  if (code === 'PGRST204' || msg.includes('column') && msg.includes('does not exist')) {
+  if (code === 'PGRST204' || (msg.includes('column') && msg.includes('does not exist'))) {
     throw new AppError(
-      'Database schema outdated. Run migration supabase/migrations/20260524000000_farmer_website_auth.sql',
+      `Database schema mismatch: ${msg}. Run \`supabase db push\` from the repo root, then restart the API.`,
       503,
       'DATABASE_SCHEMA'
     );

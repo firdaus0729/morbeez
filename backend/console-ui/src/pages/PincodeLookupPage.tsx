@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { api } from '../lib/api';
+import { PageLoader } from '../components/ui';
 
 type Pincode = {
   pincode: string;
@@ -25,6 +26,8 @@ export function PincodeLookupPage({ embedded }: { embedded?: boolean } = {}) {
       if (!data.pincode) setError('Pincode not in master — import via Supabase');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Lookup failed');
+    } finally {
+      setLooking(false);
     }
   }
 
@@ -48,11 +51,14 @@ export function PincodeLookupPage({ embedded }: { embedded?: boolean } = {}) {
         <button
           type="button"
           onClick={lookup}
-          className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
+          disabled={looking || code.replace(/\D/g, '').length < 6}
+          className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-60"
         >
-          Lookup
+          {looking ? 'Looking up…' : 'Lookup'}
         </button>
       </div>
+
+      {looking ? <PageLoader label="Looking up pincode…" compact className="mt-6" /> : null}
 
       {error ? <p className="mt-4 text-sm text-red-600">{error}</p> : null}
 

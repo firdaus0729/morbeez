@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { api } from '../lib/api';
 import { PincodeLookupPage } from './PincodeLookupPage';
 import { Field, Modal, inputClass } from '../components/Modal';
+import { Alert, HubTabs, PageShell, ReadOnlyBanner } from '../components/ui';
 
 const base = '/console/api/v1/os/intelligence';
 const CROPS = ['ginger', 'banana', 'cardamom', 'pepper', 'tomato', 'chilli', 'brinjal', 'all'];
@@ -27,7 +28,7 @@ export function IntelligenceHubPage({ canWrite }: { canWrite: boolean }) {
   const [tab, setTab] = useState<Tab>('weather');
   const [cropFilter, setCropFilter] = useState('');
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [reloadKey, setReloadKey] = useState(0);
 
   const [weatherRules, setWeatherRules] = useState<Array<Record<string, unknown>>>([]);
@@ -42,7 +43,10 @@ export function IntelligenceHubPage({ canWrite }: { canWrite: boolean }) {
   const bump = () => setReloadKey((k) => k + 1);
 
   const load = useCallback(async () => {
-    if (tab === 'pincode') return;
+    if (tab === 'pincode') {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     setError('');
     const cropQ = cropFilter ? `&crop=${encodeURIComponent(cropFilter)}` : '';
@@ -95,36 +99,13 @@ export function IntelligenceHubPage({ canWrite }: { canWrite: boolean }) {
   }
 
   return (
-    <div>
-      <h1 className="text-2xl font-semibold text-slate-900">Agriculture Intelligence</h1>
-      <p className="mt-1 text-sm text-slate-600">
+    <div className="intelligence-hub">
+      <p className="muted" style={{ marginBottom: 12 }}>
         Masters for rules, cultivation schedules, templates, and spray programs
       </p>
-
-      {!canWrite ? (
-        <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900">
-          Read-only — agronomist or super admin write access required to edit masters.
-        </p>
-      ) : null}
-
-      {error ? <p className="mt-3 text-sm text-red-600">{error}</p> : null}
-
-      <div className="mt-4 flex flex-wrap gap-2 border-b border-slate-200 pb-2">
-        {TABS.map((t) => (
-          <button
-            key={t.id}
-            type="button"
-            onClick={() => setTab(t.id)}
-            className={`rounded-lg px-3 py-1.5 text-sm ${
-              tab === t.id
-                ? 'bg-emerald-50 font-medium text-emerald-800'
-                : 'text-slate-600 hover:bg-slate-50'
-            }`}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
+      {!canWrite ? <ReadOnlyBanner /> : null}
+      {error ? <Alert tone="error">{error}</Alert> : null}
+      <HubTabs tabs={TABS} active={tab} onChange={setTab} />
 
       {tab !== 'pincode' && tab !== 'spray' ? (
         <div className="mt-4 flex items-center gap-2">
@@ -171,16 +152,12 @@ export function IntelligenceHubPage({ canWrite }: { canWrite: boolean }) {
         </div>
       ) : null}
 
-      {loading && tab !== 'pincode' ? (
-        <p className="mt-8 text-sm text-slate-500">Loading…</p>
-      ) : null}
-
       {tab === 'pincode' ? (
         <div className="mt-4">
           <PincodeLookupPage embedded />
         </div>
-      ) : null}
-
+      ) : (
+        <PageShell loading={loading} error={null} loadingLabel="Loading masters…">
       {tab === 'weather' ? (
         <MasterTable
           headers={['Rule key', 'Crop', 'Action', 'Status', 'Priority', '']}
@@ -284,6 +261,8 @@ export function IntelligenceHubPage({ canWrite }: { canWrite: boolean }) {
           onDelete={remove}
         />
       ) : null}
+        </PageShell>
+      )}
 
       {modal ? (
         <IntelligenceFormModal

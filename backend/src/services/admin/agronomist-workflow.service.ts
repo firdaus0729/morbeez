@@ -3,7 +3,17 @@ import { throwIfSupabaseError } from '../../lib/supabase-errors.js';
 import { AppError, NotFoundError } from '../../lib/errors.js';
 import { cropDoctorService } from '../ai/crop-doctor.service.js';
 import { recommendationRecordsService } from '../core/recommendation-records.service.js';
+import { computeDap } from '../whatsapp/broadcasts/dap.service.js';
 import type { AdvisoryLanguage } from '../ai/types.js';
+
+function blockDap(block: Record<string, unknown> | null): number | undefined {
+  if (!block) return undefined;
+  const dap = computeDap(
+    (block.planting_date as string | null) ?? null,
+    (block.created_at as string | null) ?? null
+  );
+  return dap > 0 ? dap : undefined;
+}
 
 function formatDosage(
   items: Array<{ product: string; rate: string; method: string; frequency?: string }>
@@ -19,7 +29,7 @@ export const agronomistWorkflowService = {
     const { data: findings, error } = await supabase
       .from('crm_field_findings')
       .select(
-        'id, farmer_id, block_id, block_name, crop_type, agronomist_name, observations, disease_pest, disease_tone, action_taken, follow_up_at, photo_urls, visited_at, farmers(id, name, phone, preferred_language, district), farm_blocks(id, name, crop_type, plot_label, dap)'
+        'id, farmer_id, block_id, block_name, crop_type, agronomist_name, observations, disease_pest, disease_tone, action_taken, follow_up_at, photo_urls, visited_at, farmers(id, name, phone, preferred_language, district), farm_blocks(id, name, crop_type, plot_label, planting_date, created_at)'
       )
       .is('archived_at', null)
       .order('visited_at', { ascending: false })
@@ -81,7 +91,7 @@ export const agronomistWorkflowService = {
                 name: block.name,
                 cropType: block.crop_type,
                 plotLabel: block.plot_label,
-                dap: block.dap,
+                dap: blockDap(block),
               }
             : null,
           existingRecommendation: rec ?? null,
@@ -95,7 +105,7 @@ export const agronomistWorkflowService = {
     const { data, error } = await supabase
       .from('crm_field_findings')
       .select(
-        '*, farmers(id, name, phone, preferred_language, district), farm_blocks(id, name, crop_type, plot_label, dap, planting_date)'
+        '*, farmers(id, name, phone, preferred_language, district), farm_blocks(id, name, crop_type, plot_label, planting_date, created_at)'
       )
       .eq('id', findingId)
       .maybeSingle();
@@ -136,7 +146,10 @@ export const agronomistWorkflowService = {
       farmerId: String(farmer.id),
       phone: farmer.phone ? String(farmer.phone) : undefined,
       cropType,
-      cropStage: block?.dap != null ? `DAP ${block.dap}` : undefined,
+      cropStage: (() => {
+        const dap = blockDap(block);
+        return dap != null ? `DAP ${dap}` : undefined;
+      })(),
       language: ['en', 'ml', 'ta', 'kn', 'hi'].includes(lang) ? lang : 'en',
       symptomsText: symptoms || 'Field visit — agronomist review requested',
       channel: 'api',

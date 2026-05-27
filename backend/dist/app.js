@@ -80,12 +80,9 @@ export async function buildApp() {
         }
         return reply.redirect(consolePrefix);
     });
-    app.get('/console/', async (_request, reply) => {
-        if (!consoleBuilt) {
-            return reply.code(503).type('text/html').send(buildMissingConsoleHtml());
-        }
-        return reply.redirect(consolePrefix);
-    });
+    if (!consoleBuilt) {
+        app.get('/console/', async (_request, reply) => reply.code(503).type('text/html').send(buildMissingConsoleHtml()));
+    }
     /* Shopify store owners often hit /admin — send them to Morbeez staff console */
     app.get('/admin', async (_request, reply) => reply.redirect('/console/'));
     app.get('/admin/', async (_request, reply) => reply.redirect('/console/'));

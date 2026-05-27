@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { api } from '../lib/api';
+import { Alert, HubTabs, PageShell, Panel, Select } from '../components/ui';
+import { StatIcon } from '../components/NavIcon';
 
 const base = '/console/api/v1/os/analytics';
 
@@ -120,65 +122,81 @@ export function AnalyticsHubPage() {
   const k = data?.kpis;
 
   return (
-    <div>
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold text-slate-900">Analytics</h1>
-          <p className="mt-1 text-sm text-slate-600">
-            Pincode-first geography, farmer retention, WhatsApp broadcasts, recommendation outcomes
-          </p>
-        </div>
-        <label className="text-sm text-slate-600">
-          Period
-          <select
-            className="ml-2 rounded-lg border border-slate-200 px-2 py-1.5"
-            value={days}
-            onChange={(e) => setDays(Number(e.target.value))}
-          >
+    <div className="analytics-hub">
+      <div className="filter-bar">
+        <p className="muted" style={{ flex: 1, margin: 0 }}>
+          Pincode-first geography, retention, broadcasts, recommendation outcomes
+        </p>
+        <label className="field" style={{ margin: 0 }}>
+          <span>Period</span>
+          <Select value={days} onChange={(e) => setDays(Number(e.target.value))}>
             {[7, 14, 30, 60, 90].map((d) => (
               <option key={d} value={d}>
                 Last {d} days
               </option>
             ))}
-          </select>
+          </Select>
         </label>
       </div>
 
-      {error ? <p className="mt-4 text-sm text-red-600">{error}</p> : null}
+      {error ? <Alert tone="error">{error}</Alert> : null}
 
-      {k && !loading ? (
-        <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <KpiCard label="Farmers" value={String(k.farmers)} sub={`${k.retentionRate30d}% active 30d`} />
-          <KpiCard label="Broadcasts sent" value={String(k.broadcastsSent)} sub={`${k.broadcastFailureRate}% failed`} />
-          <KpiCard
-            label="Recommendations"
-            value={String(k.recommendationsTotal)}
-            sub={`${k.recommendationSuccessRate}% positive outcomes`}
-          />
-          <KpiCard label="Top district" value={k.topDistrict} sub="by activity score" />
+      {k && !loading && data ? (
+        <div className="stat-grid" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
+          <article className="stat-card">
+            <div className="stat-card-head">
+              <span className="stat-label">Farmers</span>
+              <span className="stat-icon stat-icon-teal">
+                <StatIcon name="farmers" />
+              </span>
+            </div>
+            <div className="stat-value">{k.farmers}</div>
+            <div className="stat-trend trend-up">
+              <span className="trend-pct">{k.retentionRate30d}%</span>
+              <span className="trend-vs">active 30d</span>
+            </div>
+          </article>
+          <article className="stat-card">
+            <div className="stat-card-head">
+              <span className="stat-label">Broadcasts</span>
+              <span className="stat-icon stat-icon-blue">
+                <StatIcon name="cart" />
+              </span>
+            </div>
+            <div className="stat-value">{k.broadcastsSent}</div>
+            <div className="stat-trend">
+              <span className="trend-pct">{k.broadcastFailureRate}%</span>
+              <span className="trend-vs">failed</span>
+            </div>
+          </article>
+          <article className="stat-card">
+            <div className="stat-card-head">
+              <span className="stat-label">Recommendations</span>
+              <span className="stat-icon stat-icon-purple">
+                <StatIcon name="ai" />
+              </span>
+            </div>
+            <div className="stat-value">{k.recommendationsTotal}</div>
+            <div className="stat-trend trend-up">
+              <span className="trend-pct">{k.recommendationSuccessRate}%</span>
+              <span className="trend-vs">positive</span>
+            </div>
+          </article>
+          <article className="stat-card">
+            <div className="stat-card-head">
+              <span className="stat-label">Top district</span>
+            </div>
+            <div className="stat-value" style={{ fontSize: '1.1rem' }}>
+              {k.topDistrict}
+            </div>
+          </article>
         </div>
       ) : null}
 
-      <div className="mt-6 flex flex-wrap gap-2 border-b border-slate-200 pb-2">
-        {TABS.map((t) => (
-          <button
-            key={t.id}
-            type="button"
-            onClick={() => setTab(t.id)}
-            className={`rounded-lg px-3 py-1.5 text-sm ${
-              tab === t.id
-                ? 'bg-emerald-50 font-medium text-emerald-800'
-                : 'text-slate-600 hover:bg-slate-50'
-            }`}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
+      <HubTabs tabs={TABS} active={tab} onChange={setTab} />
 
-      {loading ? (
-        <p className="mt-8 text-sm text-slate-500">Loading…</p>
-      ) : !data ? null : (
+      <PageShell loading={loading} error={!data && !loading ? error || 'No data' : null} loadingLabel="Loading analytics…">
+        {!data ? null : (
         <div className="mt-6">
           {tab === 'geography' ? (
             <div className="space-y-6">
@@ -235,7 +253,9 @@ export function AnalyticsHubPage() {
                     Pincode breakdown — {selectedDistrict}
                   </h2>
                   {pinLoading ? (
-                    <p className="mt-2 text-sm text-slate-500">Loading pincodes…</p>
+                    <div className="mt-4 py-6">
+                      <PageShell loading loadingLabel="Loading pincodes…" />
+                    </div>
                   ) : (
                     <table className="mt-3 w-full text-left text-sm">
                       <thead className="text-xs uppercase text-slate-500">
@@ -372,7 +392,8 @@ export function AnalyticsHubPage() {
             </div>
           ) : null}
         </div>
-      )}
+        )}
+      </PageShell>
     </div>
   );
 }

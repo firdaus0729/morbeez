@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { api } from '../lib/api';
+import { Alert, HubTabs, Loading, ReadOnlyBanner } from '../components/ui';
 
 const base = '/console/api/v1/os/agronomist';
 
@@ -204,36 +205,31 @@ export function AgronomistHubPage({ canWrite }: { canWrite: boolean }) {
   const selected = queue.find((q) => q.finding.id === selectedId);
 
   return (
-    <div>
-      <h1 className="text-2xl font-semibold text-slate-900">Agronomist workflow</h1>
-      <p className="mt-1 text-sm text-slate-600">
-        Field findings → AI draft → your review → submit for Super Admin approval → WhatsApp to farmer
+    <div className="agronomist-hub">
+      <p className="muted" style={{ marginBottom: 12 }}>
+        Field findings → AI draft → review → Super Admin approval → WhatsApp
       </p>
-
-      {!canWrite ? (
-        <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900">
-          Read-only — you need agronomist write access to edit and submit.
-        </p>
+      {!canWrite ? <ReadOnlyBanner /> : null}
+      {error ? (
+        <Alert tone="error">
+          <p>{error}</p>
+          {error.includes('schema') || error.includes('migration') ? (
+            <p className="mt-2 text-xs opacity-90">
+              Run <code className="rounded bg-red-100/80 px-1">supabase db push</code>, restart the API, then
+              optional demo: <code className="rounded bg-red-100/80 px-1">supabase db query --linked -f archive/demo/01_…</code>
+            </p>
+          ) : null}
+        </Alert>
       ) : null}
-
-      {error ? <p className="mt-4 text-sm text-red-600">{error}</p> : null}
-
-      <div className="mt-4 flex gap-2 border-b border-slate-200 pb-2">
-        {(['queue', 'submissions'] as const).map((t) => (
-          <button
-            key={t}
-            type="button"
-            onClick={() => setTab(t)}
-            className={`rounded-lg px-3 py-1.5 text-sm capitalize ${
-              tab === t ? 'bg-emerald-50 font-medium text-emerald-800' : 'text-slate-600'
-            }`}
-          >
-            {t === 'queue' ? 'Review queue' : 'My submissions'}
-          </button>
-        ))}
-      </div>
-
-      {loading ? <p className="mt-6 text-sm text-slate-500">Loading…</p> : null}
+      <HubTabs
+        tabs={[
+          { id: 'queue' as const, label: 'Review queue' },
+          { id: 'submissions' as const, label: 'My submissions' },
+        ]}
+        active={tab}
+        onChange={setTab}
+      />
+      {loading ? <Loading /> : null}
 
       {tab === 'queue' && !loading ? (
         <div className="mt-6 grid gap-6 lg:grid-cols-2">

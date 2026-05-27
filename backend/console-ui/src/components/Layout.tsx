@@ -1,81 +1,128 @@
-import type { ReactNode } from 'react';
-import type { ApiModule, SessionAdmin } from '../lib/api';
-import { canAccess } from '../lib/api';
+import { useEffect, useState } from 'react';
+import { Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import { initials, roleLabel } from '../lib/format';
+import { matchRouteMeta } from '../lib/routes';
+import { paths, toPath } from '../lib/routes';
+import { LogoMark } from './LogoMark';
+import { NavIcon } from './NavIcon';
+import { SidebarNav } from './SidebarNav';
+import { cn } from '../lib/cn';
 
-type Props = {
-  admin: SessionAdmin;
-  modules: ApiModule[];
-  page: string;
-  onNavigate: (page: string) => void;
-  onLogout: () => void;
-  children: ReactNode;
-};
+export function AppLayout() {
+  const { admin, modules, logout } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [dateText, setDateText] = useState('');
 
-const NAV: Array<{ key: string; label: string; module: string }> = [
-  { key: 'dashboard', label: 'Dashboard', module: 'dashboard' },
-  { key: 'telecaller', label: 'Telecaller CRM', module: 'telecaller_crm' },
-  { key: 'operations', label: 'Operations', module: 'operations' },
-  { key: 'intelligence', label: 'Intelligence', module: 'intelligence' },
-  { key: 'agronomist', label: 'Agronomist', module: 'agronomist' },
-  { key: 'field', label: 'Field app ↗', module: 'agronomist' },
-  { key: 'approvals', label: 'Approvals', module: 'approve_recommendations' },
-  { key: 'gaps', label: 'Product Gaps', module: 'intelligence' },
-  { key: 'analytics', label: 'Analytics', module: 'analytics' },
-  { key: 'commerce', label: 'Commerce', module: 'commerce' },
-  { key: 'settings', label: 'Settings', module: 'settings' },
-];
+  const meta = matchRouteMeta(location.pathname);
+  const displayName = admin?.fullName ?? admin?.email ?? '';
+  const avatar = initials(displayName);
 
-export function Layout({ admin, modules, page, onNavigate, onLogout, children }: Props) {
-  const visibleNav = NAV.filter((n) => canAccess(modules, n.module, 'read'));
+  useEffect(() => {
+    setDateText(
+      new Date().toLocaleDateString('en-IN', {
+        weekday: 'short',
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+      })
+    );
+  }, []);
+
+  useEffect(() => {
+    document.body.classList.toggle('sidebar-open', sidebarOpen);
+    return () => document.body.classList.remove('sidebar-open');
+  }, [sidebarOpen]);
+
+  useEffect(() => {
+    setSidebarOpen(false);
+  }, [location.pathname]);
+
+  if (!admin) return null;
+
+  function handleLogout() {
+    logout();
+    navigate(toPath(paths.login), { replace: true });
+  }
 
   return (
-    <div className="flex min-h-full">
-      <aside className="w-56 shrink-0 border-r border-slate-200 bg-white p-4">
-        <div className="mb-6">
-          <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">Morbeez</p>
-          <p className="text-sm font-medium text-slate-900">Operations Console</p>
+    <div className={cn('app-shell', `route-${meta.pageKey}`)}>
+      <button
+        type="button"
+        className="sidebar-backdrop"
+        aria-hidden={!sidebarOpen}
+        onClick={() => setSidebarOpen(false)}
+      />
+
+      <aside className="sidebar" id="sidebar">
+        <div className="sidebar-logo">
+          <LogoMark variant="light" />
+          <div className="sidebar-logo-text">
+            <span className="logo-title">Morbeez</span>
+            <span className="logo-sub">AGRICULTURE</span>
+            <span className="sidebar-tagline">Grow Better. Live Better.</span>
+          </div>
         </div>
-        <nav className="space-y-1">
-          {visibleNav.map((item) =>
-            item.key === 'field' ? (
-              <a
-                key={item.key}
-                href="/field/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="block w-full rounded-lg px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
-              >
-                {item.label}
-              </a>
-            ) : (
-              <button
-                key={item.key}
-                type="button"
-                onClick={() => onNavigate(item.key)}
-                className={`w-full rounded-lg px-3 py-2 text-left text-sm ${
-                  page === item.key
-                    ? 'bg-emerald-50 font-medium text-emerald-800'
-                    : 'text-slate-700 hover:bg-slate-50'
-                }`}
-              >
-                {item.label}
-              </button>
-            )
-          )}
+
+        <nav className="sidebar-nav" aria-label="Main navigation">
+          <SidebarNav modules={modules} onNavigate={() => setSidebarOpen(false)} />
         </nav>
-        <div className="mt-8 border-t border-slate-100 pt-4 text-xs text-slate-500">
-          <p className="font-medium text-slate-700">{admin.fullName ?? admin.email}</p>
-          <p className="capitalize">{admin.role.replace(/_/g, ' ')}</p>
-          <button
-            type="button"
-            onClick={onLogout}
-            className="mt-3 text-sm text-red-600 hover:underline"
-          >
+
+        <div className="sidebar-bottom">
+          <button type="button" className="sidebar-support">
+            <span className="support-dot" />
+            Live Support
+          </button>
+          <div className="sidebar-profile">
+            <span className="avatar">{avatar}</span>
+            <span className="profile-text">
+              <strong>{displayName}</strong>
+              <small>{roleLabel(admin.role)}</small>
+            </span>
+          </div>
+          <button type="button" className="btn-signout" onClick={handleLogout}>
             Sign out
           </button>
         </div>
       </aside>
-      <main className="flex-1 overflow-auto p-6">{children}</main>
+
+      <div className="main">
+        <header className="topbar">
+          <button
+            type="button"
+            className="btn-menu"
+            aria-label="Open menu"
+            onClick={() => setSidebarOpen(true)}
+          >
+            <span />
+            <span />
+            <span />
+          </button>
+          <h1 className="page-heading">{meta.title}</h1>
+          <div className="topbar-tools">
+            <div className="date-pill hidden sm:flex">
+              <NavIcon name="calendar" className="date-pill-icon" />
+              <span>{dateText}</span>
+            </div>
+            <button type="button" className="tool-btn" aria-label="Search">
+              <NavIcon name="dashboard" />
+            </button>
+            <button type="button" className="tool-btn tool-btn-bell" aria-label="Notifications">
+              <NavIcon name="bell" />
+              <span className="bell-dot" />
+            </button>
+            <div className="topbar-avatar-wrap hidden md:flex">
+              <span className="avatar avatar-sm">{avatar}</span>
+              <span className="topbar-admin-label">{displayName}</span>
+            </div>
+          </div>
+        </header>
+        <div className="content mx-auto w-full max-w-[1600px] px-3 py-4 sm:px-5 sm:py-6" id="main-content">
+          <Outlet />
+        </div>
+      </div>
     </div>
   );
 }

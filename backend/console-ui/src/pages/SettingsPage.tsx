@@ -1,5 +1,16 @@
 import { useEffect, useState } from 'react';
 import { api } from '../lib/api';
+import { roleLabel } from '../lib/format';
+import {
+  Alert,
+  Badge,
+  DataTable,
+  EmptyState,
+  Loading,
+  Panel,
+  ReadOnlyBanner,
+  TableWrap,
+} from '../components/ui';
 
 type Staff = {
   id: string;
@@ -8,7 +19,6 @@ type Staff = {
   role: string;
   active: boolean;
   lastLoginAt: string | null;
-  createdAt: string;
 };
 
 export function SettingsPage({ canRead }: { canRead: boolean }) {
@@ -29,59 +39,58 @@ export function SettingsPage({ canRead }: { canRead: boolean }) {
 
   if (!canRead) {
     return (
-      <div>
-        <h1 className="text-2xl font-semibold">Settings</h1>
-        <p className="mt-2 text-sm text-slate-600">Super Admin only.</p>
-      </div>
+      <Panel title="Settings">
+        <ReadOnlyBanner />
+      </Panel>
     );
   }
 
   return (
     <div>
-      <h1 className="text-2xl font-semibold text-slate-900">Settings</h1>
-      <p className="mt-1 text-sm text-slate-600">Staff accounts and console access</p>
-
-      {error ? <p className="mt-4 text-sm text-red-600">{error}</p> : null}
-      {loading ? <p className="mt-6 text-sm text-slate-500">Loading…</p> : null}
-
-      {!loading ? (
-        <div className="mt-6 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-          <table className="w-full text-left text-sm">
-            <thead className="bg-slate-50 text-xs uppercase text-slate-500">
-              <tr>
-                <th className="px-4 py-3">Email</th>
-                <th className="px-4 py-3">Name</th>
-                <th className="px-4 py-3">Role</th>
-                <th className="px-4 py-3">Active</th>
-                <th className="px-4 py-3">Last login</th>
-              </tr>
-            </thead>
-            <tbody>
-              {staff.map((s) => (
-                <tr key={s.id} className="border-t border-slate-100">
-                  <td className="px-4 py-3">{s.email}</td>
-                  <td className="px-4 py-3">{s.fullName ?? '—'}</td>
-                  <td className="px-4 py-3 capitalize">{s.role.replace(/_/g, ' ')}</td>
-                  <td className="px-4 py-3">{s.active ? 'Yes' : 'No'}</td>
-                  <td className="px-4 py-3 text-xs text-slate-600">
-                    {s.lastLoginAt
-                      ? new Date(s.lastLoginAt).toLocaleString('en-IN')
-                      : 'Never'}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          {staff.length === 0 ? (
-            <p className="px-4 py-8 text-center text-sm text-slate-500">No staff users.</p>
-          ) : null}
-        </div>
-      ) : null}
-
-      <p className="mt-6 text-xs text-slate-500">
-        Role permissions are defined in <code>role_module_permissions</code> (see OS foundation
-        migration). Staff CRUD via API can be added in a follow-up.
+      <p className="muted" style={{ marginBottom: 16 }}>
+        Staff accounts and RBAC. For full employee workspace, use <strong>Employees</strong> in the sidebar.
       </p>
+      {error ? <Alert tone="error">{error}</Alert> : null}
+      {loading ? <Loading /> : null}
+      {!loading ? (
+        <Panel title="Staff accounts">
+          <TableWrap>
+            <DataTable>
+              <thead>
+                <tr>
+                  <th>Email</th>
+                  <th>Name</th>
+                  <th>Role</th>
+                  <th>Status</th>
+                  <th>Last login</th>
+                </tr>
+              </thead>
+              <tbody>
+                {staff.map((s) => (
+                  <tr key={s.id}>
+                    <td>{s.email}</td>
+                    <td>{s.fullName ?? '—'}</td>
+                    <td>
+                      <Badge tone="role">{roleLabel(s.role)}</Badge>
+                    </td>
+                    <td>
+                      <Badge tone={s.active ? 'active' : 'archived'}>
+                        {s.active ? 'Active' : 'Inactive'}
+                      </Badge>
+                    </td>
+                    <td className="muted">
+                      {s.lastLoginAt
+                        ? new Date(s.lastLoginAt).toLocaleString('en-IN')
+                        : 'Never'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </DataTable>
+          </TableWrap>
+          {staff.length === 0 ? <EmptyState>No staff users.</EmptyState> : null}
+        </Panel>
+      ) : null}
     </div>
   );
 }

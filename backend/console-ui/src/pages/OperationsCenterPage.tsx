@@ -5,6 +5,7 @@ import {
   LanguageTemplatesPanel,
   QuickRepliesPanel,
 } from '../components/operations/OperationsMessagingExtras';
+import { Alert, HubTabs, Loading, ReadOnlyBanner } from '../components/ui';
 
 type Tab =
   | 'messaging'
@@ -101,7 +102,7 @@ const TABS: Array<{ id: Tab; label: string }> = [
 export function OperationsCenterPage({ canWrite }: { canWrite: boolean }) {
   const [tab, setTab] = useState<Tab>('broadcasts');
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   const [config, setConfig] = useState<MessagingConfig | null>(null);
   const [rules, setRules] = useState<BroadcastRule[]>([]);
@@ -307,40 +308,15 @@ export function OperationsCenterPage({ canWrite }: { canWrite: boolean }) {
   }
 
   return (
-    <div>
-      <h1 className="text-2xl font-semibold text-slate-900">Operations Center</h1>
-      <p className="mt-1 text-sm text-slate-600">
-        WhatsApp broadcasts, quick replies, language templates, automation jobs, mandi prices, and
-        terminology review
+    <div className="operations-hub">
+      <p className="muted" style={{ marginBottom: 12 }}>
+        WhatsApp broadcasts, quick replies, templates, automation, mandi prices, terminology
       </p>
-
-      {!canWrite ? (
-        <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900">
-          Read-only access — contact Super Admin for write permissions on Operations.
-        </p>
-      ) : null}
-
-      {error ? <p className="mt-4 text-sm text-red-600">{error}</p> : null}
-
-      <div className="mt-6 flex flex-wrap gap-2 border-b border-slate-200 pb-2">
-        {TABS.map((t) => (
-          <button
-            key={t.id}
-            type="button"
-            onClick={() => setTab(t.id)}
-            className={`rounded-lg px-3 py-1.5 text-sm ${
-              tab === t.id
-                ? 'bg-emerald-50 font-medium text-emerald-800'
-                : 'text-slate-600 hover:bg-slate-50'
-            }`}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
-
+      {!canWrite ? <ReadOnlyBanner /> : null}
+      {error ? <Alert tone="error">{error}</Alert> : null}
+      <HubTabs tabs={TABS} active={tab} onChange={setTab} />
       {loading ? (
-        <p className="mt-8 text-sm text-slate-500">Loading…</p>
+        <Loading />
       ) : (
         <div className="mt-6">
           {tab === 'messaging' && config ? (
