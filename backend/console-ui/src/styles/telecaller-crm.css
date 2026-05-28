@@ -174,18 +174,33 @@
 
 .telecaller-page .tc-lead-card {
   display: flex;
-  align-items: flex-start;
+  align-items: stretch;
   gap: 12px;
   width: 100%;
   text-align: left;
-  padding: 12px 14px;
+  padding: 10px 12px;
   margin-bottom: 6px;
   border: 1px solid transparent;
   border-radius: 12px;
   background: #fff;
-  cursor: pointer;
+  cursor: default;
   font-family: inherit;
   transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.telecaller-page .tc-lead-card-select {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
 }
 
 .telecaller-page .tc-lead-card:hover {
@@ -237,6 +252,22 @@
 
 .telecaller-page .tc-lead-card-dates span {
   white-space: nowrap;
+}
+
+.telecaller-page .tc-lead-delete-btn {
+  align-self: flex-start;
+  border: 1px solid #fecaca;
+  background: #fff5f5;
+  color: #b91c1c;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 8px;
+  cursor: pointer;
+}
+
+.telecaller-page .tc-lead-delete-btn:hover {
+  background: #fee2e2;
 }
 
 .telecaller-page .tc-leads-empty {

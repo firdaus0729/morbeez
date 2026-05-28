@@ -117,6 +117,21 @@ export function TelecallerCrmPage({ canWrite }: { canWrite: boolean }) {
     }
   }
 
+  async function deleteLead(lead: LeadRow) {
+    if (!canWrite) return;
+    const ok = confirm(`Delete lead "${lead.farmerName}"? This will archive related lead records.`);
+    if (!ok) return;
+    try {
+      await api(`${base}/leads/${lead.id}`, { method: 'DELETE' });
+      if (selectedLeadId === lead.id) {
+        setSelectedLeadId(null);
+      }
+      await load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not delete lead');
+    }
+  }
+
   return (
     <div className="telecaller-page">
       <div className="tc-page-header filter-bar">
@@ -285,32 +300,45 @@ export function TelecallerCrmPage({ canWrite }: { canWrite: boolean }) {
                   <p className="tc-leads-empty">No leads in this view</p>
                 ) : (
                   leads.map((lead) => (
-                    <button
+                    <div
                       key={lead.id}
-                      type="button"
                       className={`tc-lead-card ${selectedLeadId === lead.id ? 'selected' : ''}`}
-                      onClick={() => setSelectedLeadId(lead.id)}
                     >
-                      <span className="tc-avatar-sm">{lead.farmerInitials}</span>
-                      <div className="tc-lead-card-body">
-                        <div className="tc-lead-card-top">
-                          <strong>{lead.farmerName}</strong>
-                          <span className={`tc-stage ${STAGE_CLASS[lead.stage] ?? 'stage-new'}`}>
-                            {lead.stageLabel}
-                          </span>
+                      <button
+                        type="button"
+                        className="tc-lead-card-select"
+                        onClick={() => setSelectedLeadId(lead.id)}
+                      >
+                        <span className="tc-avatar-sm">{lead.farmerInitials}</span>
+                        <div className="tc-lead-card-body">
+                          <div className="tc-lead-card-top">
+                            <strong>{lead.farmerName}</strong>
+                            <span className={`tc-stage ${STAGE_CLASS[lead.stage] ?? 'stage-new'}`}>
+                              {lead.stageLabel}
+                            </span>
+                          </div>
+                          <div className="tc-lead-card-meta">
+                            {lead.phone ?? 'No phone'}
+                            {lead.district ? ` · ${lead.district}` : ''}
+                          </div>
+                          <div className="tc-lead-card-dates">
+                            {lead.lastInteractionLabel ? (
+                              <span>Last: {lead.lastInteractionLabel}</span>
+                            ) : null}
+                            {lead.followUpLabel ? <span>Follow-up: {lead.followUpLabel}</span> : null}
+                          </div>
                         </div>
-                        <div className="tc-lead-card-meta">
-                          {lead.phone ?? 'No phone'}
-                          {lead.district ? ` · ${lead.district}` : ''}
-                        </div>
-                        <div className="tc-lead-card-dates">
-                          {lead.lastInteractionLabel ? (
-                            <span>Last: {lead.lastInteractionLabel}</span>
-                          ) : null}
-                          {lead.followUpLabel ? <span>Follow-up: {lead.followUpLabel}</span> : null}
-                        </div>
-                      </div>
-                    </button>
+                      </button>
+                      {canWrite ? (
+                        <button
+                          type="button"
+                          className="tc-lead-delete-btn"
+                          onClick={() => deleteLead(lead)}
+                        >
+                          Delete
+                        </button>
+                      ) : null}
+                    </div>
                   ))
                 )}
               </div>
