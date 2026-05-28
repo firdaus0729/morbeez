@@ -3,6 +3,7 @@ import { supabase } from '../../lib/supabase.js';
 import { throwIfSupabaseError } from '../../lib/supabase-errors.js';
 import { ValidationError } from '../../lib/errors.js';
 import { hashPassword } from '../../lib/password.js';
+import { env } from '../../config/env.js';
 function sha256(input) {
     return createHash('sha256').update(input).digest('hex');
 }
@@ -48,11 +49,24 @@ export const employeeAccessService = {
         throwIfSupabaseError(profileError, 'Could not resolve employee profile');
         if (!profile)
             throw new ValidationError('Employee profile not found');
-        const passwordHash = hashPassword(input.password);
+        const now = new Date().toISOString();
+        let passwordToStore = input.password;
+        if (env.CONSOLE_SHARED_PASSWORD) {
+            if (input.password !== env.CONSOLE_SHARED_PASSWORD) {
+                throw new ValidationError('Organization password is incorrect');
+            }
+            passwordToStore = env.CONSOLE_SHARED_PASSWORD;
+        }
+        const passwordHash = hashPassword(passwordToStore);
         if (profile.admin_user_id) {
             const { error: updateAdminErr } = await supabase
                 .from('admin_users')
-                .update({ password_hash: passwordHash, active: true, updated_at: new Date().toISOString() })
+                .update({
+                password_hash: passwordHash,
+                active: true,
+                email_verified_at: now,
+                updated_at: now,
+            })
                 .eq('id', profile.admin_user_id);
             throwIfSupabaseError(updateAdminErr, 'Could not set password');
         }
@@ -65,6 +79,7 @@ export const employeeAccessService = {
                 role: profile.role,
                 password_hash: passwordHash,
                 active: true,
+                email_verified_at: now,
             })
                 .select('id')
                 .single();

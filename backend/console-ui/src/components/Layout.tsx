@@ -97,11 +97,11 @@ export function AppLayout() {
           <TelecallerHeaderProvider>
             <TelecallerWorkspaceHeader onOpenMenu={() => setSidebarOpen(true)} onLogout={handleLogout} />
             <div className="content console-page-content" id="main-content">
-              <Outlet />
+              <Outlet key={location.pathname} />
             </div>
           </TelecallerHeaderProvider>
         ) : (
-          <ConsolePageSearchProvider pageKey={meta.pageKey}>
+          <ConsolePageSearchProvider key={meta.pageKey} pageKey={meta.pageKey}>
             <ConsoleTopbar
               pathname={location.pathname}
               dateText={dateText}
@@ -109,7 +109,7 @@ export function AppLayout() {
               onLogout={handleLogout}
             />
             <div className="content console-page-content" id="main-content">
-              <Outlet />
+              <Outlet key={location.pathname} />
             </div>
           </ConsolePageSearchProvider>
         )}

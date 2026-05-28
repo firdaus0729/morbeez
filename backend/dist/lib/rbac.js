@@ -1,16 +1,11 @@
 import { supabase } from './supabase.js';
 import { UnauthorizedError } from './errors.js';
 import { requireAdmin } from '../middleware/adminAuth.js';
-const LEGACY_ROLE_MAP = {
-    admin: 'super_admin',
-    manager: 'operations',
-};
-function normalizeRole(role) {
-    return LEGACY_ROLE_MAP[role] ?? role;
-}
+import { canAssignSuperAdmin, canManageStaff } from './console-roles.js';
+export { canApproveRecommendations, canManageStaff, canAssignSuperAdmin, getRoleHomePath } from './console-roles.js';
+export { CONSOLE_ROLES } from './console-roles.js';
 export async function getModulesForRole(role) {
-    const normalized = normalizeRole(role);
-    if (normalized === 'super_admin') {
+    if (role === 'super_admin') {
         return [
             'dashboard',
             'telecaller_crm',
@@ -27,7 +22,7 @@ export async function getModulesForRole(role) {
     const { data, error } = await supabase
         .from('role_module_permissions')
         .select('module_key, can_read, can_write')
-        .eq('role', normalized);
+        .eq('role', role);
     if (error || !data?.length) {
         return [{ moduleKey: 'dashboard', canRead: true, canWrite: false }];
     }
@@ -40,7 +35,7 @@ export async function getModulesForRole(role) {
 /** Async guard — call at route start after requireAdmin */
 export async function assertModuleAccess(request, moduleKey, mode = 'read') {
     const admin = requireAdmin(request);
-    const role = normalizeRole(admin.role);
+    const role = admin.role;
     if (role === 'super_admin')
         return admin;
     const { data } = await supabase
@@ -59,8 +54,18 @@ export async function assertModuleAccess(request, moduleKey, mode = 'read') {
     }
     return admin;
 }
-export function canApproveRecommendations(role) {
-    const r = normalizeRole(role);
-    return r === 'super_admin';
+export function assertStaffManagement(request) {
+    const admin = requireAdmin(request);
+    if (!canManageStaff(admin.role)) {
+        throw new UnauthorizedError('Staff management requires Admin or Super Admin');
+    }
+    return admin;
+}
+export function assertCanAssignRole(request, targetRole) {
+    const admin = assertStaffManagement(request);
+    if (targetRole === 'super_admin' && !canAssignSuperAdmin(admin.role)) {
+        throw new UnauthorizedError('Only Super Admin can assign the Super Admin role');
+    }
+    return admin;
 }
 //# sourceMappingURL=rbac.js.map

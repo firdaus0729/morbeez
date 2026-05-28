@@ -1,8 +1,9 @@
-import { Navigate, Route, Routes } from 'react-router-dom';
+import { createBrowserRouter, Navigate, RouterProvider } from 'react-router-dom';
 import { AppLayout } from '../components/Layout';
-import { RequireAuth, RequireGuest, RequireModule } from './guards';
+import { RequireAuth, RequireGuest, RequireModule, RoleHomeRedirect } from './guards';
 import { paths } from '../lib/routes';
 import { LoginPage } from '../pages/LoginPage';
+import { AcceptInvitePage } from '../pages/AcceptInvitePage';
 import { DashboardPage } from '../pages/DashboardPage';
 import { TelecallerCrmPage } from '../pages/TelecallerCrmPage';
 import { OperationsCenterPage } from '../pages/OperationsCenterPage';
@@ -56,56 +57,69 @@ function CommerceRoute() {
   return <CommerceHubPage canWrite={can('commerce', 'write')} />;
 }
 
+export const appRouter = createBrowserRouter(
+  [
+    { path: paths.acceptInvite, element: <AcceptInvitePage /> },
+    {
+      element: <RequireGuest />,
+      children: [{ path: paths.login, element: <LoginPage /> }],
+    },
+    {
+      element: <RequireAuth />,
+      children: [
+        {
+          element: <AppLayout />,
+          children: [
+            { index: true, element: <RoleHomeRedirect /> },
+            { path: paths.dashboard, element: <DashboardPage /> },
+            {
+              element: <RequireModule module="telecaller_crm" />,
+              children: [{ path: paths.telecaller, element: <TelecallerRoute /> }],
+            },
+            {
+              element: <RequireModule module="operations" />,
+              children: [{ path: paths.operations, element: <OperationsRoute /> }],
+            },
+            {
+              element: <RequireModule module="intelligence" />,
+              children: [
+                { path: paths.intelligence, element: <IntelligenceRoute /> },
+                { path: paths.productGaps, element: <ProductGapsPage /> },
+              ],
+            },
+            {
+              element: <RequireModule module="agronomist" />,
+              children: [{ path: paths.agronomist, element: <AgronomistRoute /> }],
+            },
+            {
+              element: <RequireModule module="approve_recommendations" />,
+              children: [{ path: paths.approvals, element: <ApprovalsRoute /> }],
+            },
+            {
+              element: <RequireModule module="analytics" />,
+              children: [{ path: paths.analytics, element: <AnalyticsHubPage /> }],
+            },
+            {
+              element: <RequireModule module="commerce" />,
+              children: [{ path: paths.commerce, element: <CommerceRoute /> }],
+            },
+            {
+              element: <RequireModule module="settings" />,
+              children: [
+                { path: paths.employees, element: <EmployeesRoute /> },
+                { path: paths.employeeDetail, element: <EmployeesRoute /> },
+                { path: paths.settings, element: <SettingsRoute /> },
+              ],
+            },
+          ],
+        },
+      ],
+    },
+    { path: '*', element: <Navigate to={`/${paths.dashboard}`} replace /> },
+  ],
+  { basename: '/console' }
+);
+
 export function AppRouter() {
-  return (
-    <Routes>
-      <Route element={<RequireGuest />}>
-        <Route path={paths.login} element={<LoginPage />} />
-      </Route>
-
-      <Route element={<RequireAuth />}>
-        <Route element={<AppLayout />}>
-          <Route index element={<Navigate to={paths.dashboard} replace />} />
-          <Route path={paths.dashboard} element={<DashboardPage />} />
-
-          <Route element={<RequireModule module="telecaller_crm" />}>
-            <Route path={paths.telecaller} element={<TelecallerRoute />} />
-          </Route>
-
-          <Route element={<RequireModule module="operations" />}>
-            <Route path={paths.operations} element={<OperationsRoute />} />
-          </Route>
-
-          <Route element={<RequireModule module="intelligence" />}>
-            <Route path={paths.intelligence} element={<IntelligenceRoute />} />
-            <Route path={paths.productGaps} element={<ProductGapsPage />} />
-          </Route>
-
-          <Route element={<RequireModule module="agronomist" />}>
-            <Route path={paths.agronomist} element={<AgronomistRoute />} />
-          </Route>
-
-          <Route element={<RequireModule module="approve_recommendations" />}>
-            <Route path={paths.approvals} element={<ApprovalsRoute />} />
-          </Route>
-
-          <Route element={<RequireModule module="analytics" />}>
-            <Route path={paths.analytics} element={<AnalyticsHubPage />} />
-          </Route>
-
-          <Route element={<RequireModule module="commerce" />}>
-            <Route path={paths.commerce} element={<CommerceRoute />} />
-          </Route>
-
-          <Route element={<RequireModule module="settings" />}>
-            <Route path={paths.employees} element={<EmployeesRoute />} />
-            <Route path={paths.employeeDetail} element={<EmployeesRoute />} />
-            <Route path={paths.settings} element={<SettingsRoute />} />
-          </Route>
-        </Route>
-      </Route>
-
-      <Route path="*" element={<Navigate to={paths.dashboard} replace />} />
-    </Routes>
-  );
+  return <RouterProvider router={appRouter} />;
 }

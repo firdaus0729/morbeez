@@ -2,6 +2,7 @@ import type { FastifyRequest } from 'fastify';
 import { supabase } from './supabase.js';
 import { UnauthorizedError } from './errors.js';
 import { requireAdmin, type AdminRequest } from '../middleware/adminAuth.js';
+import { canAssignSuperAdmin, canManageStaff } from './console-roles.js';
 
 export type ConsoleModule =
   | 'dashboard'
@@ -15,20 +16,13 @@ export type ConsoleModule =
   | 'settings'
   | 'approve_recommendations';
 
-const LEGACY_ROLE_MAP: Record<string, string> = {
-  admin: 'super_admin',
-  manager: 'operations',
-};
-
-function normalizeRole(role: string): string {
-  return LEGACY_ROLE_MAP[role] ?? role;
-}
+export { canApproveRecommendations, canManageStaff, canAssignSuperAdmin, getRoleHomePath } from './console-roles.js';
+export { CONSOLE_ROLES, type ConsoleRole } from './console-roles.js';
 
 export async function getModulesForRole(role: string): Promise<
   Array<{ moduleKey: string; canRead: boolean; canWrite: boolean }>
 > {
-  const normalized = normalizeRole(role);
-  if (normalized === 'super_admin') {
+  if (role === 'super_admin') {
     return [
       'dashboard',
       'telecaller_crm',
@@ -46,7 +40,7 @@ export async function getModulesForRole(role: string): Promise<
   const { data, error } = await supabase
     .from('role_module_permissions')
     .select('module_key, can_read, can_write')
-    .eq('role', normalized);
+    .eq('role', role);
 
   if (error || !data?.length) {
     return [{ moduleKey: 'dashboard', canRead: true, canWrite: false }];
@@ -66,7 +60,7 @@ export async function assertModuleAccess(
   mode: 'read' | 'write' = 'read'
 ): Promise<AdminRequest['admin']> {
   const admin = requireAdmin(request);
-  const role = normalizeRole(admin.role);
+  const role = admin.role;
 
   if (role === 'super_admin') return admin;
 
@@ -90,7 +84,21 @@ export async function assertModuleAccess(
   return admin;
 }
 
-export function canApproveRecommendations(role: string): boolean {
-  const r = normalizeRole(role);
-  return r === 'super_admin';
+export function assertStaffManagement(request: FastifyRequest): AdminRequest['admin'] {
+  const admin = requireAdmin(request);
+  if (!canManageStaff(admin.role)) {
+    throw new UnauthorizedError('Staff management requires Admin or Super Admin');
+  }
+  return admin;
+}
+
+export function assertCanAssignRole(
+  request: FastifyRequest,
+  targetRole: string
+): AdminRequest['admin'] {
+  const admin = assertStaffManagement(request);
+  if (targetRole === 'super_admin' && !canAssignSuperAdmin(admin.role)) {
+    throw new UnauthorizedError('Only Super Admin can assign the Super Admin role');
+  }
+  return admin;
 }

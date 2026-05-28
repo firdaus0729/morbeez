@@ -27,7 +27,13 @@ import { osAgronomistRoutes } from './os-agronomist.routes.js';
 import { osFieldRoutes } from './os-field.routes.js';
 import { osAnalyticsRoutes } from './os-analytics.routes.js';
 import { osSettingsRoutes } from './os-settings.routes.js';
-import { getModulesForRole, canApproveRecommendations } from '../../lib/rbac.js';
+import {
+  getModulesForRole,
+  canApproveRecommendations,
+  assertStaffManagement,
+  assertCanAssignRole,
+} from '../../lib/rbac.js';
+import { CONSOLE_ROLES } from '../../lib/console-roles.js';
 import { requireAdmin, requireAdminRole } from '../../middleware/adminAuth.js';
 import { supabase } from '../../lib/supabase.js';
 import { throwIfSupabaseError } from '../../lib/supabase-errors.js';
@@ -36,6 +42,7 @@ import { logAdminMutation } from '../../lib/admin-mutation-audit.js';
 import { assertSuperAdminDeactivationAllowed } from '../../lib/admin-guards.js';
 import { employeeProfileService } from '../../services/admin/employee-profile.service.js';
 import { employeeAccessService } from '../../services/admin/employee-access.service.js';
+import { staffInviteService } from '../../services/admin/staff-invite.service.js';
 import { employeeReassignmentService } from '../../services/admin/employee-reassignment.service.js';
 import { attendanceCalculatorService } from '../../services/admin/attendance-calculator.service.js';
 import { incentiveCalculatorService } from '../../services/admin/incentive-calculator.service.js';
@@ -217,6 +224,23 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
     });
   });
 
+  app.get(`${api}/auth/invite`, async (request, reply) => {
+    const query = z.object({ token: z.string().min(16) }).parse(request.query ?? {});
+    const invite = await staffInviteService.previewToken(query.token);
+    return reply.send({ ok: true, invite });
+  });
+
+  app.post(`${api}/auth/complete-invite`, async (request, reply) => {
+    const body = z
+      .object({
+        token: z.string().min(16),
+        password: z.string().min(8).max(128),
+      })
+      .parse(request.body);
+    const result = await staffInviteService.completeInvite(body);
+    return reply.send({ ok: true, email: result.email });
+  });
+
   app.post(`${api}/auth/setup-password`, async (request, reply) => {
     const body = z
       .object({
@@ -224,7 +248,7 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
         password: z.string().min(8).max(128),
       })
       .parse(request.body);
-    await employeeAccessService.consumeToken(body);
+    await staffInviteService.completeInvite(body);
     return reply.send({ ok: true });
   });
 
@@ -558,26 +582,17 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
   });
 
   app.post(`${api}/staff`, async (request, reply) => {
-    requireAdminRole(request, 'super_admin', 'admin');
+    assertStaffManagement(request);
     const body = z
       .object({
         email: z.string().email().max(255),
         fullName: z.string().min(2).max(120),
-        role: z
-          .enum([
-            'super_admin',
-            'admin',
-            'operations',
-            'agronomist',
-            'telecaller',
-            'manager',
-            'viewer',
-          ])
-          .default('viewer'),
+        role: z.enum(CONSOLE_ROLES).default('viewer'),
         password: z.string().min(8).max(128),
         active: z.boolean().optional(),
       })
       .parse(request.body);
+    assertCanAssignRole(request, body.role);
 
     const email = body.email.trim().toLowerCase();
     const now = new Date().toISOString();
@@ -589,6 +604,7 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
         role: body.role,
         password_hash: hashPassword(body.password),
         active: body.active ?? true,
+        email_verified_at: now,
         updated_at: now,
       })
       .select('id, email, full_name, role, active, last_login_at, created_at')
@@ -613,26 +629,17 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
   });
 
   app.patch(`${api}/staff/:id`, async (request, reply) => {
-    requireAdminRole(request, 'super_admin', 'admin');
-    const actor = requireAdmin(request);
+    const actor = assertStaffManagement(request);
     const { id } = request.params as { id: string };
     const body = z
       .object({
         fullName: z.string().min(2).max(120).optional(),
-        role: z
-          .enum([
-            'super_admin',
-            'admin',
-            'operations',
-            'agronomist',
-            'telecaller',
-            'manager',
-            'viewer',
-          ])
-          .optional(),
+        role: z.enum(CONSOLE_ROLES).optional(),
         active: z.boolean().optional(),
       })
       .parse(request.body);
+
+    if (body.role !== undefined) assertCanAssignRole(request, body.role);
 
     const patch: Record<string, unknown> = { updated_at: new Date().toISOString() };
     if (body.fullName !== undefined) patch.full_name = body.fullName.trim();
@@ -736,12 +743,12 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
   });
 
   app.post(`${api}/employees`, async (request, reply) => {
-    requireAdminRole(request, 'super_admin', 'admin');
+    assertStaffManagement(request);
     const body = z
       .object({
         fullName: z.string().min(2).max(120),
-        email: z.string().email().max(255).optional(),
-        role: z.string().min(2).max(50),
+        email: z.string().email().max(255),
+        role: z.enum(CONSOLE_ROLES),
         status: z.enum(['active', 'inactive']).optional(),
         personalMobile: z.string().max(20).optional(),
         companyWhatsapp: z.string().max(20).optional(),
@@ -767,7 +774,9 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
         attendanceRules: z.record(z.any()).optional(),
       })
       .parse(request.body);
+    assertCanAssignRole(request, body.role);
     const employee = await employeeProfileService.create(body);
+    await staffInviteService.ensurePendingAdminUser(String(employee.id));
     return reply.status(201).send({ ok: true, employee });
   });
 
@@ -810,20 +819,13 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
 
   app.post(`${api}/employees/:id/send-setup-link`, async (request, reply) => {
     const actor = requireAdmin(request);
-    requireAdminRole(request, 'super_admin', 'admin', 'manager');
+    assertStaffManagement(request);
     const { id } = request.params as { id: string };
-    const body = z
-      .object({
-        channels: z.array(z.enum(['personal_mobile', 'company_whatsapp', 'email'])).min(1),
-      })
-      .parse(request.body ?? {});
-    const token = await employeeAccessService.createSetupToken({
+    const invite = await staffInviteService.createInvite({
       employeeProfileId: id,
-      purpose: 'setup_password',
       createdBy: actor.id,
-      channels: body.channels,
     });
-    return reply.send({ ok: true, setup: token });
+    return reply.send({ ok: true, invite });
   });
 
   app.post(`${api}/employees/:id/reset-password-link`, async (request, reply) => {

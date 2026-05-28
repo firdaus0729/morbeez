@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
+import { useAuth } from '../context/AuthContext';
 import { api } from '../lib/api';
 import { roleLabel } from '../lib/format';
+import { assignableRolesForActor } from '../lib/role-home';
 import { Field, Modal, inputClass } from '../components/Modal';
 import {
   Alert,
@@ -147,6 +149,12 @@ function EditStaffModal({
   onClose: () => void;
   onSaved: () => Promise<void>;
 }) {
+  const { admin } = useAuth();
+  const assignableRoles = assignableRolesForActor(admin?.role);
+  const roleOptions =
+    assignableRoles.includes(row.role) || row.role === 'super_admin'
+      ? [...new Set([...assignableRoles, row.role])]
+      : assignableRoles;
   const [fullName, setFullName] = useState(row.fullName ?? '');
   const [role, setRole] = useState(row.role);
   const [active, setActive] = useState(row.active);
@@ -178,13 +186,11 @@ function EditStaffModal({
         </Field>
         <Field label="Role">
           <select className={inputClass} value={role} onChange={(e) => setRole(e.target.value)}>
-            <option value="super_admin">Super Admin</option>
-            <option value="admin">Admin</option>
-            <option value="operations">Operations</option>
-            <option value="agronomist">Agronomist</option>
-            <option value="telecaller">Telecaller</option>
-            <option value="manager">Manager</option>
-            <option value="viewer">Viewer</option>
+            {roleOptions.map((r) => (
+              <option key={r} value={r}>
+                {roleLabel(r)}
+              </option>
+            ))}
           </select>
         </Field>
         <label className="flex items-center gap-2 text-sm">

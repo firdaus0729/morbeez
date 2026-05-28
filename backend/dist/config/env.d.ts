@@ -54,6 +54,10 @@ declare const envSchema: z.ZodObject<{
     FARMER_JWT_SECRET: z.ZodString;
     ADMIN_JWT_SECRET: z.ZodString;
     ADMIN_UI_ORIGIN: z.ZodOptional<z.ZodString>;
+    /** Public URL of the staff console SPA (no trailing slash), e.g. https://api.example.com/console */
+    CONSOLE_PUBLIC_URL: z.ZodOptional<z.ZodString>;
+    /** Shared password all staff use after completing email invite (min 8 chars) */
+    CONSOLE_SHARED_PASSWORD: z.ZodOptional<z.ZodString>;
     RATE_LIMIT_MAX: z.ZodDefault<z.ZodNumber>;
     RATE_LIMIT_WINDOW_MS: z.ZodDefault<z.ZodNumber>;
     ENABLE_SHIPROCKET_AUTO_SHIP: z.ZodDefault<z.ZodEffects<z.ZodString, boolean, string>>;
@@ -169,6 +173,8 @@ declare const envSchema: z.ZodObject<{
     OPENAI_API_KEY?: string | undefined;
     PLANT_ID_API_KEY?: string | undefined;
     ADMIN_UI_ORIGIN?: string | undefined;
+    CONSOLE_PUBLIC_URL?: string | undefined;
+    CONSOLE_SHARED_PASSWORD?: string | undefined;
 }, {
     SUPABASE_URL: string;
     SUPABASE_SERVICE_ROLE_KEY: string;
@@ -223,6 +229,8 @@ declare const envSchema: z.ZodObject<{
     OPENAI_WHISPER_MODEL?: string | undefined;
     PLANT_ID_API_KEY?: string | undefined;
     ADMIN_UI_ORIGIN?: string | undefined;
+    CONSOLE_PUBLIC_URL?: string | undefined;
+    CONSOLE_SHARED_PASSWORD?: string | undefined;
     RATE_LIMIT_MAX?: number | undefined;
     RATE_LIMIT_WINDOW_MS?: number | undefined;
     ENABLE_SHIPROCKET_AUTO_SHIP?: string | undefined;
@@ -339,6 +347,8 @@ export declare const env: {
     OPENAI_API_KEY?: string | undefined;
     PLANT_ID_API_KEY?: string | undefined;
     ADMIN_UI_ORIGIN?: string | undefined;
+    CONSOLE_PUBLIC_URL?: string | undefined;
+    CONSOLE_SHARED_PASSWORD?: string | undefined;
 };
 export {};
 //# sourceMappingURL=env.d.ts.map

@@ -105,7 +105,7 @@ export const NAV_GROUPS: Array<{ id: string; items: NavItem[] } | NavGroup> = [
     items: [
       {
         id: 'employees',
-        path: paths.employees,
+        path: toPath(paths.employees),
         label: 'Employees',
         icon: 'users',
         module: 'settings',

@@ -1,5 +1,6 @@
 import { z } from 'zod';
-import { assertModuleAccess } from '../../lib/rbac.js';
+import { assertModuleAccess, assertCanAssignRole } from '../../lib/rbac.js';
+import { CONSOLE_ROLES } from '../../lib/console-roles.js';
 import { supabase } from '../../lib/supabase.js';
 import { throwIfSupabaseError } from '../../lib/supabase-errors.js';
 import { logAdminMutation } from '../../lib/admin-mutation-audit.js';
@@ -32,20 +33,12 @@ export async function osSettingsRoutes(app) {
         const body = z
             .object({
             fullName: z.string().min(2).max(120).optional(),
-            role: z
-                .enum([
-                'super_admin',
-                'admin',
-                'operations',
-                'agronomist',
-                'telecaller',
-                'manager',
-                'viewer',
-            ])
-                .optional(),
+            role: z.enum(CONSOLE_ROLES).optional(),
             active: z.boolean().optional(),
         })
             .parse(request.body);
+        if (body.role !== undefined)
+            assertCanAssignRole(request, body.role);
         const patch = { updated_at: new Date().toISOString() };
         if (body.fullName !== undefined)
             patch.full_name = body.fullName;

@@ -2,6 +2,7 @@
 
 export const paths = {
   login: 'login',
+  acceptInvite: 'accept-invite',
   dashboard: 'dashboard',
   telecaller: 'telecaller',
   operations: 'operations',

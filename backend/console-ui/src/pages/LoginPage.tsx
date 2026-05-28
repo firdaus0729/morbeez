@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { login } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import { LogoMark } from '../components/LogoMark';
+import { getRoleHomePath } from '../lib/role-home';
 import { paths, toPath } from '../lib/routes';
 import { Alert, Btn, Field, Input } from '../components/ui';
 
@@ -15,16 +16,17 @@ export function LoginPage() {
   const location = useLocation();
   const { refresh } = useAuth();
 
-  const from = (location.state as { from?: string } | null)?.from ?? toPath(paths.dashboard);
+  const from = (location.state as { from?: string } | null)?.from;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError('');
     setLoading(true);
     try {
-      await login(email, password);
+      const session = await login(email, password);
       await refresh();
-      navigate(from, { replace: true });
+      const home = getRoleHomePath(session.admin?.role);
+      navigate(from && from !== toPath(paths.dashboard) ? from : home, { replace: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed');
     } finally {
@@ -47,7 +49,8 @@ export function LoginPage() {
 
         <h1 className="text-2xl font-bold text-slate-900">Staff sign in</h1>
         <p className="mt-2 text-sm text-slate-600">
-          Operations console for products, orders & farmer intelligence
+          Operations console for products, orders & farmer intelligence. Use your organization
+          console password after completing your email invite.
         </p>
 
         {error ? (

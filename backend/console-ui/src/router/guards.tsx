@@ -1,5 +1,6 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { getRoleHomePath } from '../lib/role-home';
 import { paths, toPath } from '../lib/routes';
 import { Loading } from '../components/ui';
 
@@ -25,7 +26,9 @@ export function RequireAuth() {
 export function RequireGuest() {
   const { ready, authed } = useAuth();
   const location = useLocation();
-  const from = (location.state as { from?: string } | null)?.from ?? toPath(paths.dashboard);
+  const { admin } = useAuth();
+  const from =
+    (location.state as { from?: string } | null)?.from ?? getRoleHomePath(admin?.role);
 
   if (!ready) {
     return (
@@ -43,11 +46,17 @@ export function RequireGuest() {
 }
 
 export function RequireModule({ module, mode = 'read' }: { module: string; mode?: 'read' | 'write' }) {
-  const { can } = useAuth();
+  const { can, admin } = useAuth();
 
   if (!can(module, mode)) {
-    return <Navigate to={toPath(paths.dashboard)} replace />;
+    return <Navigate to={getRoleHomePath(admin?.role)} replace />;
   }
 
   return <Outlet />;
+}
+
+export function RoleHomeRedirect() {
+  const { admin, ready, authed } = useAuth();
+  if (!ready || !authed) return null;
+  return <Navigate to={getRoleHomePath(admin?.role)} replace />;
 }

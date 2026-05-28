@@ -27,7 +27,8 @@ export function initials(name: string | undefined): string {
 export function roleLabel(role: string): string {
   const map: Record<string, string> = {
     super_admin: 'Super Admin',
-    admin: 'Super Admin',
+    admin: 'Admin',
+    operations: 'Operations',
     manager: 'Manager',
     viewer: 'Viewer',
     agronomist: 'Agronomist',

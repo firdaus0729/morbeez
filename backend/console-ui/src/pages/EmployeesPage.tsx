@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import { useConsolePageSearch } from '../context/ConsolePageSearchContext';
 import { api } from '../lib/api';
+import { assignableRolesForActor } from '../lib/role-home';
 import { defaultsForPage } from '../lib/console-page-search';
 import { paths, toPath } from '../lib/routes';
 import { formatInrFull, initials, roleLabel } from '../lib/format';
@@ -117,6 +119,8 @@ function ProgressRing({ pct, label, display }: { pct: number; label: string; dis
 export function EmployeesPage({ canWrite = false }: { canWrite?: boolean }) {
   const { employeeId } = useParams<{ employeeId?: string }>();
   const navigate = useNavigate();
+  const { admin } = useAuth();
+  const assignableRoles = assignableRolesForActor(admin?.role);
   const [workspace, setWorkspace] = useState<Workspace | null>(null);
   const [detail, setDetail] = useState<Detail | null>(null);
   const [listTab, setListTab] = useState<'active' | 'inactive'>('active');
@@ -211,12 +215,25 @@ export function EmployeesPage({ canWrite = false }: { canWrite?: boolean }) {
     fieldExperienceYears?: number;
     compensation?: Record<string, unknown>;
     attendanceRules?: Record<string, unknown>;
-  }) {
-    await api<{ ok: boolean; employee: { id: string } }>('/console/api/v1/employees', {
+  }): Promise<string> {
+    const d = await api<{ ok: boolean; employee: { id: string } }>('/console/api/v1/employees', {
       method: 'POST',
       body: JSON.stringify(input),
     });
     await loadWorkspace();
+    return d.employee.id;
+  }
+
+  async function sendEmployeeSetupLink(employeeProfileId: string, email: string): Promise<string | null> {
+    if (!email.trim()) return null;
+    const d = await api<{
+      ok: boolean;
+      invite: { inviteUrl: string; email: string | null };
+    }>(`/console/api/v1/employees/${employeeProfileId}/send-setup-link`, {
+      method: 'POST',
+      body: JSON.stringify({ channels: ['email'] }),
+    });
+    return d.invite?.inviteUrl ?? null;
   }
 
   async function updateEmployee(
@@ -687,9 +704,11 @@ export function EmployeesPage({ canWrite = false }: { canWrite?: boolean }) {
           <Select value={roleFilter} onChange={(ev) => setRoleFilter(ev.target.value)}>
             <option value="">All roles</option>
             <option value="super_admin">Super Admin</option>
+            <option value="admin">Admin</option>
+            <option value="operations">Operations</option>
             <option value="telecaller">Telecaller</option>
             <option value="agronomist">Agronomist</option>
-            <option value="operations">Operations</option>
+            <option value="manager">Manager</option>
             <option value="viewer">Viewer</option>
           </Select>
           {canWrite ? (
@@ -826,6 +845,8 @@ export function EmployeesPage({ canWrite = false }: { canWrite?: boolean }) {
             await loadWorkspace();
           }}
           createEmployee={createEmployee}
+          sendSetupLink={sendEmployeeSetupLink}
+          assignableRoles={assignableRoles}
         />
       ) : null}
       {editingEmployee ? (
@@ -886,9 +907,13 @@ function NewEmployeeModal({
   onClose,
   onCreated,
   createEmployee,
+  sendSetupLink,
+  assignableRoles,
 }: {
   onClose: () => void;
   onCreated: () => Promise<void>;
+  sendSetupLink: (employeeId: string, email: string) => Promise<string | null>;
+  assignableRoles: string[];
   createEmployee: (input: {
     fullName: string;
     email: string;
@@ -915,11 +940,14 @@ function NewEmployeeModal({
     fieldExperienceYears?: number;
     compensation?: Record<string, unknown>;
     attendanceRules?: Record<string, unknown>;
-  }) => Promise<void>;
+  }) => Promise<string>;
 }) {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
-  const [role, setRole] = useState('viewer');
+  const defaultRole = assignableRoles.includes('telecaller')
+    ? 'telecaller'
+    : assignableRoles[0] ?? 'viewer';
+  const [role, setRole] = useState(defaultRole);
   const [active, setActive] = useState(true);
   const [personalMobile, setPersonalMobile] = useState('');
   const [companyWhatsapp, setCompanyWhatsapp] = useState('');
@@ -967,12 +995,13 @@ function NewEmployeeModal({
   const [idleWarningMinutes, setIdleWarningMinutes] = useState(45);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [inviteUrl, setInviteUrl] = useState<string | null>(null);
 
   async function save() {
     setSaving(true);
     setError('');
     try {
-      await createEmployee({
+      const employeeId = await createEmployee({
         fullName: fullName.trim(),
         email: email.trim().toLowerCase(),
         role,
@@ -1029,6 +1058,18 @@ function NewEmployeeModal({
           idle_warning_threshold_minutes: idleWarningMinutes,
         },
       });
+      if (email.trim()) {
+        const url = await sendSetupLink(employeeId, email.trim());
+        if (url) {
+          setInviteUrl(url);
+          try {
+            await navigator.clipboard.writeText(url);
+          } catch {
+            /* clipboard may be blocked */
+          }
+          return;
+        }
+      }
       await onCreated();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not create employee');
@@ -1038,8 +1079,23 @@ function NewEmployeeModal({
   }
 
   return (
-    <Modal title="New employee" onClose={onClose} onSave={save} saveLabel="Create" saving={saving}>
+    <Modal
+      title={inviteUrl ? 'Invitation link' : 'New employee'}
+      onClose={onClose}
+      onSave={inviteUrl ? onCreated : save}
+      saveLabel={inviteUrl ? 'Done' : 'Create'}
+      saving={saving}
+    >
+      {inviteUrl ? (
+        <div className="space-y-3">
+          <Alert tone="success">
+            Employee created. Send this link to their email (copied to clipboard when possible).
+          </Alert>
+          <input className={inputClass} readOnly value={inviteUrl} onFocus={(e) => e.target.select()} />
+        </div>
+      ) : null}
       {error ? <Alert tone="error">{error}</Alert> : null}
+      {!inviteUrl ? (
       <div className="space-y-3">
         <h4 className="text-sm font-semibold text-slate-800">Basic Information</h4>
         <Field label="Full name">
@@ -1061,15 +1117,17 @@ function NewEmployeeModal({
         </Field>
         <Field label="Role">
           <select className={inputClass} value={role} onChange={(e) => setRole(e.target.value)}>
-            <option value="super_admin">Super Admin</option>
-            <option value="admin">Admin</option>
-            <option value="operations">Operations</option>
-            <option value="telecaller">Telecaller</option>
-            <option value="agronomist">Agronomist</option>
-            <option value="manager">Manager</option>
-            <option value="viewer">Viewer</option>
+            {assignableRoles.map((r) => (
+              <option key={r} value={r}>
+                {roleLabel(r)}
+              </option>
+            ))}
           </select>
         </Field>
+        <p className="text-xs text-slate-500">
+          After create, an email invite link is generated. The employee must open it and enter the
+          organization console password.
+        </p>
         <Field label="Personal mobile">
           <input className={inputClass} value={personalMobile} onChange={(e) => setPersonalMobile(e.target.value)} />
         </Field>
@@ -1285,6 +1343,7 @@ function NewEmployeeModal({
           Active account
         </label>
       </div>
+      ) : null}
     </Modal>
   );
 }

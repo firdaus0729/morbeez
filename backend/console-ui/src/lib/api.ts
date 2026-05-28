@@ -65,6 +65,29 @@ export async function api<T = unknown>(
   return data;
 }
 
+export type InvitePreview = {
+  email: string | null;
+  fullName: string | null;
+  role: string | null;
+  expiresAt: string;
+  purpose: string;
+};
+
+export async function fetchInvitePreview(token: string): Promise<InvitePreview> {
+  const params = new URLSearchParams({ token });
+  const data = await api<{ ok: boolean; invite: InvitePreview }>(
+    `/console/api/v1/auth/invite?${params}`
+  );
+  return data.invite;
+}
+
+export async function completeInvite(token: string, password: string): Promise<void> {
+  await api('/console/api/v1/auth/complete-invite', {
+    method: 'POST',
+    body: JSON.stringify({ token, password }),
+  });
+}
+
 export async function login(email: string, password: string) {
   const data = await api<{
     ok: boolean;

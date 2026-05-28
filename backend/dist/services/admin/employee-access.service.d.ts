@@ -1,7 +1,7 @@
 export declare const employeeAccessService: {
     createSetupToken(input: {
         employeeProfileId: string;
-        purpose: "setup_password" | "reset_password";
+        purpose: "setup_password" | "reset_password" | "email_invite";
         createdBy?: string;
         channels: string[];
     }): Promise<{

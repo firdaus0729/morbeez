@@ -25,11 +25,19 @@ export const adminAuthService = {
             .from('admin_users')
             .select('*')
             .eq('email', email)
-            .eq('active', true)
             .maybeSingle();
         throwIfSupabaseError(error, 'Could not load admin account');
         if (!data?.password_hash)
             throw new UnauthorizedError('Invalid email or password');
+        if (!data.active) {
+            if (!data.email_verified_at) {
+                throw new UnauthorizedError('Activate your account using the invitation link sent to your email');
+            }
+            throw new UnauthorizedError('Account is inactive');
+        }
+        if (!data.email_verified_at && data.role !== 'super_admin') {
+            throw new UnauthorizedError('Complete email verification using your invitation link');
+        }
         if (!verifyPassword(input.password, data.password_hash)) {
             throw new UnauthorizedError('Invalid email or password');
         }
