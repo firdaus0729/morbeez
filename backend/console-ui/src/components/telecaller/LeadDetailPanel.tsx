@@ -306,6 +306,9 @@ export function LeadDetailPanel({ leadId, canWrite }: Props) {
 
   const l = detail.lead;
   const f = detail.farmer;
+  const timeline = Array.isArray(detail.timeline) ? detail.timeline : [];
+  const recentOrders = Array.isArray(detail.orders) ? detail.orders : [];
+  const overviewBlocks = Array.isArray(detail.farmOverview?.blocks) ? detail.farmOverview.blocks : [];
 
   return (
     <div className="tc-detail-root">
@@ -404,7 +407,7 @@ export function LeadDetailPanel({ leadId, canWrite }: Props) {
               </article>
               <article className="tc-profile-metric">
                 <span>Customer since</span>
-                <strong>{detail.timeline.at(-1)?.atLabel ?? '—'}</strong>
+                <strong>{timeline.length ? timeline[timeline.length - 1]?.atLabel ?? '—' : '—'}</strong>
               </article>
               <article className="tc-profile-metric">
                 <span>Next follow-up</span>
@@ -428,13 +431,13 @@ export function LeadDetailPanel({ leadId, canWrite }: Props) {
               <article className="tc-dashboard-card">
                 <h3>Recent orders</h3>
                 <ul className="tc-compact-list">
-                  {(detail.orders ?? []).slice(0, 3).map((o, idx) => (
+                  {recentOrders.slice(0, 3).map((o, idx) => (
                     <li key={`${o.label}-${o.date}-${idx}`}>
                       <strong>{o.label || `Order ${idx + 1}`}</strong>
                       <span>₹{Number(o.amount ?? 0)}</span>
                     </li>
                   ))}
-                  {(detail.orders ?? []).length === 0 ? <li className="tc-empty-row">No recent orders</li> : null}
+                  {recentOrders.length === 0 ? <li className="tc-empty-row">No recent orders</li> : null}
                 </ul>
               </article>
 
@@ -487,7 +490,7 @@ export function LeadDetailPanel({ leadId, canWrite }: Props) {
                     </tr>
                   </thead>
                   <tbody>
-                    {(detail.farmOverview.blocks ?? []).map((b) => (
+                    {overviewBlocks.map((b) => (
                       <tr key={b.id} className="border-t border-slate-100">
                         <td className="px-3 py-2">{b.name}</td>
                         <td className="px-3 py-2">{b.cropType || '—'}</td>
@@ -495,7 +498,7 @@ export function LeadDetailPanel({ leadId, canWrite }: Props) {
                         <td className="px-3 py-2">{b.isPrimary ? 'Primary' : 'Secondary'}</td>
                       </tr>
                     ))}
-                    {(detail.farmOverview.blocks ?? []).length === 0 ? (
+                    {overviewBlocks.length === 0 ? (
                       <tr>
                         <td className="px-3 py-4 text-slate-500" colSpan={4}>
                           No blocks found
@@ -513,22 +516,22 @@ export function LeadDetailPanel({ leadId, canWrite }: Props) {
                 <div className="tc-mini-kpis">
                   <div>
                     <span>Calls</span>
-                    <strong>{detail.timeline.filter((x) => String(x.type).toLowerCase().includes('call')).length}</strong>
+                    <strong>{timeline.filter((x) => String(x.type).toLowerCase().includes('call')).length}</strong>
                   </div>
                   <div>
                     <span>WhatsApp</span>
-                    <strong>{detail.timeline.filter((x) => String(x.type).toLowerCase().includes('whatsapp')).length}</strong>
+                    <strong>{timeline.filter((x) => String(x.type).toLowerCase().includes('whatsapp')).length}</strong>
                   </div>
                   <div>
                     <span>Recommendations</span>
-                    <strong>{detail.timeline.filter((x) => String(x.type).toLowerCase().includes('recommend')).length}</strong>
+                    <strong>{timeline.filter((x) => String(x.type).toLowerCase().includes('recommend')).length}</strong>
                   </div>
                 </div>
               </article>
               <article className="tc-dashboard-card">
                 <h3>AI insight</h3>
                 <p className="text-sm text-slate-600">
-                  {detail.timeline[0]?.detail ??
+                  {timeline[0]?.detail ??
                     'Keep follow-up cadence weekly and convert latest recommendation into order after confirmation.'}
                 </p>
               </article>
