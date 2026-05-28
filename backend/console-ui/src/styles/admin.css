@@ -4519,10 +4519,14 @@ tr:hover td {
   min-width: 0;
 }
 
-/* Menu icon only when sidebar is hidden (collapsed or mobile overlay) */
 @media (min-width: 901px) {
   body:not(.sidebar-collapsed) .crm-btn-menu {
     display: none !important;
+  }
+
+  /* Telecaller CRM mockup: hamburger always visible */
+  .route-telecaller .crm-btn-menu {
+    display: flex !important;
   }
 }
 
@@ -4532,7 +4536,7 @@ tr:hover td {
 
 .crm-topbar-title {
   margin: 0;
-  font-size: 1.2rem;
+  font-size: 1.35rem;
   font-weight: 700;
   letter-spacing: -0.02em;
   white-space: nowrap;
@@ -4626,6 +4630,91 @@ tr:hover td {
   font-weight: 600;
   font-size: 13px;
   border-radius: 8px;
+  background: var(--green-900) !important;
+  border: none;
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  box-shadow: 0 1px 2px rgba(26, 77, 50, 0.2);
+}
+
+.crm-btn-add-lead:hover {
+  background: var(--green-800) !important;
+}
+
+.crm-add-lead-icon {
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.crm-topbar-user-wrap {
+  position: relative;
+}
+
+.crm-topbar-avatar {
+  background: linear-gradient(135deg, var(--green-500), var(--green-700));
+  color: #fff;
+}
+
+.crm-profile-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 220px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: var(--shadow-lg, 0 12px 40px rgba(15, 23, 42, 0.12));
+  z-index: 200;
+  padding: 8px;
+}
+
+.crm-profile-menu-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px 10px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 4px;
+}
+
+.crm-profile-menu-head strong {
+  display: block;
+  font-size: 13px;
+}
+
+.crm-profile-menu-head small {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.crm-profile-menu-item {
+  width: 100%;
+  text-align: left;
+  padding: 10px 12px;
+  border: none;
+  background: none;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--text);
+}
+
+.crm-profile-menu-item:hover {
+  background: var(--bg);
+}
+
+.tool-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.route-telecaller .topbar.crm-topbar-shell {
+  background: #fff;
 }
 
 .crm-topbar-right .tool-btn {

@@ -5,8 +5,10 @@ import { initials, roleLabel } from '../lib/format';
 import { matchRouteMeta } from '../lib/routes';
 import { paths, toPath } from '../lib/routes';
 import { LogoMark } from './LogoMark';
-import { NavIcon } from './NavIcon';
 import { SidebarNav } from './SidebarNav';
+import { ConsoleTopbar } from './ConsoleTopbar';
+import { TelecallerHeaderProvider } from '../context/TelecallerHeaderContext';
+import { TelecallerWorkspaceHeader } from './telecaller/TelecallerWorkspaceHeader';
 import { cn } from '../lib/cn';
 
 export function AppLayout() {
@@ -17,6 +19,7 @@ export function AppLayout() {
   const [dateText, setDateText] = useState('');
 
   const meta = matchRouteMeta(location.pathname);
+  const isTelecallerCrm = meta.pageKey === 'telecaller';
   const displayName = admin?.fullName ?? admin?.email ?? '';
   const avatar = initials(displayName);
 
@@ -89,39 +92,26 @@ export function AppLayout() {
       </aside>
 
       <div className="main">
-        <header className="topbar">
-          <button
-            type="button"
-            className="btn-menu"
-            aria-label="Open menu"
-            onClick={() => setSidebarOpen(true)}
-          >
-            <span />
-            <span />
-            <span />
-          </button>
-          <h1 className="page-heading">{meta.title}</h1>
-          <div className="topbar-tools">
-            <div className="date-pill hidden sm:flex">
-              <NavIcon name="calendar" className="date-pill-icon" />
-              <span>{dateText}</span>
+        {isTelecallerCrm ? (
+          <TelecallerHeaderProvider>
+            <TelecallerWorkspaceHeader onOpenMenu={() => setSidebarOpen(true)} onLogout={handleLogout} />
+            <div className="content console-page-content" id="main-content">
+              <Outlet />
             </div>
-            <button type="button" className="tool-btn" aria-label="Search">
-              <NavIcon name="dashboard" />
-            </button>
-            <button type="button" className="tool-btn tool-btn-bell" aria-label="Notifications">
-              <NavIcon name="bell" />
-              <span className="bell-dot" />
-            </button>
-            <div className="topbar-avatar-wrap hidden md:flex">
-              <span className="avatar avatar-sm">{avatar}</span>
-              <span className="topbar-admin-label">{displayName}</span>
+          </TelecallerHeaderProvider>
+        ) : (
+          <>
+            <ConsoleTopbar
+              pathname={location.pathname}
+              dateText={dateText}
+              onOpenMenu={() => setSidebarOpen(true)}
+              onLogout={handleLogout}
+            />
+            <div className="content console-page-content" id="main-content">
+              <Outlet />
             </div>
-          </div>
-        </header>
-        <div className="content mx-auto w-full max-w-[1600px] px-3 py-4 sm:px-5 sm:py-6" id="main-content">
-          <Outlet />
-        </div>
+          </>
+        )}
       </div>
     </div>
   );

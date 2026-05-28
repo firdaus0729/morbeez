@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useTelecallerHeader } from '../context/TelecallerHeaderContext';
 import { api } from '../lib/api';
 import { LeadDetailPanel } from '../components/telecaller/LeadDetailPanel';
 import { EscalationsPanel } from '../components/telecaller/EscalationsPanel';
@@ -46,6 +47,7 @@ type CrmView = 'workspace' | 'escalations';
 type CrmNotification = { id: string; message: string; at: string };
 
 export function TelecallerCrmPage({ canWrite }: { canWrite: boolean }) {
+  const { patchHeader } = useTelecallerHeader();
   const [crmView, setCrmView] = useState<CrmView>('workspace');
   const [pendingEscalations, setPendingEscalations] = useState(0);
   const [overview, setOverview] = useState<Overview | null>(null);
@@ -159,6 +161,39 @@ export function TelecallerCrmPage({ canWrite }: { canWrite: boolean }) {
     };
   }, [realtimeClient, load, pushNotification]);
 
+  const selectedLead = useMemo(
+    () => leads.find((l) => l.id === selectedLeadId) ?? null,
+    [leads, selectedLeadId]
+  );
+
+  useEffect(() => {
+    patchHeader({
+      search,
+      setSearch,
+      canWrite,
+      onAddLead: () => setShowNewLead(true),
+      selectedPhone: selectedLead?.phone ?? null,
+      unreadNotifications,
+      notifications,
+      showNotifications,
+      setShowNotifications,
+      onToggleNotifications: () => {
+        setShowNotifications((v) => {
+          if (!v) setUnreadNotifications(0);
+          return !v;
+        });
+      },
+    });
+  }, [
+    patchHeader,
+    search,
+    canWrite,
+    selectedLead?.phone,
+    unreadNotifications,
+    notifications,
+    showNotifications,
+  ]);
+
   async function completeTask(taskId: string) {
     if (!canWrite) return;
     try {
@@ -186,47 +221,6 @@ export function TelecallerCrmPage({ canWrite }: { canWrite: boolean }) {
 
   return (
     <div className="telecaller-page">
-      <div className="tc-workspace-header">
-        <h1>Telecaller CRM Workspace</h1>
-        <div className="tc-header-search-wrap">
-          <input
-            className="tc-header-search"
-            placeholder="Search farmer, mobile, order ID, lead ID..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-        </div>
-        <div className="tc-header-actions">
-          {canWrite ? (
-            <Btn variant="primary" onClick={() => setShowNewLead(true)}>
-              + Add Lead
-            </Btn>
-          ) : null}
-          <button
-            type="button"
-            className="tc-header-icon-btn"
-            aria-label="Notifications"
-            onClick={() => {
-              setShowNotifications((v) => !v);
-              setUnreadNotifications(0);
-            }}
-          >
-            🔔
-            {unreadNotifications > 0 ? <span className="tc-notification-badge">{unreadNotifications}</span> : null}
-          </button>
-          <button type="button" className="tc-header-icon-btn" aria-label="Call">
-            📞
-          </button>
-          <button type="button" className="tc-header-icon-btn" aria-label="WhatsApp">
-            🟢
-          </button>
-          <div className="tc-admin-chip">
-            <span>Admin</span>
-            <small>Super Admin</small>
-          </div>
-        </div>
-      </div>
-
       {showNotifications ? (
         <div className="tc-notification-panel">
           <h4>Notifications</h4>
@@ -239,12 +233,6 @@ export function TelecallerCrmPage({ canWrite }: { canWrite: boolean }) {
           ))}
         </div>
       ) : null}
-
-      <div className="tc-page-header filter-bar">
-        <p className="muted" style={{ margin: 0, flex: 1 }}>
-          Manage leads, follow-ups, and farmer conversations
-        </p>
-      </div>
 
       {!canWrite ? <ReadOnlyBanner /> : null}
       {error ? <Alert tone="error">{error}</Alert> : null}
@@ -346,14 +334,6 @@ export function TelecallerCrmPage({ canWrite }: { canWrite: boolean }) {
                       <option value="recommendation">Recommendation</option>
                       <option value="order_placed">Order Placed</option>
                     </select>
-                    <input
-                      type="search"
-                      className="tc-filter-search"
-                      placeholder="Search name or phone…"
-                      value={search}
-                      onChange={(e) => setSearch(e.target.value)}
-                      aria-label="Search leads"
-                    />
                   </div>
                 </div>
               </div>
