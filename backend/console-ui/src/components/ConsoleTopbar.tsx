@@ -1,19 +1,8 @@
-import { useState } from 'react';
+import { useRef } from 'react';
 import { matchRouteMeta } from '../lib/routes';
+import { useConsolePageSearch } from '../context/ConsolePageSearchContext';
+import { GlobalSearchDropdown } from './GlobalSearchDropdown';
 import { WorkspaceHeader } from './WorkspaceHeader';
-
-const SEARCH_PLACEHOLDERS: Record<string, string> = {
-  dashboard: 'Search farmers, orders, KPIs…',
-  operations: 'Search campaigns, templates, broadcasts…',
-  intelligence: 'Search crops, rules, templates…',
-  gaps: 'Search product gaps, districts…',
-  agronomist: 'Search findings, farmers, blocks…',
-  approvals: 'Search pending recommendations…',
-  analytics: 'Search reports, metrics, regions…',
-  commerce: 'Search orders, products, offers…',
-  employees: 'Search employees, roles, payroll…',
-  settings: 'Search settings, users, modules…',
-};
 
 type Props = {
   pathname: string;
@@ -24,22 +13,46 @@ type Props = {
 
 export function ConsoleTopbar({ pathname, dateText, onOpenMenu, onLogout }: Props) {
   const meta = matchRouteMeta(pathname);
-  const [search, setSearch] = useState('');
+  const searchCtx = useConsolePageSearch();
+  const searchWrapRef = useRef<HTMLDivElement>(null);
 
-  const placeholder =
-    SEARCH_PLACEHOLDERS[meta.pageKey] ?? 'Search records, farmers, IDs…';
+  const showSearch = searchCtx.mode !== 'none';
 
   return (
     <WorkspaceHeader
       title={meta.title}
       onOpenMenu={onOpenMenu}
       onLogout={onLogout}
-      search={{
-        id: `search-${meta.pageKey}`,
-        value: search,
-        onChange: setSearch,
-        placeholder,
-      }}
+      search={
+        showSearch
+          ? {
+              id: `search-${meta.pageKey}`,
+              value: searchCtx.value,
+              onChange: searchCtx.onChange,
+              placeholder: searchCtx.placeholder,
+              onFocus: () => {
+                if (searchCtx.mode === 'global' && searchCtx.value.trim().length >= 2) {
+                  searchCtx.setGlobalOpen(true);
+                }
+              },
+              onBlur: () => {
+                window.setTimeout(() => searchCtx.setGlobalOpen(false), 150);
+              },
+              dropdown:
+                searchCtx.mode === 'global' ? (
+                  <div ref={searchWrapRef} className="console-global-search-wrap">
+                    <GlobalSearchDropdown
+                      results={searchCtx.globalResults}
+                      loading={searchCtx.globalLoading}
+                      open={searchCtx.globalOpen}
+                      query={searchCtx.value}
+                      onClose={() => searchCtx.setGlobalOpen(false)}
+                    />
+                  </div>
+                ) : undefined,
+            }
+          : undefined
+      }
       showDate
       dateText={dateText}
       notificationCount={0}

@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
 import { api } from '../lib/api';
+import { useSyncConsoleSearch } from '../hooks/useSyncConsoleSearch';
+import { defaultsForPage } from '../lib/console-page-search';
 import {
   Alert,
   DataTable,
   EmptyState,
-  FilterBar,
   HubTabs,
-  Input,
   Loading,
   Panel,
   TableWrap,
@@ -24,6 +24,12 @@ const TABS: Array<{ id: Tab; label: string }> = [
 export function CommerceHubPage({ canWrite = false }: { canWrite?: boolean }) {
   const [tab, setTab] = useState<Tab>('orders');
   const [search, setSearch] = useState('');
+  const searchDefaults = defaultsForPage('commerce');
+  useSyncConsoleSearch(
+    search,
+    setSearch,
+    searchDefaults.placeholder ?? 'Search orders, farmers, products…'
+  );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [orders, setOrders] = useState<Array<Record<string, unknown>>>([]);
@@ -92,15 +98,6 @@ export function CommerceHubPage({ canWrite = false }: { canWrite?: boolean }) {
   return (
     <div className="commerce-hub">
       <HubTabs tabs={TABS} active={tab} onChange={setTab} />
-      <FilterBar>
-        <Input
-          type="search"
-          className="products-search"
-          placeholder="Search…"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-      </FilterBar>
       {error ? <Alert tone="error">{error}</Alert> : null}
       {loading ? <Loading /> : null}
 

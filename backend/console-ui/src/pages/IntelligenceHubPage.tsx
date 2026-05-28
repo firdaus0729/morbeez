@@ -1,5 +1,8 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { api } from '../lib/api';
+import { useConsolePageSearch } from '../context/ConsolePageSearchContext';
+import { defaultsForPage } from '../lib/console-page-search';
+import { matchesSearch } from '../lib/search-filter';
 import { PincodeLookupPage } from './PincodeLookupPage';
 import { Field, Modal, inputClass } from '../components/Modal';
 import { Alert, HubTabs, PageShell, ReadOnlyBanner } from '../components/ui';
@@ -26,7 +29,25 @@ const TABS: Array<{ id: Tab; label: string }> = [
 
 export function IntelligenceHubPage({ canWrite }: { canWrite: boolean }) {
   const [tab, setTab] = useState<Tab>('weather');
+  const [search, setSearch] = useState('');
   const [cropFilter, setCropFilter] = useState('');
+  const pageSearch = useConsolePageSearch();
+  const searchDefaults = defaultsForPage('intelligence');
+
+  useEffect(() => {
+    if (tab === 'pincode') {
+      pageSearch.register({ mode: 'none' });
+      return () => pageSearch.clearRegistration();
+    }
+    pageSearch.register({
+      mode: 'local',
+      value: search,
+      onChange: setSearch,
+      placeholder: searchDefaults.placeholder ?? 'Search rules, templates, tasks…',
+    });
+    return () => pageSearch.clearRegistration();
+  }, [tab, search, searchDefaults.placeholder, pageSearch]);
+
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const [reloadKey, setReloadKey] = useState(0);
@@ -36,6 +57,24 @@ export function IntelligenceHubPage({ canWrite }: { canWrite: boolean }) {
   const [templates, setTemplates] = useState<Array<Record<string, unknown>>>([]);
   const [sprayRules, setSprayRules] = useState<Array<Record<string, unknown>>>([]);
   const [rotation, setRotation] = useState<Array<Record<string, unknown>>>([]);
+
+  function filterRows(rows: Array<Record<string, unknown>>) {
+    if (!search.trim()) return rows;
+    return rows.filter((r) =>
+      matchesSearch(
+        search,
+        ...Object.values(r).map((v) =>
+          v == null ? '' : typeof v === 'object' ? JSON.stringify(v) : String(v)
+        )
+      )
+    );
+  }
+
+  const visibleWeatherRules = useMemo(() => filterRows(weatherRules), [weatherRules, search]);
+  const visibleCultTasks = useMemo(() => filterRows(cultTasks), [cultTasks, search]);
+  const visibleTemplates = useMemo(() => filterRows(templates), [templates, search]);
+  const visibleSprayRules = useMemo(() => filterRows(sprayRules), [sprayRules, search]);
+  const visibleRotation = useMemo(() => filterRows(rotation), [rotation, search]);
 
   const [modal, setModal] = useState<string | null>(null);
   const [editRow, setEditRow] = useState<Record<string, unknown> | null>(null);
@@ -161,7 +200,7 @@ export function IntelligenceHubPage({ canWrite }: { canWrite: boolean }) {
       {tab === 'weather' ? (
         <MasterTable
           headers={['Rule key', 'Crop', 'Action', 'Status', 'Priority', '']}
-          rows={weatherRules.map((r) => [
+          rows={visibleWeatherRules.map((r) => [
             `${r.rule_key} v${r.version}`,
             String(r.crop_type ?? 'all'),
             String(r.action_type),
@@ -182,7 +221,7 @@ export function IntelligenceHubPage({ canWrite }: { canWrite: boolean }) {
       {tab === 'cultivation' ? (
         <MasterTable
           headers={['Crop', 'Task', 'Title', 'DAP range', 'Active', '']}
-          rows={cultTasks.map((r) => [
+          rows={visibleCultTasks.map((r) => [
             String(r.crop_type),
             String(r.task_key),
             String(r.title_en),
@@ -205,7 +244,7 @@ export function IntelligenceHubPage({ canWrite }: { canWrite: boolean }) {
       {tab === 'templates' ? (
         <MasterTable
           headers={['Crop', 'Issue', 'Recommendation', 'Status', '']}
-          rows={templates.map((r) => [
+          rows={visibleTemplates.map((r) => [
             String(r.crop_type),
             String(r.issue_label_en ?? r.issue_key),
             String(r.recommendation_text_en).slice(0, 60) + '…',
@@ -225,7 +264,7 @@ export function IntelligenceHubPage({ canWrite }: { canWrite: boolean }) {
       {tab === 'spray' ? (
         <MasterTable
           headers={['Product A', 'Product B', 'Compatible', 'Gap (hrs)', '']}
-          rows={sprayRules.map((r) => [
+          rows={visibleSprayRules.map((r) => [
             String(r.product_a),
             String(r.product_b),
             r.compatible ? 'Yes' : 'No',
@@ -245,7 +284,7 @@ export function IntelligenceHubPage({ canWrite }: { canWrite: boolean }) {
       {tab === 'rotation' ? (
         <MasterTable
           headers={['Crop', 'MoA', 'Order', 'Technical', '']}
-          rows={rotation.map((r) => [
+          rows={visibleRotation.map((r) => [
             String(r.crop_type),
             String(r.mode_of_action),
             String(r.rotation_order),

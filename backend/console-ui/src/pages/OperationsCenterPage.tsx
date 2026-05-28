@@ -1,5 +1,8 @@
-import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react';
 import { api } from '../lib/api';
+import { useConsolePageSearch } from '../context/ConsolePageSearchContext';
+import { defaultsForPage } from '../lib/console-page-search';
+import { matchesSearch } from '../lib/search-filter';
 import {
   AutomationJobsPanel,
   LanguageTemplatesPanel,
@@ -101,7 +104,24 @@ const TABS: Array<{ id: Tab; label: string }> = [
 
 export function OperationsCenterPage({ canWrite }: { canWrite: boolean }) {
   const [tab, setTab] = useState<Tab>('broadcasts');
+  const [search, setSearch] = useState('');
   const [error, setError] = useState('');
+  const pageSearch = useConsolePageSearch();
+  const searchDefaults = defaultsForPage('operations');
+
+  useEffect(() => {
+    if (tab === 'messaging') {
+      pageSearch.register({ mode: 'none' });
+      return () => pageSearch.clearRegistration();
+    }
+    pageSearch.register({
+      mode: 'local',
+      value: search,
+      onChange: setSearch,
+      placeholder: searchDefaults.placeholder ?? 'Search broadcasts, prices…',
+    });
+    return () => pageSearch.clearRegistration();
+  }, [tab, search, searchDefaults.placeholder, pageSearch]);
   const [loading, setLoading] = useState(true);
 
   const [config, setConfig] = useState<MessagingConfig | null>(null);
@@ -174,6 +194,95 @@ export function OperationsCenterPage({ canWrite }: { canWrite: boolean }) {
   });
 
   const base = '/console/api/v1/os/operations';
+
+  const visibleRules = useMemo(
+    () =>
+      rules.filter((r) =>
+        matchesSearch(search, r.crop_type, r.broadcast_kind, String(r.target_dap), String(r.id))
+      ),
+    [rules, search]
+  );
+  const visibleDeliveries = useMemo(
+    () =>
+      deliveries.filter((d) =>
+        matchesSearch(
+          search,
+          d.broadcast_kind,
+          d.status,
+          d.farmers?.name,
+          d.farmers?.phone,
+          d.farmers?.district
+        )
+      ),
+    [deliveries, search]
+  );
+  const visiblePrices = useMemo(
+    () =>
+      prices.filter((p) =>
+        matchesSearch(search, p.crop_type, p.market_name, p.district, String(p.price_per_kg))
+      ),
+    [prices, search]
+  );
+  const visibleTasks = useMemo(
+    () =>
+      tasks.filter((t) =>
+        matchesSearch(
+          search,
+          t.term,
+          t.language,
+          t.crop_type,
+          t.district,
+          t.context_text,
+          t.farmers?.name,
+          t.farmers?.phone
+        )
+      ),
+    [tasks, search]
+  );
+  const visibleWeatherRules = useMemo(
+    () =>
+      weatherRules.filter((r) =>
+        matchesSearch(search, r.rule_key, r.crop_type, r.action_type, r.status)
+      ),
+    [weatherRules, search]
+  );
+  const visibleQuickReplies = useMemo(
+    () =>
+      quickReplies.filter((r) =>
+        matchesSearch(search, r.shortcut_key, r.category, r.label_en, r.body_en, r.body_ml)
+      ),
+    [quickReplies, search]
+  );
+  const visibleLangTemplates = useMemo(
+    () =>
+      langTemplates.filter((t) =>
+        matchesSearch(
+          search,
+          t.template_key,
+          t.language,
+          t.channel,
+          t.body_text,
+          t.meta_template_name,
+          t.status
+        )
+      ),
+    [langTemplates, search]
+  );
+  const visibleAutoJobs = useMemo(
+    () =>
+      autoJobs.filter((j) =>
+        matchesSearch(
+          search,
+          j.job_type,
+          j.status,
+          j.farmerName,
+          j.farmerPhone,
+          j.last_error,
+          JSON.stringify(j.payload)
+        )
+      ),
+    [autoJobs, search]
+  );
 
   const loadTab = useCallback(async () => {
     setLoading(true);
@@ -457,7 +566,7 @@ export function OperationsCenterPage({ canWrite }: { canWrite: boolean }) {
                     </tr>
                   </thead>
                   <tbody>
-                    {rules.map((r) => (
+                    {visibleRules.map((r) => (
                       <tr key={r.id} className="border-t border-slate-100">
                         <td className="px-4 py-3">{r.crop_type}</td>
                         <td className="px-4 py-3">{r.broadcast_kind}</td>
@@ -495,7 +604,7 @@ export function OperationsCenterPage({ canWrite }: { canWrite: boolean }) {
                     </tr>
                   </thead>
                   <tbody>
-                    {deliveries.map((d) => (
+                    {visibleDeliveries.map((d) => (
                       <tr key={d.id} className="border-t border-slate-100">
                         <td className="px-4 py-3 text-xs text-slate-600">
                           {new Date(d.created_at).toLocaleString('en-IN')}
@@ -579,7 +688,7 @@ export function OperationsCenterPage({ canWrite }: { canWrite: boolean }) {
                     </tr>
                   </thead>
                   <tbody>
-                    {prices.map((p) => (
+                    {visiblePrices.map((p) => (
                       <tr key={p.id} className="border-t border-slate-100">
                         <td className="px-4 py-3">{p.crop_type}</td>
                         <td className="px-4 py-3">{p.market_name}</td>
@@ -635,7 +744,7 @@ export function OperationsCenterPage({ canWrite }: { canWrite: boolean }) {
                     </tr>
                   </thead>
                   <tbody>
-                    {tasks.map((t) => (
+                    {visibleTasks.map((t) => (
                       <tr key={t.id} className="border-t border-slate-100">
                         <td className="px-4 py-3 font-medium">
                           {t.term}
@@ -687,7 +796,7 @@ export function OperationsCenterPage({ canWrite }: { canWrite: boolean }) {
 
           {tab === 'quickReplies' ? (
             <QuickRepliesPanel
-              replies={quickReplies}
+              replies={visibleQuickReplies}
               canWrite={canWrite}
               category={qrCategory}
               onCategoryChange={setQrCategory}
@@ -697,7 +806,7 @@ export function OperationsCenterPage({ canWrite }: { canWrite: boolean }) {
 
           {tab === 'langTemplates' ? (
             <LanguageTemplatesPanel
-              templates={langTemplates}
+              templates={visibleLangTemplates}
               canWrite={canWrite}
               statusFilter={tplStatus}
               onStatusChange={setTplStatus}
@@ -707,7 +816,7 @@ export function OperationsCenterPage({ canWrite }: { canWrite: boolean }) {
 
           {tab === 'automationJobs' ? (
             <AutomationJobsPanel
-              jobs={autoJobs}
+              jobs={visibleAutoJobs}
               stats={autoStats}
               canWrite={canWrite}
               statusFilter={jobStatus}
@@ -730,7 +839,7 @@ export function OperationsCenterPage({ canWrite }: { canWrite: boolean }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {weatherRules.map((r) => (
+                  {visibleWeatherRules.map((r) => (
                     <tr key={r.id} className="border-t border-slate-100">
                       <td className="px-4 py-3">
                         {r.rule_key} v{r.version}

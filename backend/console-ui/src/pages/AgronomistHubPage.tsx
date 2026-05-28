@@ -1,5 +1,8 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { api } from '../lib/api';
+import { useSyncConsoleSearch } from '../hooks/useSyncConsoleSearch';
+import { defaultsForPage } from '../lib/console-page-search';
+import { matchesSearch } from '../lib/search-filter';
 import { Alert, HubTabs, Loading, ReadOnlyBanner } from '../components/ui';
 
 const base = '/console/api/v1/os/agronomist';
@@ -53,7 +56,14 @@ type Submission = {
 
 export function AgronomistHubPage({ canWrite }: { canWrite: boolean }) {
   const [tab, setTab] = useState<'queue' | 'submissions'>('queue');
+  const [search, setSearch] = useState('');
   const [queue, setQueue] = useState<QueueItem[]>([]);
+  const searchDefaults = defaultsForPage('agronomist');
+  useSyncConsoleSearch(
+    search,
+    setSearch,
+    searchDefaults.placeholder ?? 'Search farmer, crop, issue…'
+  );
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [loading, setLoading] = useState(true);
@@ -220,7 +230,39 @@ export function AgronomistHubPage({ canWrite }: { canWrite: boolean }) {
     }
   }
 
-  const selected = queue.find((q) => q.finding.id === selectedId);
+  const filteredQueue = useMemo(
+    () =>
+      queue.filter((item) =>
+        matchesSearch(
+          search,
+          item.farmer?.name,
+          item.farmer?.phone,
+          item.finding.cropType,
+          item.finding.blockName,
+          item.block?.plotLabel,
+          item.finding.diseasePest,
+          item.finding.observations
+        )
+      ),
+    [queue, search]
+  );
+
+  const filteredSubmissions = useMemo(
+    () =>
+      submissions.filter((s) =>
+        matchesSearch(
+          search,
+          s.farmers?.name,
+          s.farmers?.phone,
+          s.issue_detected,
+          s.recommendation_text,
+          s.status
+        )
+      ),
+    [submissions, search]
+  );
+
+  const selected = filteredQueue.find((q) => q.finding.id === selectedId) ?? queue.find((q) => q.finding.id === selectedId);
 
   return (
     <div className="agronomist-hub">
@@ -255,7 +297,10 @@ export function AgronomistHubPage({ canWrite }: { canWrite: boolean }) {
             {queue.length === 0 ? (
               <p className="text-sm text-slate-500">No field findings awaiting review.</p>
             ) : null}
-            {queue.map((item) => (
+            {queue.length > 0 && filteredQueue.length === 0 ? (
+              <p className="text-sm text-slate-500">No findings match your search.</p>
+            ) : null}
+            {filteredQueue.map((item) => (
               <button
                 key={item.finding.id}
                 type="button"
@@ -384,7 +429,7 @@ export function AgronomistHubPage({ canWrite }: { canWrite: boolean }) {
               </tr>
             </thead>
             <tbody>
-              {submissions.map((s) => (
+              {filteredSubmissions.map((s) => (
                 <tr key={s.id} className="border-t border-slate-100">
                   <td className="px-4 py-3 text-xs">
                     {new Date(s.created_at).toLocaleString('en-IN')}
@@ -413,6 +458,9 @@ export function AgronomistHubPage({ canWrite }: { canWrite: boolean }) {
           </table>
           {submissions.length === 0 ? (
             <p className="px-4 py-8 text-center text-sm text-slate-500">No submissions yet.</p>
+          ) : null}
+          {submissions.length > 0 && filteredSubmissions.length === 0 ? (
+            <p className="px-4 py-8 text-center text-sm text-slate-500">No submissions match your search.</p>
           ) : null}
         </div>
       ) : null}

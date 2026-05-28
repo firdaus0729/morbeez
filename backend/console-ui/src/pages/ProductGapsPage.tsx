@@ -1,5 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { api } from '../lib/api';
+import { useSyncConsoleSearch } from '../hooks/useSyncConsoleSearch';
+import { defaultsForPage } from '../lib/console-page-search';
+import { matchesSearch } from '../lib/search-filter';
 import { Alert, DataTable, EmptyState, PageShell, Panel, TableWrap } from '../components/ui';
 
 type Gap = {
@@ -13,8 +16,22 @@ type Gap = {
 
 export function ProductGapsPage() {
   const [gaps, setGaps] = useState<Gap[]>([]);
+  const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const searchDefaults = defaultsForPage('gaps');
+  useSyncConsoleSearch(
+    search,
+    setSearch,
+    searchDefaults.placeholder ?? 'Search technical name, crop, district…'
+  );
+  const visibleGaps = useMemo(
+    () =>
+      gaps.filter((g) =>
+        matchesSearch(search, g.technical_name, g.crop_type, g.district, g.urgency)
+      ),
+    [gaps, search]
+  );
 
   useEffect(() => {
     setLoading(true);
@@ -44,7 +61,7 @@ export function ProductGapsPage() {
               </tr>
             </thead>
             <tbody>
-              {gaps.map((g) => (
+              {visibleGaps.map((g) => (
                 <tr key={g.id}>
                   <td>
                     <strong>{g.technical_name}</strong>

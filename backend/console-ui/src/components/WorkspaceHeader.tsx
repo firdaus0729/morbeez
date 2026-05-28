@@ -8,6 +8,9 @@ export type WorkspaceHeaderSearch = {
   value: string;
   onChange: (value: string) => void;
   placeholder: string;
+  onFocus?: () => void;
+  onBlur?: () => void;
+  dropdown?: ReactNode;
 };
 
 export type WorkspaceHeaderPrimaryAction = {
@@ -139,32 +142,37 @@ export function WorkspaceHeader({
 
       {search ? (
         <div className="console-topbar-center">
-          <label className="console-topbar-search" htmlFor={searchId}>
-            <span className="console-search-icon" aria-hidden>
-              <svg
-                className="console-search-svg"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-              >
-                <circle cx="11" cy="11" r="7" />
-                <path d="M20 20l-3-3" strokeLinecap="round" />
-              </svg>
-            </span>
-            <input
-              id={searchId}
-              ref={searchRef}
-              type="search"
-              placeholder={search.placeholder}
-              value={search.value}
-              onChange={(e) => search.onChange(e.target.value)}
-              autoComplete="off"
-            />
-            <kbd className="console-search-kbd" aria-hidden>
-              Ctrl + K
-            </kbd>
-          </label>
+          <div className="console-topbar-search-host">
+            <label className="console-topbar-search" htmlFor={searchId}>
+              <span className="console-search-icon" aria-hidden>
+                <svg
+                  className="console-search-svg"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
+                  <circle cx="11" cy="11" r="7" />
+                  <path d="M20 20l-3-3" strokeLinecap="round" />
+                </svg>
+              </span>
+              <input
+                id={searchId}
+                ref={searchRef}
+                type="search"
+                placeholder={search.placeholder}
+                value={search.value}
+                onChange={(e) => search.onChange(e.target.value)}
+                onFocus={search.onFocus}
+                onBlur={search.onBlur}
+                autoComplete="off"
+              />
+              <kbd className="console-search-kbd" aria-hidden>
+                Ctrl + K
+              </kbd>
+            </label>
+            {search.dropdown}
+          </div>
         </div>
       ) : (
         <div className="console-topbar-center console-topbar-center--spacer" aria-hidden />

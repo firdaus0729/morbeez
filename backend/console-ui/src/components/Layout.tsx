@@ -7,6 +7,7 @@ import { paths, toPath } from '../lib/routes';
 import { LogoMark } from './LogoMark';
 import { SidebarNav } from './SidebarNav';
 import { ConsoleTopbar } from './ConsoleTopbar';
+import { ConsolePageSearchProvider } from '../context/ConsolePageSearchContext';
 import { TelecallerHeaderProvider } from '../context/TelecallerHeaderContext';
 import { TelecallerWorkspaceHeader } from './telecaller/TelecallerWorkspaceHeader';
 import { cn } from '../lib/cn';
@@ -100,7 +101,7 @@ export function AppLayout() {
             </div>
           </TelecallerHeaderProvider>
         ) : (
-          <>
+          <ConsolePageSearchProvider pageKey={meta.pageKey}>
             <ConsoleTopbar
               pathname={location.pathname}
               dateText={dateText}
@@ -110,7 +111,7 @@ export function AppLayout() {
             <div className="content console-page-content" id="main-content">
               <Outlet />
             </div>
-          </>
+          </ConsolePageSearchProvider>
         )}
       </div>
     </div>

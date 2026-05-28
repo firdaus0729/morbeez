@@ -1,5 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { api } from '../lib/api';
+import { useSyncConsoleSearch } from '../hooks/useSyncConsoleSearch';
+import { defaultsForPage } from '../lib/console-page-search';
+import { matchesSearch } from '../lib/search-filter';
 import { Alert, Badge, Btn, EmptyState, Loading, Panel, ReadOnlyBanner } from '../components/ui';
 
 type Rec = {
@@ -15,7 +18,30 @@ type Rec = {
 
 export function ApprovalsPage({ canApprove }: { canApprove: boolean }) {
   const [rows, setRows] = useState<Rec[]>([]);
+  const [search, setSearch] = useState('');
   const [error, setError] = useState('');
+  const searchDefaults = defaultsForPage('approvals');
+  useSyncConsoleSearch(
+    search,
+    setSearch,
+    searchDefaults.placeholder ?? 'Search pending recommendations…'
+  );
+  const visibleRows = useMemo(
+    () =>
+      rows.filter((r) =>
+        matchesSearch(
+          search,
+          r.farmers?.name,
+          r.farmers?.phone,
+          r.issue_detected,
+          r.recommendation_text,
+          r.farm_blocks?.name,
+          r.farm_blocks?.crop_type,
+          r.farm_blocks?.plot_label
+        )
+      ),
+    [rows, search]
+  );
   const [loading, setLoading] = useState(true);
   const [sendWhatsApp, setSendWhatsApp] = useState(true);
   const [lastWhatsApp, setLastWhatsApp] = useState<string | null>(null);
@@ -99,9 +125,12 @@ export function ApprovalsPage({ canApprove }: { canApprove: boolean }) {
       {loading ? <Loading /> : null}
 
       {!loading && rows.length === 0 ? <EmptyState>No pending recommendations.</EmptyState> : null}
+      {!loading && rows.length > 0 && visibleRows.length === 0 ? (
+        <EmptyState>No recommendations match your search.</EmptyState>
+      ) : null}
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-        {rows.map((r) => (
+        {visibleRows.map((r) => (
           <Panel
             key={r.id}
             title={`${r.farmers?.name ?? r.farmers?.phone ?? 'Farmer'} · ${r.farm_blocks?.plot_label ?? r.farm_blocks?.crop_type ?? 'Block'}`}

@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { useConsolePageSearch } from '../context/ConsolePageSearchContext';
 import { api } from '../lib/api';
+import { defaultsForPage } from '../lib/console-page-search';
 import { paths, toPath } from '../lib/routes';
 import { formatInrFull, initials, roleLabel } from '../lib/format';
 import { Field, Modal, inputClass } from '../components/Modal';
@@ -121,6 +123,22 @@ export function EmployeesPage({ canWrite = false }: { canWrite?: boolean }) {
   const [detailTab, setDetailTab] = useState('overview');
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
+  const pageSearch = useConsolePageSearch();
+  const employeeSearchDefaults = defaultsForPage('employees');
+
+  useEffect(() => {
+    if (employeeId) {
+      pageSearch.register({ mode: 'none' });
+      return () => pageSearch.clearRegistration();
+    }
+    pageSearch.register({
+      mode: 'local',
+      value: search,
+      onChange: setSearch,
+      placeholder: employeeSearchDefaults.placeholder ?? 'Search employees…',
+    });
+    return () => pageSearch.clearRegistration();
+  }, [employeeId, search, employeeSearchDefaults.placeholder, pageSearch]);
   const [loading, setLoading] = useState(true);
   const [detailLoading, setDetailLoading] = useState(false);
   const [error, setError] = useState('');
@@ -567,7 +585,9 @@ export function EmployeesPage({ canWrite = false }: { canWrite?: boolean }) {
       return (
         e.fullName.toLowerCase().includes(q) ||
         e.email.toLowerCase().includes(q) ||
-        e.employeeCode.toLowerCase().includes(q)
+        e.employeeCode.toLowerCase().includes(q) ||
+        (e.personalMobile ?? '').toLowerCase().includes(q) ||
+        (e.companyWhatsapp ?? '').toLowerCase().includes(q)
       );
     }
     return true;
@@ -664,13 +684,6 @@ export function EmployeesPage({ canWrite = false }: { canWrite?: boolean }) {
 
       <Panel>
         <FilterBar>
-          <Input
-            type="search"
-            className="products-search"
-            placeholder="Search by name, id, phone…"
-            value={search}
-            onChange={(ev) => setSearch(ev.target.value)}
-          />
           <Select value={roleFilter} onChange={(ev) => setRoleFilter(ev.target.value)}>
             <option value="">All roles</option>
             <option value="super_admin">Super Admin</option>
