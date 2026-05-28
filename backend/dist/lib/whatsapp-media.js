@@ -14,16 +14,24 @@ export async function downloadWhatsAppMedia(mediaId) {
     const meta = (await metaRes.json());
     if (!meta.url)
         throw new AppError('No media URL', 502, 'WHATSAPP_MEDIA_URL_MISSING');
-    const fileRes = await fetch(meta.url, {
+    return fetchWhatsAppMediaUrl(meta.url, meta.mime_type ?? 'image/jpeg');
+}
+/** Download bytes from a Meta CDN URL (requires the same Bearer token as Graph API). */
+export async function fetchWhatsAppMediaUrl(url, fallbackMime = 'application/octet-stream') {
+    if (!env.WHATSAPP_ACCESS_TOKEN) {
+        throw new AppError('WhatsApp not configured', 503, 'WHATSAPP_NOT_CONFIGURED');
+    }
+    const fileRes = await fetch(url, {
         headers: { Authorization: `Bearer ${env.WHATSAPP_ACCESS_TOKEN}` },
     });
     if (!fileRes.ok) {
         throw new AppError('Media download failed', fileRes.status, 'WHATSAPP_MEDIA_DOWNLOAD_FAILED');
     }
+    const mimeType = (fileRes.headers.get('content-type') ?? fallbackMime).split(';')[0];
     const arrayBuffer = await fileRes.arrayBuffer();
     return {
         buffer: Buffer.from(arrayBuffer),
-        mimeType: meta.mime_type ?? 'image/jpeg',
+        mimeType,
     };
 }
 //# sourceMappingURL=whatsapp-media.js.map

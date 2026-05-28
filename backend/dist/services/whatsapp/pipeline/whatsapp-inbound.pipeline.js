@@ -226,11 +226,21 @@ export const whatsappInboundPipeline = {
         await eventBus.publish('whatsapp.message.received', { phone: msg.phone, farmerId: captured.farmerId, text: msg.text, messageType: msg.msgType }, 'whatsapp');
     },
     async processVoice(msg, captured, sendText) {
-        const media = await extractInboundMedia({
-            channel: msg.channel,
-            msgType: msg.msgType,
-            messageObject: msg.messageObject,
-        });
+        let media;
+        try {
+            media = await extractInboundMedia({
+                channel: msg.channel,
+                msgType: msg.msgType,
+                messageObject: msg.messageObject,
+            });
+        }
+        catch (err) {
+            logger.error({ err, farmerId: captured.farmerId, msgType: msg.msgType }, 'WhatsApp media extract failed');
+            await sendText(captured.phone, captured.language === 'ml'
+                ? 'വോയ്സ് നോട്ട് ലോഡ് ചെയ്യാൻ കഴിഞ്ഞില്ല. വീണ്ടും അയയ്ക്കുക.'
+                : 'We could not load your voice note. Please try again.');
+            return;
+        }
         if (!media.audioBuffer) {
             await sendText(captured.phone, captured.language === 'ml'
                 ? 'വോയ്സ് നോട്ട് ലഭിച്ചില്ല. വീണ്ടും അയയ്ക്കുക.'
@@ -279,11 +289,21 @@ export const whatsappInboundPipeline = {
                 return;
             }
         }
-        const media = await extractInboundMedia({
-            channel: msg.channel,
-            msgType: msg.msgType,
-            messageObject: msg.messageObject,
-        });
+        let media;
+        try {
+            media = await extractInboundMedia({
+                channel: msg.channel,
+                msgType: msg.msgType,
+                messageObject: msg.messageObject,
+            });
+        }
+        catch (err) {
+            logger.error({ err, farmerId: captured.farmerId, msgType: msg.msgType }, 'WhatsApp media extract failed');
+            await sendText(captured.phone, captured.language === 'ml'
+                ? 'ചിത്രം ലോഡ് ചെയ്യാൻ കഴിഞ്ഞില്ല. ദയവായി വീണ്ടും അയയ്ക്കുക.'
+                : 'We could not load your photo. Please send the image again in a moment.');
+            return;
+        }
         if (!media.imageBase64) {
             await sendText(captured.phone, imageQualityMessage(captured.language, 'unsupported'));
             return;
