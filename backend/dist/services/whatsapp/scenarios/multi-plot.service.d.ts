@@ -11,7 +11,7 @@ export declare const multiPlotService: {
     listPlots(farmerId: string): Promise<FarmerPlot[]>;
     getActivePlotId(farmerId: string): Promise<string | null>;
     setActivePlot(farmerId: string, plot: FarmerPlot): Promise<void>;
-    setPrimaryCropType(farmerId: string, cropType: "ginger" | "banana" | "cardamom" | "pepper" | "other"): Promise<void>;
+    setPrimaryCropType(farmerId: string, cropType: string, cropLabel?: string): Promise<void>;
     parsePlotSelection(text: string, plots: FarmerPlot[]): FarmerPlot | null;
     analyzeMultiCropMessage(text: string, plots: FarmerPlot[]): {
         needsPlotPicker: boolean;

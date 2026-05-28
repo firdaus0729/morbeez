@@ -26,7 +26,7 @@ export interface SessionContext {
     /** Crop selection fallback after image when AI cannot infer crop */
     pendingCropSelection?: boolean;
     /** Minimal onboarding after language selection */
-    onboardingStep?: 'acreage' | 'planting_date';
+    onboardingStep?: 'acreage' | 'crop' | 'custom_crop' | 'planting_date';
     onboardingAcreageBucket?: '0_1' | '2_5' | '5_plus';
 }
 //# sourceMappingURL=session-context.types.d.ts.map

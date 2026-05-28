@@ -21,6 +21,7 @@ import { cultivationLoggingService } from '../cultivation/cultivation-logging.se
 import { sendReplyButtonMenu } from '../whatsapp-interactive-menu.service.js';
 import { accuracyMetricsService } from '../../ai/accuracy-metrics.service.js';
 import { createTelecallerTask } from '../pipeline/telecaller-tasks.service.js';
+import { cropSelectionService } from './crop-selection.service.js';
 
 const CROP_MEDIA = new Set(['image', 'image_message', 'document']);
 const MENU_IDS = new Set([
@@ -31,7 +32,6 @@ const MENU_IDS = new Set([
   'menu.soil',
   'menu.expert',
 ]);
-const CROP_IDS = new Set(['crop.ginger', 'crop.banana', 'crop.cardamom', 'crop.pepper', 'crop.other']);
 const ACREAGE_IDS = new Set(['acreage.0_1', 'acreage.2_5', 'acreage.5_plus']);
 const SOIL_CONFIRM_IDS = new Set(['soil.confirm_yes', 'soil.confirm_no']);
 
@@ -74,24 +74,31 @@ function isMenuCommand(text: string): boolean {
   return /^(menu|main menu|മെനു|மெனு)$/i.test(text.trim());
 }
 
+/** Map typed or button titles to stable menu ids. */
+function resolveMenuAction(text: string): string | null {
+  const t = text.trim();
+  if (!t) return null;
+  if (t.startsWith('menu.') || MENU_IDS.has(t)) return t.startsWith('menu.') ? t : t;
+
+  const lower = t.toLowerCase();
+  if (/^(weather|കാലാവസ്ഥ|வானிலை|ಹವಾಮಾನ|मौसम)$/i.test(lower)) return 'menu.weather';
+  if (/^(market price|prices|price|വില|விலை|ಬೆಲೆ|भाव)$/i.test(lower)) return 'menu.prices';
+  if (/^(diagnosis|രോഗനിർണയം|நோய்|ರೋಗ|रोग)/i.test(lower)) return 'menu.diagnosis';
+  if (/^(track order|order track|ഓർഡർ|ஆர்டர்|ಆರ್ಡರ್|ऑर्डर)/i.test(lower)) return 'menu.track_order';
+  if (/^(call back|callback|കോൾബാക്ക്|கால்பேக்|ಕಾಲ್|कॉलबैक)/i.test(lower)) return 'menu.expert';
+  if (/^(soil test|soil|മണ്ണ്|மண்|ಮಣ್ಣು|मिट्टी)/i.test(lower)) return 'menu.soil';
+
+  return null;
+}
+
 function isChangePlotCommand(text: string): boolean {
   return /^(change plot|switch plot|plot change|മറ്റ് പ്ലോട്ട്|ப்ளாட் மாற்று)$/i.test(text.trim());
 }
 
-function cropFromSelection(text: string): 'ginger' | 'banana' | 'cardamom' | 'pepper' | 'other' | null {
-  const t = text.trim().toLowerCase();
-  if (t.startsWith('crop.')) {
-    const raw = t.slice(5);
-    if (raw === 'ginger' || raw === 'banana' || raw === 'cardamom' || raw === 'pepper' || raw === 'other') {
-      return raw;
-    }
-  }
-  if (/\bginger|inchi|ഇഞ്ചി|अदरक\b/i.test(t)) return 'ginger';
-  if (/\bbanana|vazha|വാഴ|केला\b/i.test(t)) return 'banana';
-  if (/\bcardamom|elakka|ഏലക്ക|इलायची\b/i.test(t)) return 'cardamom';
-  if (/\bpepper|kurumulaku|കുരുമുളക്|काली मिर्च\b/i.test(t)) return 'pepper';
-  if (/\bother|others|മറ്റ്|अन्य\b/i.test(t)) return 'other';
-  return null;
+function plantingDatePrompt(lang: AdvisoryLanguage): string {
+  return lang === 'ml'
+    ? 'നടീൽ തീയതി DDMMYYYY ഫോർമാറ്റിൽ അയക്കുക. (ഉദാ: 28052026)'
+    : 'Send Date of planting in DDMMYYYY format. (Example: 28052026)';
 }
 
 function parseAcreageBucket(text: string): '0_1' | '2_5' | '5_plus' | null {
@@ -349,15 +356,62 @@ export const whatsappScenarioRouter = {
           .eq('id', primary.id)
           .eq('farmer_id', captured.farmerId);
         await conversationSessionService.patchContext(captured.farmerId, {
-          onboardingStep: 'planting_date',
+          onboardingStep: 'crop',
           onboardingAcreageBucket: bucket,
         });
-        await send.text(
-          msg.phone,
-          lang === 'ml'
-            ? 'നടീൽ തീയതി DDMMYYYY ഫോർമാറ്റിൽ അയക്കുക. (ഉദാ: 28052026)'
-            : 'Send Date of planting in DDMMYYYY format. (Example: 28052026)'
+        await cropSelectionService.sendCropPicker({
+          farmerId: captured.farmerId,
+          phone: msg.phone,
+          language: lang,
+          send,
+        });
+        return { handled: true };
+      }
+
+      if (ctx.onboardingStep === 'crop' && text.startsWith('crop.')) {
+        const pick = cropSelectionService.parseSelection(text);
+        if (!pick) {
+          await cropSelectionService.sendCropPicker({
+            farmerId: captured.farmerId,
+            phone: msg.phone,
+            language: lang,
+            send,
+          });
+          return { handled: true };
+        }
+        if (pick.kind === 'other') {
+          await conversationSessionService.patchContext(captured.farmerId, {
+            onboardingStep: 'custom_crop',
+          });
+          await send.text(msg.phone, cropSelectionService.customCropPrompt(lang));
+          return { handled: true };
+        }
+        if (pick.kind === 'custom') {
+          await cropSelectionService.registerCustomCrop(captured.farmerId, pick.label);
+        }
+        await cropSelectionService.applyCropToPrimaryBlock(
+          captured.farmerId,
+          pick.slug,
+          pick.kind === 'custom' ? pick.label : undefined
         );
+        await conversationSessionService.patchContext(captured.farmerId, {
+          onboardingStep: 'planting_date',
+        });
+        await send.text(msg.phone, plantingDatePrompt(lang));
+        return { handled: true };
+      }
+
+      if (ctx.onboardingStep === 'custom_crop' && text && !text.startsWith('crop.')) {
+        const custom = await cropSelectionService.registerCustomCrop(captured.farmerId, text);
+        await cropSelectionService.applyCropToPrimaryBlock(
+          captured.farmerId,
+          custom.slug,
+          custom.label
+        );
+        await conversationSessionService.patchContext(captured.farmerId, {
+          onboardingStep: 'planting_date',
+        });
+        await send.text(msg.phone, plantingDatePrompt(lang));
         return { handled: true };
       }
 
@@ -483,19 +537,41 @@ export const whatsappScenarioRouter = {
       return { handled: true };
     }
 
-    if (session.state === 'crop_select' || text.startsWith('crop.') || CROP_IDS.has(text)) {
-      const selected = cropFromSelection(text);
-      if (!selected) {
-        await send.text(
-          msg.phone,
-          lang === 'ml'
-            ? 'വിള തിരഞ്ഞെടുക്കുക: ഇഞ്ചി / വാഴ / ഏലക്ക / കുരുമുളക് / Other'
-            : 'Please choose crop: Ginger / Banana / Cardamom / Pepper / Other'
-        );
+    if (session.state === 'crop_select' || text.startsWith('crop.')) {
+      const pick = cropSelectionService.parseSelection(text);
+      if (!pick) {
+        await cropSelectionService.sendCropPicker({
+          farmerId: captured.farmerId,
+          phone: msg.phone,
+          language: lang,
+          send,
+          body:
+            lang === 'ml'
+              ? 'വിള കണ്ടെത്താനായില്ല. ദയവായി വിള തിരഞ്ഞെടുക്കുക.'
+              : 'AI could not detect crop clearly. Please select crop.',
+        });
         return { handled: true };
       }
-      await multiPlotService.setPrimaryCropType(captured.farmerId, selected);
-      await conversationSessionService.patchContext(captured.farmerId, { pendingCropSelection: false });
+      if (pick.kind === 'other') {
+        await conversationSessionService.patchContext(captured.farmerId, {
+          pendingCropSelection: true,
+          onboardingStep: 'custom_crop',
+        });
+        await send.text(msg.phone, cropSelectionService.customCropPrompt(lang));
+        return { handled: true };
+      }
+      if (pick.kind === 'custom') {
+        await cropSelectionService.registerCustomCrop(captured.farmerId, pick.label);
+      }
+      await cropSelectionService.applyCropToPrimaryBlock(
+        captured.farmerId,
+        pick.slug,
+        pick.kind === 'custom' ? pick.label : undefined
+      );
+      await conversationSessionService.patchContext(captured.farmerId, {
+        pendingCropSelection: false,
+        onboardingStep: undefined,
+      });
       await conversationSessionService.clearActivePlot(captured.farmerId);
       await conversationSessionService.setState(captured.farmerId, 'diagnosis_awaiting_photos');
       await send.text(
@@ -503,6 +579,34 @@ export const whatsappScenarioRouter = {
         lang === 'ml'
           ? 'ശരി. വിള അപ്ഡേറ്റ് ചെയ്തു. വീണ്ടും ചിത്രം അയയ്ക്കുക.'
           : 'Got it. Crop updated. Please send the image again for diagnosis.'
+      );
+      return { handled: true };
+    }
+
+    const ctxCrop = await conversationSessionService.getContext(captured.farmerId);
+    if (
+      ctxCrop.pendingCropSelection &&
+      ctxCrop.onboardingStep === 'custom_crop' &&
+      text &&
+      !text.startsWith('crop.')
+    ) {
+      const custom = await cropSelectionService.registerCustomCrop(captured.farmerId, text);
+      await cropSelectionService.applyCropToPrimaryBlock(
+        captured.farmerId,
+        custom.slug,
+        custom.label
+      );
+      await conversationSessionService.patchContext(captured.farmerId, {
+        pendingCropSelection: false,
+        onboardingStep: undefined,
+      });
+      await conversationSessionService.clearActivePlot(captured.farmerId);
+      await conversationSessionService.setState(captured.farmerId, 'diagnosis_awaiting_photos');
+      await send.text(
+        msg.phone,
+        lang === 'ml'
+          ? 'ശരി. വിള സേവ് ചെയ്തു. വീണ്ടും ചിത്രം അയയ്ക്കുക.'
+          : 'Saved your crop. Please send the image again for diagnosis.'
       );
       return { handled: true };
     }
@@ -548,9 +652,10 @@ export const whatsappScenarioRouter = {
       }
     }
 
-    // Main menu selection (list reply ids)
-    if (text.startsWith('menu.') || MENU_IDS.has(text)) {
-      await this.handleMenuSelection(msg, captured, lang, text, send);
+    // Main menu selection (list/button ids or typed labels like "Weather")
+    const menuAction = resolveMenuAction(text);
+    if (menuAction) {
+      await this.handleMenuSelection(msg, captured, lang, menuAction, send);
       return { handled: true };
     }
 
@@ -676,7 +781,9 @@ export const whatsappScenarioRouter = {
           if (selectedFromText) {
             await multiPlotService.setActivePlot(captured.farmerId, selectedFromText);
           } else {
-            const requestedCrop = cropFromSelection(msg.text);
+            const requested = cropSelectionService.parseSelection(msg.text);
+            const requestedCrop =
+              requested && requested.kind !== 'other' ? requested.slug : null;
             if (requestedCrop && !plots.some((p) => p.crop_type.toLowerCase() === requestedCrop)) {
               await send.text(
                 msg.phone,

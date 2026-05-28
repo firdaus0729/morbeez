@@ -82,7 +82,10 @@ export const multiPlotService = {
             activePlotLabel: plotDisplayName(plot, 'en'),
         });
     },
-    async setPrimaryCropType(farmerId, cropType) {
+    async setPrimaryCropType(farmerId, cropType, cropLabel) {
+        const slug = cropType.trim().toLowerCase();
+        const label = cropLabel?.trim() ||
+            (slug ? slug.charAt(0).toUpperCase() + slug.slice(1).replace(/_/g, ' ') : 'Crop');
         const blocks = await this.listPlots(farmerId);
         const primary = blocks.find((b) => b.is_primary) ?? blocks[0];
         if (!primary)
@@ -90,9 +93,9 @@ export const multiPlotService = {
         await supabase
             .from('farm_blocks')
             .update({
-            crop_type: cropType,
-            crop_name: cropType,
-            plot_label: `${cropType.charAt(0).toUpperCase()}${cropType.slice(1)} Plot`,
+            crop_type: slug,
+            crop_name: label,
+            plot_label: `${label} Plot`,
         })
             .eq('id', primary.id)
             .eq('farmer_id', farmerId);

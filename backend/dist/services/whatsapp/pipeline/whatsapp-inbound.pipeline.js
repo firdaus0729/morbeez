@@ -19,6 +19,7 @@ import { farmerService } from '../../farmer/farmer.service.js';
 import { conversationSessionService } from '../conversation-session.service.js';
 import { whatsappScenarioRouter } from '../scenarios/whatsapp-scenario-router.service.js';
 import { returnUserGreetingService } from '../scenarios/return-user-greeting.service.js';
+import { cropSelectionService } from '../scenarios/crop-selection.service.js';
 import { sendReplyButtonMenu } from '../whatsapp-interactive-menu.service.js';
 import { diagnosisFlowService } from '../scenarios/diagnosis-flow.service.js';
 import { multiPlotService } from '../scenarios/multi-plot.service.js';
@@ -38,41 +39,16 @@ const CROP_HINTS = [
     { crop: 'turmeric', terms: ['turmeric', 'manjal', 'മഞ്ഞൾ', 'हल्दी', 'ಅರಿಶಿನ'] },
     { crop: 'coconut', terms: ['coconut', 'thenga', 'തേങ്ങ', 'नारियल', 'ತೆಂಗು'] },
 ];
-async function askCropSelection(send, phone, language) {
-    const body = language === 'ml'
-        ? 'വിള കണ്ടെത്താനായില്ല. ദയവായി വിള തിരഞ്ഞെടുക്കുക.'
-        : 'AI could not detect crop clearly. Please select crop.';
-    const options = [
-        { id: 'crop.ginger', title: 'Ginger' },
-        { id: 'crop.banana', title: 'Banana' },
-        { id: 'crop.cardamom', title: 'Cardamom' },
-        { id: 'crop.pepper', title: 'Pepper' },
-        { id: 'crop.other', title: 'Other' },
-    ];
-    if (send.list) {
-        await send.list({
-            phone,
-            body,
-            buttonText: language === 'ml' ? 'വിള' : 'Crop',
-            sections: [{ title: 'Crop', rows: options }],
-        });
-        return;
-    }
-    if (send.buttons) {
-        await sendReplyButtonMenu({
-            to: phone,
-            body,
-            options,
-            continuationBody: language === 'ml' ? 'മറ്റു വിളകൾ:' : 'More crop options:',
-            sendButtons: (p) => send.buttons({
-                phone: p.to,
-                body: p.body,
-                buttons: p.buttons,
-            }),
-        });
-        return;
-    }
-    await send.text(phone, `${body}\n\nGinger / Banana / Cardamom / Pepper / Other`);
+async function askCropSelection(send, phone, language, farmerId) {
+    await cropSelectionService.sendCropPicker({
+        farmerId,
+        phone,
+        language,
+        send,
+        body: language === 'ml'
+            ? 'വിള കണ്ടെത്താനായില്ല. ദയവായി വിള തിരഞ്ഞെടുക്കുക.'
+            : 'AI could not detect crop clearly. Please select crop.',
+    });
 }
 function localizedSummary(advisory, language) {
     if (language === 'ml' && advisory.farmerSummaryMl)
@@ -450,7 +426,7 @@ export const whatsappInboundPipeline = {
                 await multiPlotService.setPrimaryCropType(captured.farmerId, detected.crop);
             }
             else {
-                await askCropSelection(senders, captured.phone, captured.language);
+                await askCropSelection(senders, captured.phone, captured.language, captured.farmerId);
                 await conversationSessionService.patchContext(captured.farmerId, { pendingCropSelection: true });
                 await conversationSessionService.setState(captured.farmerId, 'crop_select');
                 return;
