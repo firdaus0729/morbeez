@@ -292,12 +292,36 @@ export async function osTelecallerRoutes(app: FastifyInstance): Promise<void> {
   app.delete(`${api}/leads/:id`, async (request, reply) => {
     await assertModuleAccess(request, 'telecaller_crm', 'write');
     const { id } = request.params as { id: string };
-    const { error } = await supabase
+    const relatedLeadRefs = [
+      'crm_tasks',
+      'crm_call_logs',
+      'field_findings',
+      'recommendation_drafts',
+      'follow_up_actions',
+      'escalation_cases',
+      'quotation_inquiries',
+      'callback_requests',
+    ] as const;
+
+    for (const table of relatedLeadRefs) {
+      const { error: relErr } = await supabase
+        .from(table)
+        .update({ lead_id: null })
+        .eq('lead_id', id);
+      throwIfSupabaseError(relErr, `Could not detach ${table} from lead`);
+    }
+
+    const { data: deleted, error } = await supabase
       .from('leads')
-      .update({ status: 'lost', stage: 'follow_up', updated_at: new Date().toISOString() })
-      .eq('id', id);
-    throwIfSupabaseError(error, 'Could not archive lead');
-    return reply.send({ ok: true });
+      .delete()
+      .eq('id', id)
+      .select('id')
+      .maybeSingle();
+    throwIfSupabaseError(error, 'Could not delete lead');
+    if (!deleted) {
+      return reply.code(404).send({ ok: false, error: 'Lead not found' });
+    }
+    return reply.send({ ok: true, deletedId: deleted.id });
   });
 
   app.post(`${api}/leads/:id/calls`, async (request, reply) => {

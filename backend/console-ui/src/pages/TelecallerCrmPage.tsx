@@ -119,7 +119,7 @@ export function TelecallerCrmPage({ canWrite }: { canWrite: boolean }) {
 
   async function deleteLead(lead: LeadRow) {
     if (!canWrite) return;
-    const ok = confirm(`Delete lead "${lead.farmerName}"? This will archive related lead records.`);
+    const ok = confirm(`Delete lead "${lead.farmerName}"? This will remove the lead from database.`);
     if (!ok) return;
     try {
       await api(`${base}/leads/${lead.id}`, { method: 'DELETE' });
