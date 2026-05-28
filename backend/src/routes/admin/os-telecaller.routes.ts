@@ -292,25 +292,6 @@ export async function osTelecallerRoutes(app: FastifyInstance): Promise<void> {
   app.delete(`${api}/leads/:id`, async (request, reply) => {
     await assertModuleAccess(request, 'telecaller_crm', 'write');
     const { id } = request.params as { id: string };
-    const relatedLeadRefs = [
-      'crm_tasks',
-      'crm_call_logs',
-      'field_findings',
-      'recommendation_drafts',
-      'follow_up_actions',
-      'escalation_cases',
-      'quotation_inquiries',
-      'callback_requests',
-    ] as const;
-
-    for (const table of relatedLeadRefs) {
-      const { error: relErr } = await supabase
-        .from(table)
-        .update({ lead_id: null })
-        .eq('lead_id', id);
-      throwIfSupabaseError(relErr, `Could not detach ${table} from lead`);
-    }
-
     const { data: deleted, error } = await supabase
       .from('leads')
       .delete()
