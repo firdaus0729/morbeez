@@ -669,6 +669,26 @@ export const whatsappScenarioRouter = {
     // Scenario 2 — image in diagnosis flow
     if (CROP_MEDIA.has(msg.msgType)) {
       const plots = await multiPlotService.listPlots(captured.farmerId);
+      const activePlotId = await multiPlotService.getActivePlotId(captured.farmerId);
+      if (plots.length >= 2 && !activePlotId) {
+        if (msg.text?.trim()) {
+          const selectedFromText = multiPlotService.parsePlotSelection(msg.text, plots);
+          if (selectedFromText) {
+            await multiPlotService.setActivePlot(captured.farmerId, selectedFromText);
+          } else {
+            const requestedCrop = cropFromSelection(msg.text);
+            if (requestedCrop && !plots.some((p) => p.crop_type.toLowerCase() === requestedCrop)) {
+              await send.text(
+                msg.phone,
+                lang === 'ml'
+                  ? `നിങ്ങൾ ${requestedCrop} എന്ന് പറഞ്ഞു, പക്ഷേ ഇപ്പോഴത്തെ പ്ലോട്ടുകൾ വേറെയാണ്. പ്രശ്നമുള്ള പ്ലോട്ട് തിരഞ്ഞെടുക്കൂ.`
+                  : `You mentioned ${requestedCrop}, but your saved plots are different. Please choose the plot with the issue.`
+              );
+            }
+          }
+        }
+      }
+
       if (plots.length >= 2 && !(await multiPlotService.getActivePlotId(captured.farmerId))) {
         await this.sendPlotPicker(msg.phone, captured.farmerId, lang, send, msg.text || undefined);
         return { handled: true };
