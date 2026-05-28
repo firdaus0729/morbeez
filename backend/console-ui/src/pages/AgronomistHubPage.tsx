@@ -202,6 +202,24 @@ export function AgronomistHubPage({ canWrite }: { canWrite: boolean }) {
     }
   }
 
+  async function archiveDraft(recommendationId: string) {
+    if (!canWrite) return;
+    if (!confirm('Archive this draft recommendation?')) return;
+    setSaving(true);
+    setError('');
+    try {
+      await api(`${base}/drafts/${recommendationId}`, { method: 'DELETE' });
+      if (form.recommendationId === recommendationId) {
+        setForm((f) => ({ ...f, recommendationId: '' }));
+      }
+      await load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to archive draft');
+    } finally {
+      setSaving(false);
+    }
+  }
+
   const selected = queue.find((q) => q.finding.id === selectedId);
 
   return (
@@ -362,6 +380,7 @@ export function AgronomistHubPage({ canWrite }: { canWrite: boolean }) {
                 <th className="px-4 py-3">Farmer</th>
                 <th className="px-4 py-3">Issue</th>
                 <th className="px-4 py-3">Status</th>
+                {canWrite ? <th className="px-4 py-3" /> : null}
               </tr>
             </thead>
             <tbody>
@@ -375,6 +394,19 @@ export function AgronomistHubPage({ canWrite }: { canWrite: boolean }) {
                   </td>
                   <td className="max-w-xs truncate px-4 py-3">{s.issue_detected ?? '—'}</td>
                   <td className="px-4 py-3 capitalize">{s.status.replace(/_/g, ' ')}</td>
+                  {canWrite ? (
+                    <td className="px-4 py-3">
+                      {s.status === 'draft' || s.status === 'pending_approval' ? (
+                        <button
+                          type="button"
+                          className="text-xs text-red-600 hover:underline"
+                          onClick={() => archiveDraft(s.id)}
+                        >
+                          Archive
+                        </button>
+                      ) : null}
+                    </td>
+                  ) : null}
                 </tr>
               ))}
             </tbody>

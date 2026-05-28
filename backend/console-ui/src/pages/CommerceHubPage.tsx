@@ -21,7 +21,7 @@ const TABS: Array<{ id: Tab; label: string }> = [
   { id: 'inventory', label: 'Inventory' },
 ];
 
-export function CommerceHubPage() {
+export function CommerceHubPage({ canWrite = false }: { canWrite?: boolean }) {
   const [tab, setTab] = useState<Tab>('orders');
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
@@ -64,6 +64,26 @@ export function CommerceHubPage() {
     }
   }, [tab, search]);
 
+  async function archiveOrder(id: string, source?: string) {
+    if (!confirm('Archive/cancel this order?')) return;
+    await api(`/console/api/v1/orders/${id}?source=${encodeURIComponent(source ?? 'shopify')}`, {
+      method: 'DELETE',
+    });
+    await load();
+  }
+
+  async function archiveFarmer(id: string) {
+    if (!confirm('Archive this farmer?')) return;
+    await api(`/console/api/v1/farmers/${id}`, { method: 'DELETE' });
+    await load();
+  }
+
+  async function archiveProduct(id: string) {
+    if (!confirm('Archive this product?')) return;
+    await api(`/console/api/v1/products/${id}`, { method: 'DELETE' });
+    await load();
+  }
+
   useEffect(() => {
     const t = setTimeout(load, 300);
     return () => clearTimeout(t);
@@ -95,6 +115,7 @@ export function CommerceHubPage() {
                   <th>Amount</th>
                   <th>Status</th>
                   <th>Payment</th>
+                  <th />
                 </tr>
               </thead>
               <tbody>
@@ -110,11 +131,22 @@ export function CommerceHubPage() {
                       <td>₹{String(o.totalAmount ?? 0)}</td>
                       <td>{String(o.status ?? '—')}</td>
                       <td>{String(o.paymentLabel ?? '—')}</td>
+                      <td>
+                        {canWrite ? (
+                          <button
+                            type="button"
+                            className="text-xs text-red-600 hover:underline"
+                            onClick={() => archiveOrder(String(o.id), String(o.source ?? 'shopify'))}
+                          >
+                            Archive
+                          </button>
+                        ) : null}
+                      </td>
                     </tr>
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={5}>
+                    <td colSpan={6}>
                       <EmptyState>No orders found.</EmptyState>
                     </td>
                   </tr>
@@ -135,6 +167,7 @@ export function CommerceHubPage() {
                   <th>Phone</th>
                   <th>District</th>
                   <th>Status</th>
+                  <th />
                 </tr>
               </thead>
               <tbody>
@@ -144,6 +177,17 @@ export function CommerceHubPage() {
                     <td>{String(f.phone ?? '—')}</td>
                     <td>{String(f.district ?? '—')}</td>
                     <td>{String(f.status ?? '—')}</td>
+                    <td>
+                      {canWrite ? (
+                        <button
+                          type="button"
+                          className="text-xs text-red-600 hover:underline"
+                          onClick={() => archiveFarmer(String(f.id))}
+                        >
+                          Archive
+                        </button>
+                      ) : null}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -161,6 +205,7 @@ export function CommerceHubPage() {
                   <th>Product</th>
                   <th>Status</th>
                   <th>Stock</th>
+                  <th />
                 </tr>
               </thead>
               <tbody>
@@ -169,6 +214,17 @@ export function CommerceHubPage() {
                     <td>{String(p.title ?? '—')}</td>
                     <td>{String(p.status ?? '—')}</td>
                     <td>{String(p.inventory ?? 0)}</td>
+                    <td>
+                      {canWrite ? (
+                        <button
+                          type="button"
+                          className="text-xs text-red-600 hover:underline"
+                          onClick={() => archiveProduct(String(p.id))}
+                        >
+                          Archive
+                        </button>
+                      ) : null}
+                    </td>
                   </tr>
                 ))}
               </tbody>

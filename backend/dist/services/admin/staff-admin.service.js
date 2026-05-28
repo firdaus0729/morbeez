@@ -1,4 +1,41 @@
 import { supabase } from '../../lib/supabase.js';
+const STAFF_ROLES = [
+    'super_admin',
+    'admin',
+    'operations',
+    'agronomist',
+    'telecaller',
+    'manager',
+    'viewer',
+];
+function mapUserToStaffMember(u, idx, metrics) {
+    const leads = metrics?.leads ?? 0;
+    const pendingTasks = metrics?.pendingTasks ?? 0;
+    const pendingFollowUpsToday = metrics?.followUps ?? 0;
+    const loginMs = u.last_login_at ? new Date(u.last_login_at).getTime() : null;
+    const loginDaysAgo = loginMs != null ? Math.floor((Date.now() - loginMs) / 86400000) : null;
+    const performanceScore = scoreFromMetrics(leads, 0, loginDaysAgo);
+    const turnoverInr = leads * 12500 + pendingTasks * 800;
+    const now = Date.now();
+    const statusOnline = u.active && loginMs != null && now - loginMs < 15 * 60 * 1000;
+    return {
+        id: u.id,
+        email: u.email,
+        fullName: u.full_name ?? u.email,
+        role: u.role,
+        active: u.active,
+        lastLoginAt: u.last_login_at,
+        createdAt: u.created_at,
+        employeeCode: `EMP-${String(1000 + idx + 1)}`,
+        totalLeads: leads,
+        pendingTasks,
+        pendingFollowUpsToday,
+        turnoverInr,
+        performanceScore,
+        performanceLabel: performanceLabel(performanceScore),
+        statusOnline,
+    };
+}
 function performanceLabel(score) {
     if (score >= 90)
         return 'Excellent';
@@ -61,33 +98,11 @@ export const staffAdminService = {
             }
         }
         const now = Date.now();
-        const employees = (users ?? []).map((u, idx) => {
-            const leads = leadCounts.get(u.email) ?? 0;
-            const pendingTasks = taskCounts.get(u.email) ?? 0;
-            const pendingFollowUpsToday = followUpCounts.get(u.email) ?? 0;
-            const loginMs = u.last_login_at ? new Date(u.last_login_at).getTime() : null;
-            const loginDaysAgo = loginMs != null ? Math.floor((now - loginMs) / 86400000) : null;
-            const performanceScore = scoreFromMetrics(leads, 0, loginDaysAgo);
-            const turnoverInr = leads * 12500 + pendingTasks * 800;
-            const statusOnline = u.active && loginMs != null && now - loginMs < 15 * 60 * 1000;
-            return {
-                id: u.id,
-                email: u.email,
-                fullName: u.full_name ?? u.email,
-                role: u.role,
-                active: u.active,
-                lastLoginAt: u.last_login_at,
-                createdAt: u.created_at,
-                employeeCode: `EMP-${String(1000 + idx + 1)}`,
-                totalLeads: leads,
-                pendingTasks,
-                pendingFollowUpsToday,
-                turnoverInr,
-                performanceScore,
-                performanceLabel: performanceLabel(performanceScore),
-                statusOnline,
-            };
-        });
+        const employees = (users ?? []).map((u, idx) => mapUserToStaffMember(u, idx, {
+            leads: leadCounts.get(u.email) ?? 0,
+            pendingTasks: taskCounts.get(u.email) ?? 0,
+            followUps: followUpCounts.get(u.email) ?? 0,
+        }));
         const active = employees.filter((e) => e.active);
         const inactive = employees.filter((e) => !e.active);
         const avgPerformance = employees.length > 0

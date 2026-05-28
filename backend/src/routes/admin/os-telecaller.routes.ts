@@ -2,6 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { assertModuleAccess } from '../../lib/rbac.js';
 import { supabase } from '../../lib/supabase.js';
+import { throwIfSupabaseError } from '../../lib/supabase-errors.js';
 import { telecallerAdminService } from '../../services/admin/telecaller-admin.service.js';
 import { crmFarmerService, type MasterType } from '../../services/admin/crm-farmer.service.js';
 import { whatsappOsAdminService } from '../../services/admin/whatsapp-os-admin.service.js';
@@ -170,6 +171,17 @@ export async function osTelecallerRoutes(app: FastifyInstance): Promise<void> {
     return reply.send({ ok: true });
   });
 
+  app.delete(`${api}/tasks/:id`, async (request, reply) => {
+    await assertModuleAccess(request, 'telecaller_crm', 'write');
+    const { id } = request.params as { id: string };
+    const { error } = await supabase
+      .from('crm_tasks')
+      .update({ status: 'cancelled', updated_at: new Date().toISOString() })
+      .eq('id', id);
+    throwIfSupabaseError(error, 'Could not archive task');
+    return reply.send({ ok: true });
+  });
+
   app.get(`${api}/whatsapp/threads`, async (request, reply) => {
     await assertModuleAccess(request, 'telecaller_crm', 'read');
     const threads = await telecallerAdminService.listWhatsAppThreads();
@@ -236,6 +248,17 @@ export async function osTelecallerRoutes(app: FastifyInstance): Promise<void> {
     return reply.status(201).send({ ok: true, lead: detail.lead, farmerId: detail.lead.farmerId });
   });
 
+  app.delete(`${api}/leads/:id`, async (request, reply) => {
+    await assertModuleAccess(request, 'telecaller_crm', 'write');
+    const { id } = request.params as { id: string };
+    const { error } = await supabase
+      .from('leads')
+      .update({ status: 'lost', stage: 'follow_up', updated_at: new Date().toISOString() })
+      .eq('id', id);
+    throwIfSupabaseError(error, 'Could not archive lead');
+    return reply.send({ ok: true });
+  });
+
   app.post(`${api}/leads/:id/calls`, async (request, reply) => {
     const admin = await assertModuleAccess(request, 'telecaller_crm', 'write');
     const { id } = request.params as { id: string };
@@ -294,6 +317,13 @@ export async function osTelecallerRoutes(app: FastifyInstance): Promise<void> {
     return reply.send({ ok: true, block });
   });
 
+  app.delete(`${api}/leads/:leadId/blocks/:blockId`, async (request, reply) => {
+    await assertModuleAccess(request, 'telecaller_crm', 'write');
+    const { blockId } = request.params as { leadId: string; blockId: string };
+    const block = await crmFarmerService.updateBlock(blockId, { archived: true });
+    return reply.send({ ok: true, block });
+  });
+
   app.post(`${api}/leads/:id/interactions`, async (request, reply) => {
     const admin = await assertModuleAccess(request, 'telecaller_crm', 'write');
     const { id } = request.params as { id: string };
@@ -315,6 +345,17 @@ export async function osTelecallerRoutes(app: FastifyInstance): Promise<void> {
       { ...body, doneBy: admin.email, doneByRole: 'Telecaller' }
     );
     return reply.status(201).send({ ok: true, interaction });
+  });
+
+  app.delete(`${api}/interactions/:id`, async (request, reply) => {
+    await assertModuleAccess(request, 'telecaller_crm', 'write');
+    const { id } = request.params as { id: string };
+    const { error } = await supabase
+      .from('interaction_logs')
+      .update({ status: 'archived' })
+      .eq('id', id);
+    throwIfSupabaseError(error, 'Could not archive interaction');
+    return reply.send({ ok: true });
   });
 
   app.post(`${api}/leads/:id/recommendations`, async (request, reply) => {
@@ -339,6 +380,17 @@ export async function osTelecallerRoutes(app: FastifyInstance): Promise<void> {
     return reply.status(201).send({ ok: true, recommendation: rec });
   });
 
+  app.delete(`${api}/recommendations/:id`, async (request, reply) => {
+    await assertModuleAccess(request, 'telecaller_crm', 'write');
+    const { id } = request.params as { id: string };
+    const { error } = await supabase
+      .from('crm_recommendations')
+      .update({ status: 'archived' })
+      .eq('id', id);
+    throwIfSupabaseError(error, 'Could not archive recommendation');
+    return reply.send({ ok: true });
+  });
+
   app.post(`${api}/leads/:id/field-findings`, async (request, reply) => {
     await assertModuleAccess(request, 'telecaller_crm', 'write');
     const { id } = request.params as { id: string };
@@ -361,6 +413,17 @@ export async function osTelecallerRoutes(app: FastifyInstance): Promise<void> {
       body
     );
     return reply.status(201).send({ ok: true, finding });
+  });
+
+  app.delete(`${api}/field-findings/:id`, async (request, reply) => {
+    await assertModuleAccess(request, 'telecaller_crm', 'write');
+    const { id } = request.params as { id: string };
+    const { error } = await supabase
+      .from('crm_field_findings')
+      .update({ archived_at: new Date().toISOString() })
+      .eq('id', id);
+    throwIfSupabaseError(error, 'Could not archive field finding');
+    return reply.send({ ok: true });
   });
 
   app.post(`${api}/leads/:id/schedule-visit`, async (request, reply) => {

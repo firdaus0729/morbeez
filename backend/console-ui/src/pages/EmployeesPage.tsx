@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { api } from '../lib/api';
 import { paths, toPath } from '../lib/routes';
 import { formatInrFull, initials, roleLabel } from '../lib/format';
+import { Field, Modal, inputClass } from '../components/Modal';
 import {
   Alert,
   Badge,
@@ -69,6 +70,19 @@ function perfClass(label: string): string {
   return 'perf-low';
 }
 
+function formatDateTime(value: string | null | undefined): string {
+  if (!value) return '—';
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return '—';
+  return d.toLocaleString('en-IN', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
 function ProgressRing({ pct, label, display }: { pct: number; label: string; display: string }) {
   const r = 36;
   const c = 2 * Math.PI * r;
@@ -98,7 +112,7 @@ function ProgressRing({ pct, label, display }: { pct: number; label: string; dis
   );
 }
 
-export function EmployeesPage() {
+export function EmployeesPage({ canWrite = false }: { canWrite?: boolean }) {
   const { employeeId } = useParams<{ employeeId?: string }>();
   const navigate = useNavigate();
   const [workspace, setWorkspace] = useState<Workspace | null>(null);
@@ -110,6 +124,8 @@ export function EmployeesPage() {
   const [loading, setLoading] = useState(true);
   const [detailLoading, setDetailLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showNewEmployee, setShowNewEmployee] = useState(false);
+  const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
 
   const loadWorkspace = useCallback(async () => {
     setLoading(true);
@@ -146,6 +162,36 @@ export function EmployeesPage() {
       }
     })();
   }, [employeeId]);
+
+  async function createEmployee(input: {
+    fullName: string;
+    email: string;
+    role: string;
+    password: string;
+    active: boolean;
+  }) {
+    await api<{ ok: boolean; employee: { id: string } }>('/console/api/v1/staff', {
+      method: 'POST',
+      body: JSON.stringify(input),
+    });
+    await loadWorkspace();
+  }
+
+  async function updateEmployee(
+    id: string,
+    input: { fullName?: string; role?: string; active?: boolean }
+  ) {
+    await api(`/console/api/v1/staff/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(input),
+    });
+    await loadWorkspace();
+  }
+
+  async function deactivateEmployee(id: string) {
+    await api(`/console/api/v1/staff/${id}`, { method: 'DELETE' });
+    await loadWorkspace();
+  }
 
   if (employeeId && detailLoading && !detail) {
     return <Loading label="Loading employee…" />;
@@ -320,11 +366,159 @@ export function EmployeesPage() {
               </Panel>
             </div>
           </>
-        ) : (
-          <Panel title={detailTab}>
-            <p className="muted">Detailed {detailTab} analytics coming soon.</p>
+        ) : null}
+
+        {detailTab === 'performance' ? (
+          <div className="space-y-4">
+            <Panel title="Performance breakdown">
+              {detail.performanceBreakdown.length ? (
+                detail.performanceBreakdown.map((row) => (
+                  <div className="emp-bar-row" key={row.label}>
+                    <span className="emp-bar-label">{row.label}</span>
+                    <div className="emp-bar-track">
+                      <div className="emp-bar-fill" style={{ width: `${row.pct}%` }} />
+                    </div>
+                    <span style={{ width: 36, fontSize: 12, fontWeight: 700 }}>{row.pct}%</span>
+                  </div>
+                ))
+              ) : (
+                <EmptyState>No performance components available</EmptyState>
+              )}
+            </Panel>
+            <Panel title="Turnover trend (6 months)">
+              <div className="chart-wrap" style={{ height: 220, padding: '12px 0' }}>
+                <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8, height: 180 }}>
+                  {detail.turnoverTrend.values.map((v, i) => {
+                    const max = Math.max(...detail.turnoverTrend.values, 1);
+                    return (
+                      <div key={i} style={{ flex: 1, textAlign: 'center' }}>
+                        <div
+                          style={{
+                            height: `${Math.max(8, (v / max) * 140)}px`,
+                            background: 'var(--green-500)',
+                            borderRadius: '6px 6px 0 0',
+                          }}
+                        />
+                        <small className="muted">{detail.turnoverTrend.labels[i]}</small>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </Panel>
+          </div>
+        ) : null}
+
+        {detailTab === 'leads' ? (
+          <Panel title="Assigned leads">
+            <TableWrap>
+              <DataTable>
+                <thead>
+                  <tr>
+                    <th>Lead</th>
+                    <th>Crop / Area</th>
+                    <th>Last interaction</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {detail.recentLeads.length ? (
+                    detail.recentLeads.map((lead) => (
+                      <tr key={lead.id}>
+                        <td>
+                          <strong>{lead.name}</strong>
+                        </td>
+                        <td>{lead.crop || '—'}</td>
+                        <td>{formatDateTime(lead.when)}</td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={3}>
+                        <EmptyState>No leads assigned</EmptyState>
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </DataTable>
+            </TableWrap>
           </Panel>
-        )}
+        ) : null}
+
+        {detailTab === 'tasks' ? (
+          <Panel title="Assigned tasks">
+            <TableWrap>
+              <DataTable>
+                <thead>
+                  <tr>
+                    <th>Task</th>
+                    <th>Status</th>
+                    <th>Due</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {detail.recentTasks.length ? (
+                    detail.recentTasks.map((task) => (
+                      <tr key={task.id}>
+                        <td>
+                          <strong>{task.title}</strong>
+                        </td>
+                        <td>
+                          <Badge tone={task.status === 'done' ? 'success' : 'warn'}>{task.status}</Badge>
+                        </td>
+                        <td>{formatDateTime(task.dueAt)}</td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={3}>
+                        <EmptyState>No tasks</EmptyState>
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </DataTable>
+            </TableWrap>
+          </Panel>
+        ) : null}
+
+        {detailTab === 'activity' ? (
+          <Panel title="Employee activity timeline">
+            {(() => {
+              const events = [
+                ...detail.recentLeads.map((l) => ({
+                  id: `lead-${l.id}`,
+                  label: `Lead touched: ${l.name}`,
+                  sub: l.crop || 'Lead activity',
+                  at: l.when,
+                })),
+                ...detail.recentTasks.map((t) => ({
+                  id: `task-${t.id}`,
+                  label: `Task update: ${t.title}`,
+                  sub: `Status: ${t.status}`,
+                  at: t.dueAt,
+                })),
+              ]
+                .filter((x) => !!x.at)
+                .sort((a, b) => new Date(String(b.at)).getTime() - new Date(String(a.at)).getTime());
+
+              if (!events.length) return <EmptyState>No activity available yet</EmptyState>;
+
+              return (
+                <div className="space-y-3">
+                  {events.map((ev) => (
+                    <div key={ev.id} className="emp-list-item">
+                      <div>
+                        <strong>{ev.label}</strong>
+                        <div className="muted">{ev.sub}</div>
+                      </div>
+                      <div className="muted">{formatDateTime(ev.at)}</div>
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
+          </Panel>
+        ) : null}
       </div>
     );
   }
@@ -450,6 +644,11 @@ export function EmployeesPage() {
             <option value="operations">Operations</option>
             <option value="viewer">Viewer</option>
           </Select>
+          {canWrite ? (
+            <Btn variant="primary" onClick={() => setShowNewEmployee(true)}>
+              + New employee
+            </Btn>
+          ) : null}
           <Btn variant="secondary">Filters</Btn>
           <Btn variant="secondary">Export</Btn>
         </FilterBar>
@@ -502,13 +701,32 @@ export function EmployeesPage() {
                       </span>
                     </td>
                     <td>
-                      <Btn
-                        size="sm"
-                        variant="primary"
-                        onClick={() => navigate(toPath(`${paths.employees}/${e.id}`))}
-                      >
-                        View
-                      </Btn>
+                      <div className="flex items-center gap-2">
+                        <Btn
+                          size="sm"
+                          variant="primary"
+                          onClick={() => navigate(toPath(`${paths.employees}/${e.id}`))}
+                        >
+                          View
+                        </Btn>
+                        {canWrite ? (
+                          <Btn size="sm" variant="secondary" onClick={() => setEditingEmployee(e)}>
+                            Edit
+                          </Btn>
+                        ) : null}
+                        {canWrite && e.active ? (
+                          <Btn
+                            size="sm"
+                            variant="danger"
+                            onClick={async () => {
+                              if (!confirm(`Deactivate ${e.fullName}?`)) return;
+                              await deactivateEmployee(e.id);
+                            }}
+                          >
+                            Deactivate
+                          </Btn>
+                        ) : null}
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -523,6 +741,183 @@ export function EmployeesPage() {
           </DataTable>
         </TableWrap>
       </Panel>
+      {showNewEmployee ? (
+        <NewEmployeeModal
+          onClose={() => setShowNewEmployee(false)}
+          onCreated={async () => {
+            setShowNewEmployee(false);
+            await loadWorkspace();
+          }}
+          createEmployee={createEmployee}
+        />
+      ) : null}
+      {editingEmployee ? (
+        <EditEmployeeModal
+          employee={editingEmployee}
+          onClose={() => setEditingEmployee(null)}
+          onSaved={async () => {
+            setEditingEmployee(null);
+            await loadWorkspace();
+          }}
+          updateEmployee={updateEmployee}
+        />
+      ) : null}
     </div>
+  );
+}
+
+function NewEmployeeModal({
+  onClose,
+  onCreated,
+  createEmployee,
+}: {
+  onClose: () => void;
+  onCreated: () => Promise<void>;
+  createEmployee: (input: {
+    fullName: string;
+    email: string;
+    role: string;
+    password: string;
+    active: boolean;
+  }) => Promise<void>;
+}) {
+  const [fullName, setFullName] = useState('');
+  const [email, setEmail] = useState('');
+  const [role, setRole] = useState('viewer');
+  const [password, setPassword] = useState('');
+  const [active, setActive] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  async function save() {
+    setSaving(true);
+    setError('');
+    try {
+      await createEmployee({
+        fullName: fullName.trim(),
+        email: email.trim().toLowerCase(),
+        role,
+        password,
+        active,
+      });
+      await onCreated();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not create employee');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Modal title="New employee" onClose={onClose} onSave={save} saveLabel="Create" saving={saving}>
+      {error ? <Alert tone="error">{error}</Alert> : null}
+      <div className="space-y-3">
+        <Field label="Full name">
+          <input
+            className={inputClass}
+            value={fullName}
+            onChange={(e) => setFullName(e.target.value)}
+            placeholder="Asha Nair"
+          />
+        </Field>
+        <Field label="Email">
+          <input
+            type="email"
+            className={inputClass}
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="asha@morbeez.in"
+          />
+        </Field>
+        <Field label="Role">
+          <select className={inputClass} value={role} onChange={(e) => setRole(e.target.value)}>
+            <option value="super_admin">Super Admin</option>
+            <option value="admin">Admin</option>
+            <option value="operations">Operations</option>
+            <option value="telecaller">Telecaller</option>
+            <option value="agronomist">Agronomist</option>
+            <option value="manager">Manager</option>
+            <option value="viewer">Viewer</option>
+          </select>
+        </Field>
+        <Field label="Temporary password">
+          <input
+            type="password"
+            className={inputClass}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="Minimum 8 characters"
+          />
+        </Field>
+        <label className="flex items-center gap-2 text-sm text-slate-700">
+          <input type="checkbox" checked={active} onChange={(e) => setActive(e.target.checked)} />
+          Active account
+        </label>
+      </div>
+    </Modal>
+  );
+}
+
+function EditEmployeeModal({
+  employee,
+  onClose,
+  onSaved,
+  updateEmployee,
+}: {
+  employee: Employee;
+  onClose: () => void;
+  onSaved: () => Promise<void>;
+  updateEmployee: (
+    id: string,
+    input: { fullName?: string; role?: string; active?: boolean }
+  ) => Promise<void>;
+}) {
+  const [fullName, setFullName] = useState(employee.fullName);
+  const [role, setRole] = useState(employee.role);
+  const [active, setActive] = useState(employee.active);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  async function save() {
+    setSaving(true);
+    setError('');
+    try {
+      await updateEmployee(employee.id, {
+        fullName: fullName.trim(),
+        role,
+        active,
+      });
+      await onSaved();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not update employee');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Modal title="Edit employee" onClose={onClose} onSave={save} saveLabel="Update" saving={saving}>
+      {error ? <Alert tone="error">{error}</Alert> : null}
+      <div className="space-y-3">
+        <Field label="Full name">
+          <input className={inputClass} value={fullName} onChange={(e) => setFullName(e.target.value)} />
+        </Field>
+        <Field label="Role">
+          <select className={inputClass} value={role} onChange={(e) => setRole(e.target.value)}>
+            <option value="super_admin">Super Admin</option>
+            <option value="admin">Admin</option>
+            <option value="operations">Operations</option>
+            <option value="telecaller">Telecaller</option>
+            <option value="agronomist">Agronomist</option>
+            <option value="manager">Manager</option>
+            <option value="viewer">Viewer</option>
+          </select>
+        </Field>
+        <label className="flex items-center gap-2 text-sm text-slate-700">
+          <input type="checkbox" checked={active} onChange={(e) => setActive(e.target.checked)} />
+          Active account
+        </label>
+      </div>
+    </Modal>
   );
 }

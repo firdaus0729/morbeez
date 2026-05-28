@@ -43,7 +43,12 @@ function ApprovalsRoute() {
 
 function SettingsRoute() {
   const { can } = useAuth();
-  return <SettingsPage canRead={can('settings', 'read')} />;
+  return <SettingsPage canRead={can('settings', 'read')} canWrite={can('settings', 'write')} />;
+}
+
+function EmployeesRoute() {
+  const { can } = useAuth();
+  return <EmployeesPage canWrite={can('settings', 'write')} />;
 }
 
 export function AppRouter() {
@@ -84,12 +89,12 @@ export function AppRouter() {
           </Route>
 
           <Route element={<RequireModule module="commerce" />}>
-            <Route path={paths.commerce} element={<CommerceHubPage />} />
+            <Route path={paths.commerce} element={<CommerceHubPage canWrite={can('commerce', 'write')} />} />
           </Route>
 
           <Route element={<RequireModule module="settings" />}>
-            <Route path={paths.employees} element={<EmployeesPage />} />
-            <Route path={paths.employeeDetail} element={<EmployeesPage />} />
+            <Route path={paths.employees} element={<EmployeesRoute />} />
+            <Route path={paths.employeeDetail} element={<EmployeesRoute />} />
             <Route path={paths.settings} element={<SettingsRoute />} />
           </Route>
         </Route>

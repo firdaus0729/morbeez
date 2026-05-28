@@ -119,7 +119,10 @@ export function TelecallerCrmPage({ canWrite }: { canWrite: boolean }) {
 
   return (
     <div className="telecaller-page">
-      <div className="filter-bar">
+      <div className="tc-page-header filter-bar">
+        <p className="muted" style={{ margin: 0, flex: 1 }}>
+          Manage leads, follow-ups, and farmer conversations
+        </p>
         {canWrite ? (
           <Btn variant="primary" onClick={() => setShowNewLead(true)}>
             + New lead
@@ -186,117 +189,129 @@ export function TelecallerCrmPage({ canWrite }: { canWrite: boolean }) {
           <div className="tc-workspace-split">
             <div className="tc-leads-pane">
               <div className="tc-leads-toolbar">
-                <div className="tc-scope-tabs">
-                  <button
-                    type="button"
-                    className={`tc-scope-tab ${scope === 'mine' ? 'active' : ''}`}
-                    onClick={() => setScope('mine')}
+                <div className="tc-toolbar-row tc-toolbar-row--primary">
+                  <div className="tc-scope-tabs">
+                    <button
+                      type="button"
+                      className={`tc-scope-tab ${scope === 'mine' ? 'active' : ''}`}
+                      onClick={() => setScope('mine')}
+                    >
+                      My Leads ({counts.mine})
+                    </button>
+                    <button
+                      type="button"
+                      className={`tc-scope-tab ${scope === 'all' ? 'active' : ''}`}
+                      onClick={() => setScope('all')}
+                    >
+                      All Leads ({counts.all})
+                    </button>
+                  </div>
+                  <Btn
+                    size="sm"
+                    variant="secondary"
+                    className={showTasks ? 'tc-tasks-toggle active' : 'tc-tasks-toggle'}
+                    onClick={() => setShowTasks((v) => !v)}
                   >
-                    My Leads ({counts.mine})
-                  </button>
-                  <button
-                    type="button"
-                    className={`tc-scope-tab ${scope === 'all' ? 'active' : ''}`}
-                    onClick={() => setScope('all')}
-                  >
-                    All Leads ({counts.all})
-                  </button>
-                </div>
-                <div className="tc-leads-filters">
-                  <select
-                    className="products-select"
-                    value={stage}
-                    onChange={(e) => setStage(e.target.value)}
-                  >
-                    <option value="">All stages</option>
-                    <option value="new_lead">New Lead</option>
-                    <option value="interested">Interested</option>
-                    <option value="follow_up">Follow-up</option>
-                    <option value="recommendation">Recommendation</option>
-                    <option value="order_placed">Order Placed</option>
-                  </select>
-                  <input
-                    type="search"
-                    className="products-search tc-lead-search"
-                    placeholder="Search leads…"
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                  />
-                  <Btn size="sm" variant="secondary" onClick={() => setShowTasks((v) => !v)}>
                     Tasks ({tasks.length})
                   </Btn>
+                </div>
+                <div className="tc-toolbar-row tc-toolbar-row--filters">
+                  <div className="tc-leads-filters">
+                    <select
+                      className="tc-filter-select"
+                      value={stage}
+                      onChange={(e) => setStage(e.target.value)}
+                      aria-label="Filter by stage"
+                    >
+                      <option value="">All stages</option>
+                      <option value="new_lead">New Lead</option>
+                      <option value="interested">Interested</option>
+                      <option value="follow_up">Follow-up</option>
+                      <option value="recommendation">Recommendation</option>
+                      <option value="order_placed">Order Placed</option>
+                    </select>
+                    <input
+                      type="search"
+                      className="tc-filter-search"
+                      placeholder="Search name or phone…"
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                      aria-label="Search leads"
+                    />
+                  </div>
                 </div>
               </div>
 
               {showTasks ? (
-                <div className="panel-body" style={{ maxHeight: 160, overflow: 'auto' }}>
-                  {tasks.map((t) => (
-                    <div key={t.id} className="emp-list-item">
-                      <strong>{t.title}</strong>
-                      {t.dueLabel ? <div className="muted">{t.dueLabel}</div> : null}
-                      <div style={{ marginTop: 6, display: 'flex', gap: 8 }}>
-                        {t.leadId ? (
-                          <button type="button" className="btn btn-ghost btn-sm" onClick={() => setSelectedLeadId(t.leadId!)}>
-                            Open
-                          </button>
-                        ) : null}
-                        {canWrite ? (
-                          <button type="button" className="btn btn-ghost btn-sm" onClick={() => completeTask(t.id)}>
-                            Done
-                          </button>
-                        ) : null}
+                <div className="tc-tasks-panel">
+                  {tasks.length === 0 ? (
+                    <p className="muted" style={{ margin: 0, fontSize: 13 }}>
+                      No pending tasks
+                    </p>
+                  ) : (
+                    tasks.map((t) => (
+                      <div key={t.id} className="tc-task-item">
+                        <div>
+                          <strong>{t.title}</strong>
+                          {t.dueLabel ? <div className="muted">{t.dueLabel}</div> : null}
+                          {t.farmerName ? (
+                            <div className="muted" style={{ fontSize: 12, marginTop: 2 }}>
+                              {t.farmerName}
+                            </div>
+                          ) : null}
+                        </div>
+                        <div className="tc-task-actions">
+                          {t.leadId ? (
+                            <Btn size="sm" variant="ghost" onClick={() => setSelectedLeadId(t.leadId!)}>
+                              Open
+                            </Btn>
+                          ) : null}
+                          {canWrite ? (
+                            <Btn size="sm" variant="primary" onClick={() => completeTask(t.id)}>
+                              Done
+                            </Btn>
+                          ) : null}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    ))
+                  )}
                 </div>
               ) : null}
 
-              <div className="table-wrap tc-leads-table-wrap">
+              <div className="tc-lead-list">
                 {loading ? (
                   <Loading label="Loading leads…" />
+                ) : leads.length === 0 ? (
+                  <p className="tc-leads-empty">No leads in this view</p>
                 ) : (
-                  <table className="products-table tc-leads-table">
-                    <thead>
-                      <tr>
-                        <th>Farmer</th>
-                        <th>Stage</th>
-                        <th className="tc-hide-sm">Last interaction</th>
-                        <th>Follow-up</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {leads.map((lead) => (
-                        <tr
-                          key={lead.id}
-                          className={`tc-lead-row ${selectedLeadId === lead.id ? 'selected' : ''}`}
-                          onClick={() => setSelectedLeadId(lead.id)}
-                          style={{ cursor: 'pointer' }}
-                        >
-                          <td className="tc-col-farmer">
-                            <span className="tc-avatar-sm">{lead.farmerInitials}</span>
-                            <div>
-                              <strong>{lead.farmerName}</strong>
-                              <small>{lead.phone ?? ''}</small>
-                            </div>
-                          </td>
-                          <td>
-                            <span className={`tc-stage ${STAGE_CLASS[lead.stage] ?? 'stage-new'}`}>
-                              {lead.stageLabel}
-                            </span>
-                          </td>
-                          <td className="tc-muted tc-hide-sm">{lead.lastInteractionLabel ?? '—'}</td>
-                          <td>{lead.followUpLabel ?? '—'}</td>
-                        </tr>
-                      ))}
-                      {!leads.length ? (
-                        <tr>
-                          <td colSpan={4} className="empty-state">
-                            No leads in this view
-                          </td>
-                        </tr>
-                      ) : null}
-                    </tbody>
-                  </table>
+                  leads.map((lead) => (
+                    <button
+                      key={lead.id}
+                      type="button"
+                      className={`tc-lead-card ${selectedLeadId === lead.id ? 'selected' : ''}`}
+                      onClick={() => setSelectedLeadId(lead.id)}
+                    >
+                      <span className="tc-avatar-sm">{lead.farmerInitials}</span>
+                      <div className="tc-lead-card-body">
+                        <div className="tc-lead-card-top">
+                          <strong>{lead.farmerName}</strong>
+                          <span className={`tc-stage ${STAGE_CLASS[lead.stage] ?? 'stage-new'}`}>
+                            {lead.stageLabel}
+                          </span>
+                        </div>
+                        <div className="tc-lead-card-meta">
+                          {lead.phone ?? 'No phone'}
+                          {lead.district ? ` · ${lead.district}` : ''}
+                        </div>
+                        <div className="tc-lead-card-dates">
+                          {lead.lastInteractionLabel ? (
+                            <span>Last: {lead.lastInteractionLabel}</span>
+                          ) : null}
+                          {lead.followUpLabel ? <span>Follow-up: {lead.followUpLabel}</span> : null}
+                        </div>
+                      </div>
+                    </button>
+                  ))
                 )}
               </div>
             </div>

@@ -307,6 +307,26 @@ export function OperationsCenterPage({ canWrite }: { canWrite: boolean }) {
     }
   }
 
+  async function archiveBroadcastRule(id: string) {
+    if (!canWrite || !confirm('Archive this broadcast rule?')) return;
+    try {
+      await api(`${base}/broadcasts/rules/${id}`, { method: 'DELETE' });
+      await loadTab();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not archive rule');
+    }
+  }
+
+  async function archiveCropPrice(id: string) {
+    if (!canWrite || !confirm('Archive this crop price?')) return;
+    try {
+      await api(`${base}/crop-prices/${id}`, { method: 'DELETE' });
+      await loadTab();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not archive price');
+    }
+  }
+
   return (
     <div className="operations-hub">
       <p className="muted" style={{ marginBottom: 12 }}>
@@ -433,6 +453,7 @@ export function OperationsCenterPage({ canWrite }: { canWrite: boolean }) {
                       <th className="px-4 py-3">DAP</th>
                       <th className="px-4 py-3">Priority</th>
                       <th className="px-4 py-3">Active</th>
+                      {canWrite ? <th className="px-4 py-3" /> : null}
                     </tr>
                   </thead>
                   <tbody>
@@ -443,6 +464,17 @@ export function OperationsCenterPage({ canWrite }: { canWrite: boolean }) {
                         <td className="px-4 py-3">{r.target_dap ?? `${r.min_dap ?? '—'}–${r.max_dap ?? '—'}`}</td>
                         <td className="px-4 py-3">{r.priority}</td>
                         <td className="px-4 py-3">{r.active ? 'Yes' : 'No'}</td>
+                        {canWrite ? (
+                          <td className="px-4 py-3">
+                            <button
+                              type="button"
+                              className="text-xs text-red-600 hover:underline"
+                              onClick={() => archiveBroadcastRule(r.id)}
+                            >
+                              Archive
+                            </button>
+                          </td>
+                        ) : null}
                       </tr>
                     ))}
                   </tbody>
@@ -543,6 +575,7 @@ export function OperationsCenterPage({ canWrite }: { canWrite: boolean }) {
                       <th className="px-4 py-3">Market</th>
                       <th className="px-4 py-3">District</th>
                       <th className="px-4 py-3">₹/kg</th>
+                      {canWrite ? <th className="px-4 py-3" /> : null}
                     </tr>
                   </thead>
                   <tbody>
@@ -552,6 +585,17 @@ export function OperationsCenterPage({ canWrite }: { canWrite: boolean }) {
                         <td className="px-4 py-3">{p.market_name}</td>
                         <td className="px-4 py-3">{p.district ?? '—'}</td>
                         <td className="px-4 py-3">{p.price_per_kg}</td>
+                        {canWrite ? (
+                          <td className="px-4 py-3">
+                            <button
+                              type="button"
+                              className="text-xs text-red-600 hover:underline"
+                              onClick={() => archiveCropPrice(p.id)}
+                            >
+                              Archive
+                            </button>
+                          </td>
+                        ) : null}
                       </tr>
                     ))}
                   </tbody>

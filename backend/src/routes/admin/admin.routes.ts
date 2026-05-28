@@ -31,6 +31,9 @@ import { getModulesForRole, canApproveRecommendations } from '../../lib/rbac.js'
 import { requireAdmin, requireAdminRole } from '../../middleware/adminAuth.js';
 import { supabase } from '../../lib/supabase.js';
 import { throwIfSupabaseError } from '../../lib/supabase-errors.js';
+import { hashPassword } from '../../lib/password.js';
+import { logAdminMutation } from '../../lib/admin-mutation-audit.js';
+import { assertSuperAdminDeactivationAllowed } from '../../lib/admin-guards.js';
 
 const loginSchema = z.object({
   email: z.string().email().max(255),
@@ -165,6 +168,27 @@ const flashSaleCreateSchema = z.object({
   shopifyProductId: z.string().max(50).optional(),
 });
 
+async function assertCanDeactivateSuperAdmin(userId: string): Promise<void> {
+  const { data, error } = await supabase
+    .from('admin_users')
+    .select('id, role, active')
+    .eq('id', userId)
+    .maybeSingle();
+  throwIfSupabaseError(error, 'Could not validate admin account');
+  if (!data || data.role !== 'super_admin' || data.active === false) return;
+  const { count, error: countError } = await supabase
+    .from('admin_users')
+    .select('id', { count: 'exact', head: true })
+    .eq('role', 'super_admin')
+    .eq('active', true);
+  throwIfSupabaseError(countError, 'Could not validate super admin guard');
+  assertSuperAdminDeactivationAllowed({
+    role: data.role as string,
+    active: Boolean(data.active),
+    activeSuperAdminCount: count ?? 0,
+  });
+}
+
 export async function adminRoutes(app: FastifyInstance): Promise<void> {
   const api = '/console/api/v1';
 
@@ -236,6 +260,47 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
     const { id } = request.params as { id: string };
     const order = await ordersAdminService.get(id);
     return reply.send({ ok: true, order });
+  });
+
+  app.delete(`${api}/orders/:id`, async (request, reply) => {
+    requireAdminRole(request, 'super_admin', 'admin', 'manager');
+    const actor = requireAdmin(request);
+    const { id } = request.params as { id: string };
+    const q = request.query as { source?: string };
+    const now = new Date().toISOString();
+    if (q.source === 'razorpay_checkout') {
+      const { error } = await supabase
+        .from('checkout_sessions')
+        .update({ status: 'cancelled', updated_at: now })
+        .eq('id', id);
+      throwIfSupabaseError(error, 'Could not cancel order');
+      await logAdminMutation({
+        actorId: actor.id,
+        actorEmail: actor.email,
+        action: 'archive',
+        resource: 'checkout_sessions',
+        resourceId: id,
+      });
+      return reply.send({ ok: true });
+    }
+    const { error } = await supabase
+      .from('commerce_orders')
+      .update({
+        payment_status: 'cancelled',
+        fulfillment_status: 'cancelled',
+        financial_status: 'voided',
+        updated_at: now,
+      })
+      .eq('id', id);
+    throwIfSupabaseError(error, 'Could not cancel order');
+    await logAdminMutation({
+      actorId: actor.id,
+      actorEmail: actor.email,
+      action: 'archive',
+      resource: 'commerce_orders',
+      resourceId: id,
+    });
+    return reply.send({ ok: true });
   });
 
   app.get(`${api}/offers`, async (request, reply) => {
@@ -455,7 +520,7 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
   });
 
   app.get(`${api}/staff`, async (request, reply) => {
-    requireAdminRole(request, 'admin');
+    requireAdminRole(request, 'super_admin', 'admin');
     const { data, error } = await supabase
       .from('admin_users')
       .select('id, email, full_name, role, active, last_login_at, created_at')
@@ -473,6 +538,142 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
         createdAt: u.created_at,
       })),
     });
+  });
+
+  app.post(`${api}/staff`, async (request, reply) => {
+    requireAdminRole(request, 'super_admin', 'admin');
+    const body = z
+      .object({
+        email: z.string().email().max(255),
+        fullName: z.string().min(2).max(120),
+        role: z
+          .enum([
+            'super_admin',
+            'admin',
+            'operations',
+            'agronomist',
+            'telecaller',
+            'manager',
+            'viewer',
+          ])
+          .default('viewer'),
+        password: z.string().min(8).max(128),
+        active: z.boolean().optional(),
+      })
+      .parse(request.body);
+
+    const email = body.email.trim().toLowerCase();
+    const now = new Date().toISOString();
+    const { data, error } = await supabase
+      .from('admin_users')
+      .insert({
+        email,
+        full_name: body.fullName.trim(),
+        role: body.role,
+        password_hash: hashPassword(body.password),
+        active: body.active ?? true,
+        updated_at: now,
+      })
+      .select('id, email, full_name, role, active, last_login_at, created_at')
+      .single();
+
+    throwIfSupabaseError(error, 'Could not create employee');
+    if (!data) {
+      return reply.code(500).send({ ok: false, error: 'Could not create employee' });
+    }
+    return reply.status(201).send({
+      ok: true,
+      employee: {
+        id: data.id,
+        email: data.email,
+        fullName: data.full_name,
+        role: data.role,
+        active: data.active,
+        lastLoginAt: data.last_login_at,
+        createdAt: data.created_at,
+      },
+    });
+  });
+
+  app.patch(`${api}/staff/:id`, async (request, reply) => {
+    requireAdminRole(request, 'super_admin', 'admin');
+    const actor = requireAdmin(request);
+    const { id } = request.params as { id: string };
+    const body = z
+      .object({
+        fullName: z.string().min(2).max(120).optional(),
+        role: z
+          .enum([
+            'super_admin',
+            'admin',
+            'operations',
+            'agronomist',
+            'telecaller',
+            'manager',
+            'viewer',
+          ])
+          .optional(),
+        active: z.boolean().optional(),
+      })
+      .parse(request.body);
+
+    const patch: Record<string, unknown> = { updated_at: new Date().toISOString() };
+    if (body.fullName !== undefined) patch.full_name = body.fullName.trim();
+    if (body.role !== undefined) patch.role = body.role;
+    if (body.active !== undefined) patch.active = body.active;
+    if (body.active === false) await assertCanDeactivateSuperAdmin(id);
+
+    const { data, error } = await supabase
+      .from('admin_users')
+      .update(patch)
+      .eq('id', id)
+      .select('id, email, full_name, role, active, last_login_at, created_at')
+      .single();
+    throwIfSupabaseError(error, 'Could not update employee');
+    if (!data) return reply.code(404).send({ ok: false, error: 'Employee not found' });
+    await logAdminMutation({
+      actorId: actor.id,
+      actorEmail: actor.email,
+      action: 'update',
+      resource: 'admin_users',
+      resourceId: id,
+      details: body,
+    });
+    return reply.send({
+      ok: true,
+      employee: {
+        id: data.id,
+        email: data.email,
+        fullName: data.full_name,
+        role: data.role,
+        active: data.active,
+        lastLoginAt: data.last_login_at,
+        createdAt: data.created_at,
+      },
+    });
+  });
+
+  app.delete(`${api}/staff/:id`, async (request, reply) => {
+    requireAdminRole(request, 'super_admin', 'admin');
+    const actor = requireAdmin(request);
+    const { id } = request.params as { id: string };
+    if (actor.id === id) {
+      return reply.code(400).send({ ok: false, error: 'You cannot deactivate your own account' });
+    }
+    await assertCanDeactivateSuperAdmin(id);
+    const { error } = await supabase
+      .from('admin_users')
+      .update({ active: false, updated_at: new Date().toISOString() })
+      .eq('id', id);
+    throwIfSupabaseError(error, 'Could not deactivate employee');
+    await logAdminMutation({
+      actorId: actor.id,
+      actorEmail: actor.email,
+      action: 'archive',
+      resource: 'admin_users',
+      resourceId: id,
+    });
+    return reply.send({ ok: true });
   });
 
   app.get(`${api}/staff/workspace`, async (request, reply) => {
@@ -545,6 +746,25 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
     const body = farmerUpdateSchema.parse(request.body);
     const farmer = await farmersAdminService.update(id, body);
     return reply.send({ ok: true, farmer });
+  });
+
+  app.delete(`${api}/farmers/:id`, async (request, reply) => {
+    requireAdminRole(request, 'super_admin', 'admin', 'manager');
+    const actor = requireAdmin(request);
+    const { id } = request.params as { id: string };
+    const { error } = await supabase
+      .from('farmers')
+      .update({ source: 'archived', updated_at: new Date().toISOString() })
+      .eq('id', id);
+    throwIfSupabaseError(error, 'Could not archive farmer');
+    await logAdminMutation({
+      actorId: actor.id,
+      actorEmail: actor.email,
+      action: 'archive',
+      resource: 'farmers',
+      resourceId: id,
+    });
+    return reply.send({ ok: true });
   });
 
   app.get(`${api}/telecaller/overview`, async (request, reply) => {
@@ -1475,6 +1695,21 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
     const { id } = request.params as { id: string };
     const body = productUpdateSchema.parse(request.body);
     const product = await shopifyProductsService.update(id, body);
+    return reply.send({ ok: true, product });
+  });
+
+  app.delete(`${api}/products/:id`, async (request, reply) => {
+    requireAdminRole(request, 'super_admin', 'admin', 'manager');
+    const actor = requireAdmin(request);
+    const { id } = request.params as { id: string };
+    const product = await shopifyProductsService.update(id, { status: 'archived' });
+    await logAdminMutation({
+      actorId: actor.id,
+      actorEmail: actor.email,
+      action: 'archive',
+      resource: 'products',
+      resourceId: id,
+    });
     return reply.send({ ok: true, product });
   });
 

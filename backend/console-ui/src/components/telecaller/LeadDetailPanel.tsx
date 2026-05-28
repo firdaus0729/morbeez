@@ -4,6 +4,15 @@ import { CrmModals, type CrmModalType } from './CrmModals';
 import { LeadExportMenu } from './LeadExportMenu';
 import { openWhatsAppShare } from '../../lib/crmExport';
 
+const STAGE_CLASS: Record<string, string> = {
+  new_lead: 'stage-new',
+  interested: 'stage-interested',
+  follow_up: 'stage-follow',
+  recommendation: 'stage-rec',
+  order_placed: 'stage-order',
+  repeat_customer: 'stage-repeat',
+};
+
 const STAGES = [
   { id: 'new_lead', label: 'New Lead' },
   { id: 'interested', label: 'Interested' },
@@ -263,6 +272,17 @@ export function LeadDetailPanel({ leadId, canWrite }: Props) {
     }
   }
 
+  async function archiveResource(path: string, label: string) {
+    if (!canWrite) return;
+    if (!confirm(`Archive this ${label}?`)) return;
+    try {
+      await api(path, { method: 'DELETE' });
+      bumpData();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : `Could not archive ${label}`);
+    }
+  }
+
   async function patchSession(patch: Record<string, unknown>) {
     if (!canWrite || !detail) return;
     try {
@@ -277,36 +297,35 @@ export function LeadDetailPanel({ leadId, canWrite }: Props) {
   }
 
   if (loading && !detail) {
-    return <p className="text-sm text-slate-500">Loading farmer…</p>;
+    return <p className="tc-muted" style={{ padding: 24 }}>Loading farmer…</p>;
   }
 
   if (!detail) {
-    return <p className="text-sm text-red-600">{error || 'Lead not found'}</p>;
+    return <p className="text-sm text-red-600" style={{ padding: 24 }}>{error || 'Lead not found'}</p>;
   }
 
   const l = detail.lead;
   const f = detail.farmer;
 
   return (
-    <div className="flex h-full flex-col">
-      <header className="border-b border-slate-200 pb-4">
-        <div className="flex items-start gap-3">
-          <span className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 text-sm font-semibold text-emerald-800">
-            {l.farmerInitials}
-          </span>
+    <div className="tc-detail-root">
+      <header className="tc-detail-header">
+        <div className="tc-detail-identity-row">
+          <span className="tc-avatar-lg">{l.farmerInitials}</span>
           <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-start justify-between gap-2">
-            <h2 className="text-lg font-semibold text-slate-900">{l.farmerName}</h2>
-            <LeadExportMenu leadId={leadId} canShare={Boolean(l.phone)} />
+            <div className="tc-detail-badges" style={{ justifyContent: 'space-between' }}>
+              <h2>{l.farmerName}</h2>
+              <LeadExportMenu leadId={leadId} canShare={Boolean(l.phone)} />
             </div>
-            <p className="text-sm text-slate-600">
-              {l.phone} · {f.territory} · ★ {Number(l.leadScore).toFixed(1)}
+            <p className="tc-detail-subline">
+              {l.phone ?? '—'} · {f.territory} · <span className="tc-rating">★ {Number(l.leadScore).toFixed(1)}</span>
             </p>
             {canWrite ? (
               <select
-                className="mt-2 rounded border border-slate-200 px-2 py-1 text-sm"
+                className="tc-stage-select"
                 value={l.stage}
                 onChange={(e) => changeStage(e.target.value)}
+                aria-label="Lead stage"
               >
                 {STAGES.map((s) => (
                   <option key={s.id} value={s.id}>
@@ -315,39 +334,43 @@ export function LeadDetailPanel({ leadId, canWrite }: Props) {
                 ))}
               </select>
             ) : (
-              <span className="mt-2 inline-block rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700">
-                {l.stageLabel}
-              </span>
+              <span className={`tc-stage ${STAGE_CLASS[l.stage] ?? 'stage-new'}`}>{l.stageLabel}</span>
             )}
           </div>
         </div>
-        <nav className="mt-4 flex flex-wrap gap-1">
+        <nav className="tc-detail-tabs" role="tablist">
           {TABS.map((t) => (
             <button
               key={t.id}
               type="button"
+              role="tab"
+              aria-selected={tab === t.id}
               onClick={() => setTab(t.id)}
-              className={`rounded-lg px-3 py-1.5 text-xs ${
-                tab === t.id
-                  ? 'bg-emerald-50 font-medium text-emerald-800'
-                  : 'text-slate-600 hover:bg-slate-50'
-              }`}
+              className={`tc-detail-tab ${tab === t.id ? 'active' : ''}`}
             >
               {t.label}
             </button>
           ))}
         </nav>
         {canWrite ? (
-          <div className="mt-3 flex flex-wrap gap-2">
-            <ActionBtn onClick={() => setModal('call')}>Log call</ActionBtn>
-            <ActionBtn onClick={() => setModal('task')}>Follow-up</ActionBtn>
-            <ActionBtn onClick={() => setModal('visit')}>Schedule visit</ActionBtn>
-            <ActionBtn onClick={() => setModal('order')}>New order</ActionBtn>
+          <div className="tc-detail-actions">
+            <button type="button" className="tc-action-btn" onClick={() => setModal('call')}>
+              Log call
+            </button>
+            <button type="button" className="tc-action-btn" onClick={() => setModal('task')}>
+              Follow-up
+            </button>
+            <button type="button" className="tc-action-btn" onClick={() => setModal('visit')}>
+              Schedule visit
+            </button>
+            <button type="button" className="tc-action-btn" onClick={() => setModal('order')}>
+              New order
+            </button>
           </div>
         ) : null}
       </header>
 
-      {error ? <p className="mt-3 text-sm text-red-600">{error}</p> : null}
+      {error ? <p className="text-sm text-red-600" style={{ padding: '12px 20px 0' }}>{error}</p> : null}
 
       {modal ? (
         <CrmModals
@@ -359,64 +382,164 @@ export function LeadDetailPanel({ leadId, canWrite }: Props) {
         />
       ) : null}
 
-      <div className="flex-1 overflow-auto py-4">
+      <div className="tc-detail-body">
         {tab === 'overview' ? (
-          <div className="grid gap-6 lg:grid-cols-2">
-            <section className="rounded-xl border border-slate-200 bg-white p-4 text-sm shadow-sm">
-              <h3 className="font-medium text-slate-900">Farm profile</h3>
-              <dl className="mt-3 space-y-2">
-                <Row label="Primary crop" value={f.crop} />
-                <Row label="Blocks" value={String(detail.farmOverview.totalBlocks)} />
-                <Row label="Acreage" value={f.acreage} />
-                <Row label="Irrigation" value={f.irrigation} />
-                <Row label="Soil" value={f.soilType} />
-                <Row label="Language" value={f.language} />
-              </dl>
+          <div className="tc-farmer-dashboard">
+            <section className="tc-profile-summary">
+              <article className="tc-profile-metric">
+                <span>Total acres</span>
+                <strong>{f.acreage || '—'}</strong>
+              </article>
+              <article className="tc-profile-metric">
+                <span>Primary crop</span>
+                <strong>{f.crop || '—'}</strong>
+              </article>
+              <article className="tc-profile-metric">
+                <span>Farmer score</span>
+                <strong>{Math.round(Number(l.leadScore) * 20) || 0}</strong>
+              </article>
+              <article className="tc-profile-metric">
+                <span>Relationship score</span>
+                <strong>{Math.min(100, Math.round(Number(l.leadScore) * 18 + 10))}</strong>
+              </article>
+              <article className="tc-profile-metric">
+                <span>Customer since</span>
+                <strong>{detail.timeline.at(-1)?.atLabel ?? '—'}</strong>
+              </article>
+              <article className="tc-profile-metric">
+                <span>Next follow-up</span>
+                <strong>{detail.nextFollowUp?.dueLabel ?? 'None'}</strong>
+              </article>
             </section>
-            <section className="rounded-xl border border-slate-200 bg-white p-4 text-sm shadow-sm">
-              <h3 className="font-medium text-slate-900">Next follow-up</h3>
-              {detail.nextFollowUp ? (
-                <p className="mt-2 text-slate-700">
-                  <strong>{detail.nextFollowUp.title}</strong>
-                  <br />
-                  <span className="text-slate-500">{detail.nextFollowUp.dueLabel}</span>
-                </p>
-              ) : (
-                <p className="mt-2 text-slate-500">None scheduled</p>
-              )}
-              {canWrite ? (
-                <form onSubmit={addNote} className="mt-4 border-t border-slate-100 pt-4">
-                  <label className="text-xs text-slate-600">Internal note</label>
-                  <textarea
-                    className="mt-1 w-full rounded border border-slate-200 px-2 py-1.5 text-sm"
-                    rows={2}
-                    value={noteText}
-                    onChange={(e) => setNoteText(e.target.value)}
-                    placeholder="Call summary, farmer concern…"
-                  />
-                  <button
-                    type="submit"
-                    className="mt-2 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-700"
-                  >
-                    Save note
-                  </button>
-                </form>
-              ) : null}
-            </section>
-            <section className="rounded-xl border border-slate-200 bg-white p-4 text-sm shadow-sm lg:col-span-2">
-              <h3 className="font-medium text-slate-900">Timeline</h3>
-              <ul className="mt-3 space-y-2">
-                {detail.timeline.map((ev) => (
-                  <li key={ev.id} className="border-l-2 border-emerald-200 pl-3">
-                    <p className="font-medium text-slate-800">{ev.title}</p>
-                    <p className="text-xs text-slate-500">{ev.atLabel}</p>
-                    {ev.detail ? <p className="text-xs text-slate-600">{ev.detail}</p> : null}
-                  </li>
-                ))}
-                {detail.timeline.length === 0 ? (
-                  <li className="text-slate-500">No activity yet</li>
+
+            <section className="tc-dashboard-main-grid">
+              <article className="tc-dashboard-card">
+                <h3>Farmer overview</h3>
+                <dl>
+                  <Row label="Full Name" value={l.farmerName} />
+                  <Row label="Territory" value={f.territory || '—'} />
+                  <Row label="Language" value={f.language || '—'} />
+                  <Row label="Phone" value={l.phone ?? '—'} />
+                  <Row label="Irrigation" value={f.irrigation || '—'} />
+                  <Row label="Soil" value={f.soilType || '—'} />
+                </dl>
+              </article>
+
+              <article className="tc-dashboard-card">
+                <h3>Recent orders</h3>
+                <ul className="tc-compact-list">
+                  {(detail.orders ?? []).slice(0, 3).map((o, idx) => (
+                    <li key={`${o.label}-${o.date}-${idx}`}>
+                      <strong>{o.label || `Order ${idx + 1}`}</strong>
+                      <span>₹{Number(o.amount ?? 0)}</span>
+                    </li>
+                  ))}
+                  {(detail.orders ?? []).length === 0 ? <li className="tc-empty-row">No recent orders</li> : null}
+                </ul>
+              </article>
+
+              <article className="tc-dashboard-card">
+                <h3>Upcoming follow-ups</h3>
+                {detail.nextFollowUp ? (
+                  <div className="tc-followup-block">
+                    <p className="tc-followup-title">{detail.nextFollowUp.title}</p>
+                    <p className="tc-followup-time">{detail.nextFollowUp.dueLabel}</p>
+                  </div>
+                ) : (
+                  <p className="tc-empty-row">No follow-up scheduled</p>
+                )}
+                {canWrite ? (
+                  <form onSubmit={addNote} className="mt-3 border-t border-slate-100 pt-3">
+                    <label className="text-xs text-slate-600">Internal note</label>
+                    <textarea
+                      className="mt-1 w-full rounded border border-slate-200 px-2 py-1.5 text-sm"
+                      rows={2}
+                      value={noteText}
+                      onChange={(e) => setNoteText(e.target.value)}
+                      placeholder="Call summary, farmer concern…"
+                    />
+                    <button
+                      type="submit"
+                      className="mt-2 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-700"
+                    >
+                      Save note
+                    </button>
+                  </form>
                 ) : null}
-              </ul>
+              </article>
+            </section>
+
+            <section className="tc-dashboard-card tc-blocks-summary">
+              <div className="tc-card-head">
+                <h3>Blocks summary</h3>
+                <button type="button" className="tc-inline-link" onClick={() => setTab('blocks')}>
+                  View all blocks
+                </button>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-sm">
+                  <thead className="bg-slate-50 text-xs uppercase text-slate-500">
+                    <tr>
+                      <th className="px-3 py-2">Block</th>
+                      <th className="px-3 py-2">Crop</th>
+                      <th className="px-3 py-2">Area</th>
+                      <th className="px-3 py-2">Stage</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(detail.farmOverview.blocks ?? []).map((b) => (
+                      <tr key={b.id} className="border-t border-slate-100">
+                        <td className="px-3 py-2">{b.name}</td>
+                        <td className="px-3 py-2">{b.cropType || '—'}</td>
+                        <td className="px-3 py-2">{String(b.acreage ?? '—')}</td>
+                        <td className="px-3 py-2">{b.isPrimary ? 'Primary' : 'Secondary'}</td>
+                      </tr>
+                    ))}
+                    {(detail.farmOverview.blocks ?? []).length === 0 ? (
+                      <tr>
+                        <td className="px-3 py-4 text-slate-500" colSpan={4}>
+                          No blocks found
+                        </td>
+                      </tr>
+                    ) : null}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+
+            <section className="tc-dashboard-footer-grid">
+              <article className="tc-dashboard-card">
+                <h3>Interaction summary</h3>
+                <div className="tc-mini-kpis">
+                  <div>
+                    <span>Calls</span>
+                    <strong>{detail.timeline.filter((x) => String(x.type).toLowerCase().includes('call')).length}</strong>
+                  </div>
+                  <div>
+                    <span>WhatsApp</span>
+                    <strong>{detail.timeline.filter((x) => String(x.type).toLowerCase().includes('whatsapp')).length}</strong>
+                  </div>
+                  <div>
+                    <span>Recommendations</span>
+                    <strong>{detail.timeline.filter((x) => String(x.type).toLowerCase().includes('recommend')).length}</strong>
+                  </div>
+                </div>
+              </article>
+              <article className="tc-dashboard-card">
+                <h3>AI insight</h3>
+                <p className="text-sm text-slate-600">
+                  {detail.timeline[0]?.detail ??
+                    'Keep follow-up cadence weekly and convert latest recommendation into order after confirmation.'}
+                </p>
+              </article>
+              <article className="tc-dashboard-card">
+                <h3>Suggested next action</h3>
+                <ul className="tc-compact-list">
+                  <li><strong>Call farmer for confirmation</strong><span>Today</span></li>
+                  <li><strong>Share recommendation on WhatsApp</strong><span>Today</span></li>
+                  <li><strong>Schedule field visit if needed</strong><span>This week</span></li>
+                </ul>
+              </article>
             </section>
           </div>
         ) : null}
@@ -478,16 +601,50 @@ export function LeadDetailPanel({ leadId, canWrite }: Props) {
                 <ActionBtn onClick={() => setModal('interaction')}>+ Log interaction</ActionBtn>
               </div>
             ) : null}
-          <DataTable
-            headers={['Type', 'Summary', 'Status', 'When']}
-            rows={interactions.map((r) => [
-              String(r.interactionType ?? r.type ?? '—'),
-              String(r.summary ?? r.notes ?? '—').slice(0, 80),
-              String(r.status ?? '—'),
-              String(r.createdLabel ?? r.created_at ?? '—'),
-            ])}
-            empty="No cultivation interactions logged."
-          />
+            <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+              <table className="w-full text-left text-sm">
+                <thead className="bg-slate-50 text-xs uppercase text-slate-500">
+                  <tr>
+                    <th className="px-4 py-3">Type</th>
+                    <th className="px-4 py-3">Summary</th>
+                    <th className="px-4 py-3">Status</th>
+                    <th className="px-4 py-3">When</th>
+                    {canWrite ? <th className="px-4 py-3" /> : null}
+                  </tr>
+                </thead>
+                <tbody>
+                  {interactions.map((r) => (
+                    <tr key={String(r.id)} className="border-t border-slate-100">
+                      <td className="px-4 py-3">{String(r.interactionType ?? r.type ?? '—')}</td>
+                      <td className="px-4 py-3">{String(r.summary ?? r.notes ?? '—').slice(0, 80)}</td>
+                      <td className="px-4 py-3">{String(r.status ?? '—')}</td>
+                      <td className="px-4 py-3">{String(r.createdLabel ?? r.created_at ?? '—')}</td>
+                      {canWrite ? (
+                        <td className="px-4 py-3">
+                          <button
+                            type="button"
+                            className="text-xs text-red-600 hover:underline"
+                            onClick={() =>
+                              archiveResource(
+                                `${base}/interactions/${String(r.id)}`,
+                                'interaction'
+                              )
+                            }
+                          >
+                            Archive
+                          </button>
+                        </td>
+                      ) : null}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {interactions.length === 0 ? (
+                <p className="px-4 py-6 text-center text-sm text-slate-500">
+                  No cultivation interactions logged.
+                </p>
+              ) : null}
+            </div>
           </>
         ) : null}
 
@@ -540,6 +697,18 @@ export function LeadDetailPanel({ leadId, canWrite }: Props) {
                                 Share WA
                               </button>
                             ) : null}
+                            <button
+                              type="button"
+                              className="text-xs text-red-600 hover:underline text-left"
+                              onClick={() =>
+                                archiveResource(
+                                  `${base}/recommendations/${String(r.id)}`,
+                                  'recommendation'
+                                )
+                              }
+                            >
+                              Archive
+                            </button>
                           </div>
                         </td>
                       ) : null}
@@ -561,15 +730,46 @@ export function LeadDetailPanel({ leadId, canWrite }: Props) {
                 <ActionBtn onClick={() => setModal('finding')}>+ Add field finding</ActionBtn>
               </div>
             ) : null}
-          <DataTable
-            headers={['Visit', 'Observations', 'Severity']}
-            rows={findings.map((r) => [
-              String(r.visitedLabel ?? r.visited_at ?? '—'),
-              String(r.observations ?? '—').slice(0, 100),
-              String(r.severity ?? '—'),
-            ])}
-            empty="No field findings."
-          />
+            <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+              <table className="w-full text-left text-sm">
+                <thead className="bg-slate-50 text-xs uppercase text-slate-500">
+                  <tr>
+                    <th className="px-4 py-3">Visit</th>
+                    <th className="px-4 py-3">Observations</th>
+                    <th className="px-4 py-3">Severity</th>
+                    {canWrite ? <th className="px-4 py-3" /> : null}
+                  </tr>
+                </thead>
+                <tbody>
+                  {findings.map((r) => (
+                    <tr key={String(r.id)} className="border-t border-slate-100">
+                      <td className="px-4 py-3">{String(r.visitedLabel ?? r.visited_at ?? '—')}</td>
+                      <td className="px-4 py-3">{String(r.observations ?? '—').slice(0, 100)}</td>
+                      <td className="px-4 py-3">{String(r.severity ?? '—')}</td>
+                      {canWrite ? (
+                        <td className="px-4 py-3">
+                          <button
+                            type="button"
+                            className="text-xs text-red-600 hover:underline"
+                            onClick={() =>
+                              archiveResource(
+                                `${base}/field-findings/${String(r.id)}`,
+                                'field finding'
+                              )
+                            }
+                          >
+                            Archive
+                          </button>
+                        </td>
+                      ) : null}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {findings.length === 0 ? (
+                <p className="px-4 py-6 text-center text-sm text-slate-500">No field findings.</p>
+              ) : null}
+            </div>
           </>
         ) : null}
 
@@ -595,51 +795,66 @@ export function LeadDetailPanel({ leadId, canWrite }: Props) {
         ) : null}
 
         {tab === 'whatsapp' ? (
-          <div className="flex flex-col gap-4 lg:flex-row">
-            <div className="flex flex-1 flex-col rounded-xl border border-slate-200 bg-white shadow-sm">
-              <div className="max-h-80 flex-1 overflow-y-auto p-4 space-y-2">
-                {messages.map((m) => (
-                  <div
-                    key={String(m.id)}
-                    className={`max-w-[85%] rounded-lg px-3 py-2 text-sm ${
-                      m.direction === 'outbound'
-                        ? 'ml-auto bg-emerald-600 text-white'
-                        : 'bg-slate-100 text-slate-900'
-                    }`}
-                  >
-                    {String(m.content ?? '')}
-                    <p className="mt-1 text-[10px] opacity-70">
-                      {m.created_at ? new Date(String(m.created_at)).toLocaleString('en-IN') : ''}
-                    </p>
-                  </div>
-                ))}
+          <div className="tc-wa-layout">
+            <div className="tc-wa-thread">
+              <div className="tc-wa-messages">
+                {messages.map((m) => {
+                  const outbound = m.direction === 'outbound';
+                  const raw = String(m.content ?? '').trim();
+                  const isMedia =
+                    !raw ||
+                    /^(image|photo|audio|voice|document|video|sticker)$/i.test(raw) ||
+                    raw.length < 3;
+                  return (
+                    <div
+                      key={String(m.id)}
+                      className={`tc-wa-bubble ${outbound ? 'tc-wa-bubble--out' : 'tc-wa-bubble--in'} ${
+                        isMedia ? 'tc-wa-bubble--media' : ''
+                      }`}
+                    >
+                      {isMedia ? (
+                        <span>{raw ? `📎 ${raw}` : '📷 Media message'}</span>
+                      ) : (
+                        raw
+                      )}
+                      {m.created_at ? (
+                        <time dateTime={String(m.created_at)}>
+                          {new Date(String(m.created_at)).toLocaleString('en-IN', {
+                            day: 'numeric',
+                            month: 'short',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
+                        </time>
+                      ) : null}
+                    </div>
+                  );
+                })}
                 {messages.length === 0 ? (
-                  <p className="text-sm text-slate-500">No WhatsApp messages in log.</p>
+                  <p className="tc-muted" style={{ textAlign: 'center', padding: 24 }}>
+                    No WhatsApp messages in log yet.
+                  </p>
                 ) : null}
               </div>
               {canWrite ? (
-                <form onSubmit={sendWhatsApp} className="border-t border-slate-100 p-3 flex gap-2">
+                <form onSubmit={sendWhatsApp} className="tc-wa-composer">
                   <input
-                    className="flex-1 rounded border border-slate-200 px-3 py-2 text-sm"
                     value={waText}
                     onChange={(e) => setWaText(e.target.value)}
                     placeholder="Type a message…"
+                    aria-label="WhatsApp message"
                   />
-                  <button
-                    type="submit"
-                    className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white"
-                  >
-                    Send
-                  </button>
+                  <button type="submit">Send</button>
                 </form>
               ) : null}
             </div>
-            <aside className="w-full lg:w-56 rounded-xl border border-slate-200 bg-white p-4 text-sm shadow-sm">
-              <h3 className="font-medium">Session</h3>
-              <label className="mt-3 block text-xs text-slate-600">
+            <aside className="tc-wa-session">
+              <h3>Session</h3>
+              <label className="block text-xs text-slate-600">
                 Owner
                 <select
-                  className="mt-1 w-full rounded border border-slate-200 px-2 py-1"
+                  className="tc-stage-select"
+                  style={{ width: '100%', marginTop: 6 }}
                   disabled={!canWrite}
                   value={String(session?.conversation_owner ?? 'ai')}
                   onChange={(e) => patchSession({ owner: e.target.value })}
@@ -651,7 +866,10 @@ export function LeadDetailPanel({ leadId, canWrite }: Props) {
                   ))}
                 </select>
               </label>
-              <label className="mt-3 flex items-center gap-2 text-xs">
+              <label
+                className="flex items-center gap-2 text-xs"
+                style={{ marginTop: 14, cursor: canWrite ? 'pointer' : 'default' }}
+              >
                 <input
                   type="checkbox"
                   disabled={!canWrite}
@@ -670,11 +888,7 @@ export function LeadDetailPanel({ leadId, canWrite }: Props) {
 
 function ActionBtn({ children, onClick }: { children: ReactNode; onClick: () => void }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
-    >
+    <button type="button" className="tc-action-btn" onClick={onClick}>
       {children}
     </button>
   );

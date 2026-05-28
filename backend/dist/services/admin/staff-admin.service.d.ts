@@ -1,3 +1,5 @@
+declare const STAFF_ROLES: readonly ["super_admin", "admin", "operations", "agronomist", "telecaller", "manager", "viewer"];
+export type StaffRole = (typeof STAFF_ROLES)[number];
 export type StaffMember = {
     id: string;
     email: string;
@@ -66,4 +68,5 @@ export declare const staffAdminService: {
         }[];
     } | null>;
 };
+export {};
 //# sourceMappingURL=staff-admin.service.d.ts.map

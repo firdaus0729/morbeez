@@ -30,6 +30,7 @@ import { getModulesForRole, canApproveRecommendations } from '../../lib/rbac.js'
 import { requireAdmin, requireAdminRole } from '../../middleware/adminAuth.js';
 import { supabase } from '../../lib/supabase.js';
 import { throwIfSupabaseError } from '../../lib/supabase-errors.js';
+import { hashPassword } from '../../lib/password.js';
 const loginSchema = z.object({
     email: z.string().email().max(255),
     password: z.string().min(1).max(128),
@@ -369,7 +370,7 @@ export async function adminRoutes(app) {
         return reply.send({ ok: true, intelligence: intel });
     });
     app.get(`${api}/staff`, async (request, reply) => {
-        requireAdminRole(request, 'admin');
+        requireAdminRole(request, 'super_admin', 'admin');
         const { data, error } = await supabase
             .from('admin_users')
             .select('id, email, full_name, role, active, last_login_at, created_at')
@@ -386,6 +387,58 @@ export async function adminRoutes(app) {
                 lastLoginAt: u.last_login_at,
                 createdAt: u.created_at,
             })),
+        });
+    });
+    app.post(`${api}/staff`, async (request, reply) => {
+        requireAdminRole(request, 'super_admin', 'admin');
+        const body = z
+            .object({
+            email: z.string().email().max(255),
+            fullName: z.string().min(2).max(120),
+            role: z
+                .enum([
+                'super_admin',
+                'admin',
+                'operations',
+                'agronomist',
+                'telecaller',
+                'manager',
+                'viewer',
+            ])
+                .default('viewer'),
+            password: z.string().min(8).max(128),
+            active: z.boolean().optional(),
+        })
+            .parse(request.body);
+        const email = body.email.trim().toLowerCase();
+        const now = new Date().toISOString();
+        const { data, error } = await supabase
+            .from('admin_users')
+            .insert({
+            email,
+            full_name: body.fullName.trim(),
+            role: body.role,
+            password_hash: hashPassword(body.password),
+            active: body.active ?? true,
+            updated_at: now,
+        })
+            .select('id, email, full_name, role, active, last_login_at, created_at')
+            .single();
+        throwIfSupabaseError(error, 'Could not create employee');
+        if (!data) {
+            return reply.code(500).send({ ok: false, error: 'Could not create employee' });
+        }
+        return reply.status(201).send({
+            ok: true,
+            employee: {
+                id: data.id,
+                email: data.email,
+                fullName: data.full_name,
+                role: data.role,
+                active: data.active,
+                lastLoginAt: data.last_login_at,
+                createdAt: data.created_at,
+            },
         });
     });
     app.get(`${api}/staff/workspace`, async (request, reply) => {

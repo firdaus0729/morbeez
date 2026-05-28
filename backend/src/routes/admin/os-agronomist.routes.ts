@@ -4,6 +4,8 @@ import { assertModuleAccess } from '../../lib/rbac.js';
 import { agronomistWorkflowService } from '../../services/admin/agronomist-workflow.service.js';
 import { recommendationRecordsService } from '../../services/core/recommendation-records.service.js';
 import { recommendationCommunicationService } from '../../services/core/recommendation-communication.service.js';
+import { supabase } from '../../lib/supabase.js';
+import { throwIfSupabaseError } from '../../lib/supabase-errors.js';
 
 const draftSchema = z.object({
   findingId: z.string().uuid(),
@@ -55,6 +57,55 @@ export async function osAgronomistRoutes(app: FastifyInstance): Promise<void> {
       createdBy: admin.email,
     });
     return reply.send({ ok: true, recommendation: row });
+  });
+
+  app.patch(`${api}/drafts/:id`, async (request, reply) => {
+    const admin = await assertModuleAccess(request, 'agronomist', 'write');
+    const { id } = request.params as { id: string };
+    const body = draftSchema
+      .partial()
+      .omit({ findingId: true, farmerId: true })
+      .extend({ status: z.enum(['draft', 'pending_approval', 'cancelled']).optional() })
+      .parse(request.body);
+
+    const updates: Record<string, unknown> = {
+      updated_at: new Date().toISOString(),
+      reviewed_by: admin.email,
+    };
+    if (body.blockId !== undefined) updates.block_id = body.blockId ?? null;
+    if (body.leadId !== undefined) updates.lead_id = body.leadId ?? null;
+    if (body.aiSessionId !== undefined) updates.ai_session_id = body.aiSessionId ?? null;
+    if (body.recommendationId !== undefined) updates.crm_recommendation_id = body.recommendationId ?? null;
+    if (body.issueDetected !== undefined) updates.issue_detected = body.issueDetected ?? null;
+    if (body.recommendationText !== undefined) updates.recommendation_text = body.recommendationText;
+    if (body.products !== undefined) updates.products = body.products;
+    if (body.dosage !== undefined) updates.dosage = body.dosage ?? null;
+    if (body.applicationType !== undefined) updates.application_type = body.applicationType ?? null;
+    if (body.weatherWarning !== undefined) updates.weather_warning = body.weatherWarning ?? null;
+    if (body.language !== undefined) updates.language = body.language;
+    if (body.status !== undefined) updates.status = body.status;
+
+    const { data, error } = await supabase
+      .from('recommendation_records')
+      .update(updates)
+      .eq('id', id)
+      .eq('source', 'field_finding')
+      .select('*')
+      .single();
+    throwIfSupabaseError(error, 'Could not update draft');
+    return reply.send({ ok: true, recommendation: data });
+  });
+
+  app.delete(`${api}/drafts/:id`, async (request, reply) => {
+    await assertModuleAccess(request, 'agronomist', 'write');
+    const { id } = request.params as { id: string };
+    const { error } = await supabase
+      .from('recommendation_records')
+      .update({ status: 'cancelled', updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .eq('source', 'field_finding');
+    throwIfSupabaseError(error, 'Could not archive draft');
+    return reply.send({ ok: true });
   });
 
   app.post(`${api}/recommendations/:id/submit`, async (request, reply) => {
