@@ -10,6 +10,19 @@ import type { InboundMessage } from './pipeline/types.js';
 import type { WhatsAppProvider } from './whatsapp-outbound.types.js';
 import { sendReplyButtonMenu } from './whatsapp-interactive-menu.service.js';
 
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function simulateTypingDelay(text: string): Promise<void> {
+  if (!env.WHATSAPP_TYPING_SIMULATION) return;
+  const min = Math.max(0, env.WHATSAPP_TYPING_MIN_MS);
+  const max = Math.max(min, env.WHATSAPP_TYPING_MAX_MS);
+  const textFactor = Math.min(1800, Math.max(0, Math.floor(text.length * 18)));
+  const jitter = Math.floor(Math.random() * (max - min + 1));
+  await sleep(min + jitter + textFactor);
+}
+
 function getProvider() {
   if (env.WHATSAPP_PROVIDER === 'adsgyani') return adsgyaniWhatsAppProvider;
   if (env.WHATSAPP_PROVIDER === 'wati') return watiWhatsAppProvider;
@@ -106,6 +119,7 @@ export const whatsappService = {
 
   async sendText(to: string, text: string): Promise<void> {
     try {
+      await simulateTypingDelay(text);
       await getProvider().sendText(to, text);
       logger.info({ to: to.replace(/\d(?=\d{4})/g, '*'), chars: text.length }, 'WhatsApp outbound sent');
     } catch (err) {

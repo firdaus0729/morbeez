@@ -39,6 +39,14 @@ import type { InboundMessage } from './types.js';
 
 const CROP_MEDIA_TYPES = new Set(['image', 'image_message', 'document']);
 const VOICE_TYPES = new Set(['audio', 'voice', 'audio_message']);
+const CROP_HINTS: Array<{ crop: string; terms: string[] }> = [
+  { crop: 'ginger', terms: ['ginger', 'inchi', 'ഇഞ്ചി', 'इंजी', 'અદ્રક', 'अदरक', 'ഇഞ്ചി'] },
+  { crop: 'pepper', terms: ['pepper', 'kurumulaku', 'കുരുമുളക്', 'मिर्च', 'ಕಾಳು ಮೆಣಸು'] },
+  { crop: 'cardamom', terms: ['cardamom', 'elakka', 'ഏലക്ക', 'इलायची', 'ಏಲಕ್ಕಿ'] },
+  { crop: 'banana', terms: ['banana', 'vazha', 'വാഴ', 'केला', 'ಬಾಳೆ'] },
+  { crop: 'turmeric', terms: ['turmeric', 'manjal', 'മഞ്ഞൾ', 'हल्दी', 'ಅರಿಶಿನ'] },
+  { crop: 'coconut', terms: ['coconut', 'thenga', 'തേങ്ങ', 'नारियल', 'ತೆಂಗು'] },
+];
 
 type Senders = {
   text: (phone: string, text: string) => Promise<void>;
@@ -78,6 +86,63 @@ function languageFromSelection(text: string): AdvisoryLanguage | null {
   if (t === 'kannada' || t === 'kn') return 'kn';
   if (t === 'hindi' || t === 'hi') return 'hi';
   return null;
+}
+
+function inferCropHint(text?: string): string | null {
+  if (!text?.trim()) return null;
+  const lower = text.toLowerCase();
+  for (const entry of CROP_HINTS) {
+    if (entry.terms.some((term) => lower.includes(term.toLowerCase()))) {
+      return entry.crop;
+    }
+  }
+  return null;
+}
+
+async function resolveDiagnosisContext(params: {
+  farmerId: string;
+  symptomsText?: string;
+}): Promise<{
+  activePlotId: string | null;
+  cropType: string;
+  cropStage?: string;
+  compactHistory: string;
+}> {
+  const initialActivePlotId = await multiPlotService.getActivePlotId(params.farmerId);
+  const hintedCrop = inferCropHint(params.symptomsText);
+  let resolvedActivePlotId = initialActivePlotId;
+
+  if (hintedCrop) {
+    const plots = await multiPlotService.listPlots(params.farmerId);
+    const matched = plots.find((p) => p.crop_type.toLowerCase() === hintedCrop);
+    if (matched) {
+      resolvedActivePlotId = matched.id;
+      await multiPlotService.setActivePlot(params.farmerId, matched);
+    }
+  }
+
+  const ctx = await fetchCompactFarmerContext(params.farmerId, { activePlotId: resolvedActivePlotId });
+  return {
+    activePlotId: resolvedActivePlotId,
+    cropType: hintedCrop ?? ctx.cropType,
+    cropStage: ctx.cropStage,
+    compactHistory: formatCompactHistory(ctx),
+  };
+}
+
+async function fetchRecentConversationHistory(farmerId: string, limit = 8): Promise<string[]> {
+  const { data } = await supabase
+    .from('interaction_logs')
+    .select('direction, content, created_at')
+    .eq('farmer_id', farmerId)
+    .eq('channel', 'whatsapp')
+    .order('created_at', { ascending: false })
+    .limit(limit);
+  if (!data?.length) return [];
+  return [...data]
+    .reverse()
+    .map((row) => `${row.direction === 'outbound' ? 'Assistant' : 'Farmer'}: ${String(row.content ?? '')}`)
+    .filter((line) => line.trim().length > 0);
 }
 
 function languageSelectCopy(): {
@@ -370,14 +435,16 @@ export const whatsappInboundPipeline = {
     sendText: (phone: string, text: string) => Promise<void>,
     senders?: Senders
   ): Promise<void> {
-    const activePlotId = await multiPlotService.getActivePlotId(captured.farmerId);
-    const ctxPeek = await fetchCompactFarmerContext(captured.farmerId, { activePlotId });
+    const context = await resolveDiagnosisContext({
+      farmerId: captured.farmerId,
+      symptomsText: msg.text || undefined,
+    });
     const willReuse = await aiReuseService.peekMatch({
       farmerId: captured.farmerId,
-      cropType: ctxPeek.cropType,
+      cropType: context.cropType,
       symptomsText: msg.text || undefined,
-      activePlotId,
-      compactHistory: formatCompactHistory(ctxPeek),
+      activePlotId: context.activePlotId,
+      compactHistory: context.compactHistory,
     });
 
     if (!willReuse) {
@@ -527,6 +594,7 @@ export const whatsappInboundPipeline = {
         userMessage: msg.text,
         language: captured.language,
         farmerName: msg.profileName,
+        conversationHistory: await fetchRecentConversationHistory(captured.farmerId, 10),
       });
       await this.sendAndLog(captured.farmerId, captured.phone, reply, sendText);
       return;
@@ -563,27 +631,27 @@ export const whatsappInboundPipeline = {
     send?: Senders;
   }): Promise<void> {
     try {
-      const activePlotId = await multiPlotService.getActivePlotId(params.farmerId);
       const sessCtx = await conversationSessionService.getContext(params.farmerId);
-      const ctx = await fetchCompactFarmerContext(params.farmerId, { activePlotId });
-      const compactHistory = formatCompactHistory(ctx);
-
       const symptomsText =
         params.symptomsText?.trim() ||
         sessCtx.pendingSymptomsText ||
         undefined;
+      const context = await resolveDiagnosisContext({
+        farmerId: params.farmerId,
+        symptomsText,
+      });
 
       const result = await cropDoctorService.diagnose({
         farmerId: params.farmerId,
-        cropType: ctx.cropType,
-        cropStage: ctx.cropStage,
+        cropType: context.cropType,
+        cropStage: context.cropStage,
         language: params.language,
         symptomsText,
         voiceTranscript: params.voiceTranscript,
         imageBase64: params.imageBase64,
         imageMimeType: params.imageMimeType,
         channel: params.channel ?? 'whatsapp',
-        compactHistory,
+        compactHistory: context.compactHistory,
       });
 
       const safety = validateAdvisorySafety(result.advisory, params.language);
