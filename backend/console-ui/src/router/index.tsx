@@ -51,6 +51,11 @@ function EmployeesRoute() {
   return <EmployeesPage canWrite={can('settings', 'write')} />;
 }
 
+function CommerceRoute() {
+  const { can } = useAuth();
+  return <CommerceHubPage canWrite={can('commerce', 'write')} />;
+}
+
 export function AppRouter() {
   return (
     <Routes>
@@ -89,7 +94,7 @@ export function AppRouter() {
           </Route>
 
           <Route element={<RequireModule module="commerce" />}>
-            <Route path={paths.commerce} element={<CommerceHubPage canWrite={can('commerce', 'write')} />} />
+            <Route path={paths.commerce} element={<CommerceRoute />} />
           </Route>
 
           <Route element={<RequireModule module="settings" />}>
