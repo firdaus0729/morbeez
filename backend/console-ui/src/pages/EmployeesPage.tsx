@@ -930,8 +930,21 @@ function NewEmployeeModal({
   const [incentiveEnabled, setIncentiveEnabled] = useState(true);
   const [monthlySalesTarget, setMonthlySalesTarget] = useState(300000);
   const [incentivePct, setIncentivePct] = useState(2);
+  const [conversionBonusEnabled, setConversionBonusEnabled] = useState(true);
   const [conversionTarget, setConversionTarget] = useState(50);
   const [additionalBonus, setAdditionalBonus] = useState(1000);
+  const [retentionBonusEnabled, setRetentionBonusEnabled] = useState(false);
+  const [relationshipBonusEnabled, setRelationshipBonusEnabled] = useState(false);
+  const [followUpBonusEnabled, setFollowUpBonusEnabled] = useState(false);
+  const [farmerRetentionBonus, setFarmerRetentionBonus] = useState(0);
+  const [recommendationSuccessBonus, setRecommendationSuccessBonus] = useState(0);
+  const [escalationBonus, setEscalationBonus] = useState(0);
+  const [kmAllowanceEnabled, setKmAllowanceEnabled] = useState(false);
+  const [ratePerKm, setRatePerKm] = useState(0);
+  const [fieldVisitBonus, setFieldVisitBonus] = useState(0);
+  const [assignedRegions, setAssignedRegions] = useState('');
+  const [gpsTrackingEnabled, setGpsTrackingEnabled] = useState(false);
+  const [offlineSyncEnabled, setOfflineSyncEnabled] = useState(false);
   const [travelAllowance, setTravelAllowance] = useState(0);
   const [joiningBonus, setJoiningBonus] = useState(0);
   const [minDailyHours, setMinDailyHours] = useState(9);
@@ -975,11 +988,25 @@ function NewEmployeeModal({
           salary_cycle: 'monthly',
           joining_bonus: joiningBonus,
           travel_allowance: travelAllowance,
-          monthly_sales_target: monthlySalesTarget,
-          incentive_pct_after_target: incentivePct,
-          conversion_target_pct: conversionTarget,
-          additional_bonus_after_conversion: additionalBonus,
-          conversion_bonus_enabled: true,
+          monthly_sales_target: role === 'telecaller' ? monthlySalesTarget : 0,
+          incentive_pct_after_target: role === 'telecaller' ? incentivePct : 0,
+          conversion_target_pct: role === 'telecaller' ? conversionTarget : 0,
+          additional_bonus_after_conversion: role === 'telecaller' ? additionalBonus : 0,
+          conversion_bonus_enabled: role === 'telecaller' ? conversionBonusEnabled : false,
+          retention_bonus_enabled: role === 'telecaller' ? retentionBonusEnabled : false,
+          relationship_bonus_enabled: role === 'telecaller' ? relationshipBonusEnabled : false,
+          follow_up_bonus_enabled: role === 'telecaller' ? followUpBonusEnabled : false,
+          farmer_retention_bonus: role === 'agronomist' ? farmerRetentionBonus : 0,
+          recommendation_success_bonus: role === 'agronomist' ? recommendationSuccessBonus : 0,
+          escalation_bonus: role === 'agronomist' ? escalationBonus : 0,
+          km_allowance_enabled: role === 'agronomist' ? kmAllowanceEnabled : false,
+          rate_per_km: role === 'agronomist' ? ratePerKm : 0,
+          field_visit_bonus: role === 'agronomist' ? fieldVisitBonus : 0,
+          metadata: {
+            assignedRegions: role === 'agronomist' ? assignedRegions : '',
+            gpsTrackingEnabled: role === 'agronomist' ? gpsTrackingEnabled : false,
+            offlineSyncEnabled: role === 'agronomist' ? offlineSyncEnabled : false,
+          },
         },
         attendanceRules: {
           min_daily_hours: minDailyHours,
@@ -1129,18 +1156,6 @@ function NewEmployeeModal({
         <Field label="Fixed salary">
           <input type="number" className={inputClass} value={fixedSalary} onChange={(e) => setFixedSalary(Number(e.target.value || 0))} />
         </Field>
-        <Field label="Monthly sales target">
-          <input type="number" className={inputClass} value={monthlySalesTarget} onChange={(e) => setMonthlySalesTarget(Number(e.target.value || 0))} />
-        </Field>
-        <Field label="Incentive % after target">
-          <input type="number" className={inputClass} value={incentivePct} onChange={(e) => setIncentivePct(Number(e.target.value || 0))} />
-        </Field>
-        <Field label="Conversion target %">
-          <input type="number" className={inputClass} value={conversionTarget} onChange={(e) => setConversionTarget(Number(e.target.value || 0))} />
-        </Field>
-        <Field label="Additional bonus after conversion">
-          <input type="number" className={inputClass} value={additionalBonus} onChange={(e) => setAdditionalBonus(Number(e.target.value || 0))} />
-        </Field>
         <Field label="Joining bonus">
           <input type="number" className={inputClass} value={joiningBonus} onChange={(e) => setJoiningBonus(Number(e.target.value || 0))} />
         </Field>
@@ -1151,6 +1166,83 @@ function NewEmployeeModal({
           <input type="checkbox" checked={incentiveEnabled} onChange={(e) => setIncentiveEnabled(e.target.checked)} />
           Incentive enabled
         </label>
+
+        {role === 'telecaller' ? (
+          <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 space-y-3">
+            <h5 className="text-sm font-semibold text-slate-800">Telecaller Conditional Fields</h5>
+            <Field label="Monthly Sales Target">
+              <input type="number" className={inputClass} value={monthlySalesTarget} onChange={(e) => setMonthlySalesTarget(Number(e.target.value || 0))} />
+            </Field>
+            <Field label="Incentive % After Target">
+              <input type="number" className={inputClass} value={incentivePct} onChange={(e) => setIncentivePct(Number(e.target.value || 0))} />
+            </Field>
+            <label className="flex items-center gap-2 text-sm text-slate-700">
+              <input type="checkbox" checked={conversionBonusEnabled} onChange={(e) => setConversionBonusEnabled(e.target.checked)} />
+              Conversion Bonus Enabled
+            </label>
+            <Field label="Conversion Target %">
+              <input type="number" className={inputClass} value={conversionTarget} onChange={(e) => setConversionTarget(Number(e.target.value || 0))} />
+            </Field>
+            <Field label="Additional Bonus After Conversion Target">
+              <input type="number" className={inputClass} value={additionalBonus} onChange={(e) => setAdditionalBonus(Number(e.target.value || 0))} />
+            </Field>
+            <label className="flex items-center gap-2 text-sm text-slate-700">
+              <input type="checkbox" checked={retentionBonusEnabled} onChange={(e) => setRetentionBonusEnabled(e.target.checked)} />
+              Retention Bonus Enabled
+            </label>
+            <label className="flex items-center gap-2 text-sm text-slate-700">
+              <input type="checkbox" checked={relationshipBonusEnabled} onChange={(e) => setRelationshipBonusEnabled(e.target.checked)} />
+              Relationship Bonus Enabled
+            </label>
+            <label className="flex items-center gap-2 text-sm text-slate-700">
+              <input type="checkbox" checked={followUpBonusEnabled} onChange={(e) => setFollowUpBonusEnabled(e.target.checked)} />
+              Follow-up Bonus Enabled
+            </label>
+          </div>
+        ) : null}
+
+        {role === 'agronomist' ? (
+          <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 space-y-3">
+            <h5 className="text-sm font-semibold text-slate-800">Agronomist Conditional Fields</h5>
+            <Field label="Farmer Retention Bonus">
+              <input type="number" className={inputClass} value={farmerRetentionBonus} onChange={(e) => setFarmerRetentionBonus(Number(e.target.value || 0))} />
+            </Field>
+            <Field label="Recommendation Success Bonus">
+              <input type="number" className={inputClass} value={recommendationSuccessBonus} onChange={(e) => setRecommendationSuccessBonus(Number(e.target.value || 0))} />
+            </Field>
+            <Field label="Escalation Resolution Bonus">
+              <input type="number" className={inputClass} value={escalationBonus} onChange={(e) => setEscalationBonus(Number(e.target.value || 0))} />
+            </Field>
+            <label className="flex items-center gap-2 text-sm text-slate-700">
+              <input type="checkbox" checked={kmAllowanceEnabled} onChange={(e) => setKmAllowanceEnabled(e.target.checked)} />
+              KM Allowance Enabled
+            </label>
+            <Field label="Rate Per KM">
+              <input type="number" className={inputClass} value={ratePerKm} onChange={(e) => setRatePerKm(Number(e.target.value || 0))} />
+            </Field>
+            <Field label="Field Visit Bonus">
+              <input type="number" className={inputClass} value={fieldVisitBonus} onChange={(e) => setFieldVisitBonus(Number(e.target.value || 0))} />
+            </Field>
+            <Field label="Assigned Regions">
+              <input className={inputClass} value={assignedRegions} onChange={(e) => setAssignedRegions(e.target.value)} placeholder="District/Taluk list" />
+            </Field>
+            <label className="flex items-center gap-2 text-sm text-slate-700">
+              <input type="checkbox" checked={gpsTrackingEnabled} onChange={(e) => setGpsTrackingEnabled(e.target.checked)} />
+              GPS Tracking Enabled
+            </label>
+            <label className="flex items-center gap-2 text-sm text-slate-700">
+              <input type="checkbox" checked={offlineSyncEnabled} onChange={(e) => setOfflineSyncEnabled(e.target.checked)} />
+              Offline Sync Enabled
+            </label>
+          </div>
+        ) : null}
+
+        {role !== 'telecaller' && role !== 'agronomist' ? (
+          <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-600">
+            Role-based conditional fields are disabled. Select role <strong>Telecaller</strong> or <strong>Agronomist</strong> to enable additional fields.
+          </div>
+        ) : null}
+
         <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm">
           <div>Estimated Monthly Earnings</div>
           <div>Fixed Salary: {formatInrFull(fixedSalary)}</div>
