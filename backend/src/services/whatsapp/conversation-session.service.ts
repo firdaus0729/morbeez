@@ -88,7 +88,25 @@ export const conversationSessionService = {
       .eq('farmer_id', farmerId)
       .eq('channel', 'whatsapp');
 
-    // Also persist on farmer profile for global use.
+    await supabase
+      .from('farmers')
+      .update({ preferred_language: language, updated_at: now })
+      .eq('id', farmerId);
+  },
+
+  /** Language chosen — continue mandatory onboarding (acre → plot → planting date). */
+  async setLanguageForOnboarding(farmerId: string, language: AdvisoryLanguage): Promise<void> {
+    const now = new Date().toISOString();
+    await supabase
+      .from('conversation_sessions')
+      .update({
+        preferred_language: language,
+        state: 'onboarding_minimal',
+        updated_at: now,
+      })
+      .eq('farmer_id', farmerId)
+      .eq('channel', 'whatsapp');
+
     await supabase
       .from('farmers')
       .update({ preferred_language: language, updated_at: now })

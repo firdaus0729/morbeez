@@ -49,6 +49,7 @@ export declare const whatsappScenarioRouter: {
     sendPlotPicker(phone: string, farmerId: string, lang: AdvisoryLanguage, send: ScenarioSenders, pendingText?: string): Promise<void>;
     applyPlotSelection(msg: InboundMessage, captured: ScenarioCapture, lang: AdvisoryLanguage, plotId: string, send: ScenarioSenders): Promise<void>;
     tryRoute(msg: InboundMessage, captured: ScenarioCapture, session: ConversationSession, send: ScenarioSenders): Promise<ScenarioRouterResult>;
+    showReturningFarmerWelcome(msg: InboundMessage, captured: ScenarioCapture, lang: AdvisoryLanguage, send: ScenarioSenders): Promise<void>;
     showMainMenu(phone: string, lang: AdvisoryLanguage, send: ScenarioSenders, options?: {
         includeTrackOrder?: boolean;
         welcomeOverride?: string;

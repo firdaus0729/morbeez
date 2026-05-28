@@ -18,10 +18,10 @@ import { whatsappConversationalService } from '../whatsapp-conversational.servic
 import { farmerService } from '../../farmer/farmer.service.js';
 import { conversationSessionService } from '../conversation-session.service.js';
 import { whatsappScenarioRouter } from '../scenarios/whatsapp-scenario-router.service.js';
-import { returnUserGreetingService } from '../scenarios/return-user-greeting.service.js';
 import { cropSelectionService } from '../scenarios/crop-selection.service.js';
 import { farmerPurgeService } from '../../farmer/farmer-purge.service.js';
 import { orderWhatsappService } from '../orders/order-whatsapp.service.js';
+import { onboardingFlowService } from '../scenarios/onboarding-flow.service.js';
 import { sendReplyButtonMenu } from '../whatsapp-interactive-menu.service.js';
 import { diagnosisFlowService } from '../scenarios/diagnosis-flow.service.js';
 import { multiPlotService } from '../scenarios/multi-plot.service.js';
@@ -182,7 +182,7 @@ function isFarmerResetCommand(text) {
         /^(मेरा डेटा हटाएं|खाता रीसेट)$/i.test(t));
 }
 export const whatsappInboundPipeline = {
-    async process(msg, send, hooks) {
+    async process(msg, send, _hooks) {
         const detected = detectLanguageFromText(msg.text);
         const language = normalizeLanguage(detected, null);
         if (msg.text?.trim() && isFarmerResetCommand(msg.text)) {
@@ -208,12 +208,17 @@ export const whatsappInboundPipeline = {
                 ai_paused: false,
                 active_plot_id: null,
                 active_block_id: null,
-                context: {},
+                context: { onboardingComplete: false },
                 updated_at: now,
             })
                 .eq('farmer_id', captured.farmerId)
                 .eq('channel', 'whatsapp');
-            session = { ...session, preferred_language: null, state: 'language_select', context: {} };
+            session = {
+                ...session,
+                preferred_language: null,
+                state: 'language_select',
+                context: { onboardingComplete: false },
+            };
         }
         if (await conversationSessionService.shouldPauseAi(captured.farmerId)) {
             logger.info({ farmerId: captured.farmerId }, 'AI paused for WhatsApp conversation');
@@ -229,34 +234,39 @@ export const whatsappInboundPipeline = {
             raw_payload: msg.rawPayload,
             purge_after: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(),
         });
-        if (hooks?.sendWelcomeTemplate) {
-            await hooks.sendWelcomeTemplate(msg.phone, captured.farmerId, msg.profileName).catch(() => { });
-        }
-        // Scenario 1: New user greeting → language selection (5 reply buttons: 3 + 2)
-        if (!session.preferred_language && msg.text && isGreeting(msg.text)) {
+        // Step 1 — language selection (required before anything else for new farmers)
+        if (!session.preferred_language) {
+            if (msg.text) {
+                const selected = msg.text.startsWith('lang.')
+                    ? msg.text.replace('lang.', '')
+                    : languageFromSelection(msg.text);
+                if (selected && ['en', 'ml', 'ta', 'kn', 'hi'].includes(selected)) {
+                    await conversationSessionService.setLanguageForOnboarding(captured.farmerId, selected);
+                    await whatsappScenarioRouter.startMinimalOnboarding(msg.phone, captured.farmerId, selected, send);
+                    return;
+                }
+            }
             const copy = languageSelectCopy();
-            if (send.list || send.buttons) {
-                if (send.list) {
-                    await send.list({
-                        phone: msg.phone,
-                        body: copy.body,
-                        buttonText: copy.buttonText,
-                        sections: [{ title: 'Languages', rows: copy.rows }],
-                    });
-                }
-                else if (send.buttons) {
-                    await sendReplyButtonMenu({
-                        to: msg.phone,
-                        body: copy.body,
-                        options: copy.rows.map((r) => ({ id: r.id, title: r.title })),
-                        continuationBody: 'Please select your language (continued):',
-                        sendButtons: (p) => send.buttons({
-                            phone: p.to,
-                            body: p.body,
-                            buttons: p.buttons,
-                        }),
-                    });
-                }
+            if (send.list) {
+                await send.list({
+                    phone: msg.phone,
+                    body: copy.body,
+                    buttonText: copy.buttonText,
+                    sections: [{ title: 'Languages', rows: copy.rows }],
+                });
+            }
+            else if (send.buttons) {
+                await sendReplyButtonMenu({
+                    to: msg.phone,
+                    body: copy.body,
+                    options: copy.rows.map((r) => ({ id: r.id, title: r.title })),
+                    continuationBody: 'Please select your language (continued):',
+                    sendButtons: (p) => send.buttons({
+                        phone: p.to,
+                        body: p.body,
+                        buttons: p.buttons,
+                    }),
+                });
             }
             else {
                 await send.text(msg.phone, `${copy.body}\n\nReply with: English / Malayalam / Tamil / Kannada / Hindi`);
@@ -266,31 +276,20 @@ export const whatsappInboundPipeline = {
             });
             return;
         }
-        // Handle language selection via typed text or interactive id
-        if (!session.preferred_language && msg.text) {
-            const selected = msg.text.startsWith('lang.')
-                ? msg.text.replace('lang.', '')
-                : languageFromSelection(msg.text);
-            if (selected && ['en', 'ml', 'ta', 'kn', 'hi'].includes(selected)) {
-                await conversationSessionService.setLanguage(captured.farmerId, selected);
-                await whatsappScenarioRouter.startMinimalOnboarding(msg.phone, captured.farmerId, selected, send);
+        const onboardingDone = await onboardingFlowService.isComplete(captured.farmerId);
+        if (!onboardingDone) {
+            const routeOnboarding = await whatsappScenarioRouter.tryRoute(msg, captured, session, send);
+            if (routeOnboarding.handled) {
+                await eventBus.publish('whatsapp.message.received', { phone: msg.phone, farmerId: captured.farmerId, text: msg.text, messageType: msg.msgType }, 'whatsapp');
                 return;
             }
         }
         const activeLang = (session.preferred_language ?? captured.language);
         captured.language = activeLang;
-        if (session.preferred_language && msg.text && isGreeting(msg.text)) {
-            const smartGreeting = await returnUserGreetingService.buildSmartGreeting(captured.farmerId, activeLang);
-            if (smartGreeting) {
-                await whatsappScenarioRouter.showMainMenu(msg.phone, activeLang, send, {
-                    includeTrackOrder: smartGreeting.includeTrackOrder,
-                    returningQuickActionsOnly: true,
-                    welcomeOverride: `${smartGreeting.greeting}\n\n${smartGreeting.optionsIntro}`,
-                });
-                await conversationSessionService.setState(captured.farmerId, 'main_menu');
-                await eventBus.publish('whatsapp.message.received', { phone: msg.phone, farmerId: captured.farmerId, text: msg.text, messageType: msg.msgType }, 'whatsapp');
-                return;
-            }
+        if (session.preferred_language && onboardingDone && msg.text && isGreeting(msg.text)) {
+            await whatsappScenarioRouter.showReturningFarmerWelcome(msg, captured, activeLang, send);
+            await eventBus.publish('whatsapp.message.received', { phone: msg.phone, farmerId: captured.farmerId, text: msg.text, messageType: msg.msgType }, 'whatsapp');
+            return;
         }
         const routeResult = await whatsappScenarioRouter.tryRoute(msg, captured, session, send);
         if (routeResult.handled && 'runDiagnosis' in routeResult && routeResult.runDiagnosis) {

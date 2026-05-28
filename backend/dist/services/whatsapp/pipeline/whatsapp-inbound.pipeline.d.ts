@@ -26,7 +26,7 @@ type Senders = {
     }) => Promise<void>;
 };
 export declare const whatsappInboundPipeline: {
-    process(msg: InboundMessage, send: Senders, hooks?: {
+    process(msg: InboundMessage, send: Senders, _hooks?: {
         sendWelcomeTemplate?: (phone: string, farmerId: string, profileName?: string) => Promise<boolean>;
     }): Promise<void>;
     processVoice(msg: InboundMessage, captured: {

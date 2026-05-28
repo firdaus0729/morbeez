@@ -19,6 +19,8 @@ export declare const conversationSessionService: {
     getContext(farmerId: string): Promise<SessionContext>;
     patchContext(farmerId: string, patch: Partial<SessionContext>): Promise<SessionContext>;
     setLanguage(farmerId: string, language: AdvisoryLanguage): Promise<void>;
+    /** Language chosen — continue mandatory onboarding (acre → plot → planting date). */
+    setLanguageForOnboarding(farmerId: string, language: AdvisoryLanguage): Promise<void>;
     setState(farmerId: string, state: ConversationState, patch?: Record<string, unknown>): Promise<void>;
     clearActivePlot(farmerId: string): Promise<void>;
     shouldPauseAi(farmerId: string): Promise<boolean>;

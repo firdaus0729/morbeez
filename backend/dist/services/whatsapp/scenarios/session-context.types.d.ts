@@ -28,5 +28,7 @@ export interface SessionContext {
     /** Minimal onboarding after language selection */
     onboardingStep?: 'acreage' | 'crop' | 'custom_crop' | 'planting_date';
     onboardingAcreageBucket?: '0_1' | '2_5' | '5_plus';
+    /** Set true after acre → plot → planting date flow completes */
+    onboardingComplete?: boolean;
 }
 //# sourceMappingURL=session-context.types.d.ts.map
