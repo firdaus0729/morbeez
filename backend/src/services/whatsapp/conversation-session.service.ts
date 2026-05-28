@@ -35,21 +35,34 @@ export interface ConversationSession {
 
 export const conversationSessionService = {
   async ensureWhatsAppSession(farmerId: string): Promise<ConversationSession> {
+    const selectCols =
+      'id, farmer_id, channel, state, preferred_language, conversation_owner, ai_paused, last_menu_at, last_ai_at, active_plot_id, active_block_id, context';
+
+    const { data: existing, error: readError } = await supabase
+      .from('conversation_sessions')
+      .select(selectCols)
+      .eq('farmer_id', farmerId)
+      .eq('channel', 'whatsapp')
+      .maybeSingle();
+
+    if (readError) throw readError;
+    if (existing) {
+      const row = existing as unknown as ConversationSession;
+      row.context = (row.context ?? {}) as SessionContext;
+      return row;
+    }
+
     const now = new Date().toISOString();
     const { data, error } = await supabase
       .from('conversation_sessions')
-      .upsert(
-        {
-          farmer_id: farmerId,
-          channel: 'whatsapp',
-          state: 'language_select',
-          updated_at: now,
-        },
-        { onConflict: 'farmer_id,channel' }
-      )
-      .select(
-        'id, farmer_id, channel, state, preferred_language, conversation_owner, ai_paused, last_menu_at, last_ai_at, active_plot_id, active_block_id, context'
-      )
+      .insert({
+        farmer_id: farmerId,
+        channel: 'whatsapp',
+        state: 'language_select',
+        context: {},
+        updated_at: now,
+      })
+      .select(selectCols)
       .single();
 
     if (error) throw error;

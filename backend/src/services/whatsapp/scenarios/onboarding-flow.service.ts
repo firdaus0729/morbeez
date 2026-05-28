@@ -9,6 +9,16 @@ export const onboardingFlowService = {
     if (ctx.onboardingComplete === true) return true;
     if (ctx.onboardingComplete === false) return false;
 
+    const { data: session } = await supabase
+      .from('conversation_sessions')
+      .select('state')
+      .eq('farmer_id', farmerId)
+      .eq('channel', 'whatsapp')
+      .maybeSingle();
+    if (session?.state === 'language_select' || session?.state === 'onboarding_minimal') {
+      return false;
+    }
+
     const { data: block } = await supabase
       .from('farm_blocks')
       .select('planting_date, acreage_decimal, crop_type')

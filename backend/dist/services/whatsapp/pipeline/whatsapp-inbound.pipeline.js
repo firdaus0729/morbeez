@@ -335,6 +335,24 @@ export const whatsappInboundPipeline = {
             await eventBus.publish('whatsapp.message.received', { phone: msg.phone, farmerId: captured.farmerId, text: msg.text, messageType: msg.msgType }, 'whatsapp');
             return;
         }
+        if (!onboardingDone) {
+            const ctxOnboard = await conversationSessionService.getContext(captured.farmerId);
+            const stepPrompt = onboardingFlowService.currentStepPrompt(ctxOnboard.onboardingStep, activeLang);
+            await send.text(msg.phone, stepPrompt);
+            if (ctxOnboard.onboardingStep === 'crop' || ctxOnboard.onboardingStep === 'custom_crop') {
+                await cropSelectionService.sendCropPicker({
+                    farmerId: captured.farmerId,
+                    phone: msg.phone,
+                    language: activeLang,
+                    send,
+                });
+            }
+            else if (ctxOnboard.onboardingStep === 'acreage') {
+                await whatsappScenarioRouter.startMinimalOnboarding(msg.phone, captured.farmerId, activeLang, send);
+            }
+            await eventBus.publish('whatsapp.message.received', { phone: msg.phone, farmerId: captured.farmerId, text: msg.text, messageType: msg.msgType }, 'whatsapp');
+            return;
+        }
         if (!env.ENABLE_AI_CROP_DOCTOR) {
             if (msg.text)
                 await classifyCommercialLead(captured.farmerId, msg.text);

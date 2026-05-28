@@ -104,7 +104,7 @@ export const blockService = {
         crop_name: cropType,
         crop_type: cropType.toLowerCase(),
         is_primary: true,
-        planting_date: new Date().toISOString().slice(0, 10),
+        planting_date: null,
       })
       .select('*')
       .single();

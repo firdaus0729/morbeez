@@ -401,6 +401,16 @@ export const whatsappScenarioRouter = {
           phone: msg.phone,
           language: lang,
           send,
+          body:
+            lang === 'ml'
+              ? 'ഏത് പ്ലോട്ട് (വിള) കൃഷി ചെയ്യുന്നു?'
+              : lang === 'ta'
+                ? 'எந்த ப்ளாட் (பயிர்)?'
+                : lang === 'kn'
+                  ? 'ಯಾವ ಪ್ಲಾಟ್ (ಬೆಳೆ)?'
+                  : lang === 'hi'
+                    ? 'कौन सा प्लॉट (फसल)?'
+                    : 'Which plot (crop) do you cultivate?',
         });
         return { handled: true };
       }
@@ -580,7 +590,14 @@ export const whatsappScenarioRouter = {
       return { handled: true };
     }
 
-    if (session.state === 'crop_select' || text.startsWith('crop.')) {
+    const ctxForCrop = await conversationSessionService.getContext(captured.farmerId);
+    const inOnboardingCropFlow =
+      session.state === 'onboarding_minimal' &&
+      (ctxForCrop.onboardingStep === 'crop' ||
+        ctxForCrop.onboardingStep === 'custom_crop' ||
+        ctxForCrop.onboardingStep === 'planting_date');
+
+    if ((session.state === 'crop_select' || text.startsWith('crop.')) && !inOnboardingCropFlow) {
       const pick = await cropSelectionService.resolveSelection(captured.farmerId, text);
       if (!pick) {
         await cropSelectionService.sendCropPicker({
