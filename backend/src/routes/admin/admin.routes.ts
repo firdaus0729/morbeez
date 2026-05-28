@@ -31,7 +31,7 @@ import { getModulesForRole, canApproveRecommendations } from '../../lib/rbac.js'
 import { requireAdmin, requireAdminRole } from '../../middleware/adminAuth.js';
 import { supabase } from '../../lib/supabase.js';
 import { throwIfSupabaseError } from '../../lib/supabase-errors.js';
-import { hashPassword } from '../../lib/password.js';
+import { hashPassword, verifyPassword } from '../../lib/password.js';
 import { logAdminMutation } from '../../lib/admin-mutation-audit.js';
 import { assertSuperAdminDeactivationAllowed } from '../../lib/admin-guards.js';
 import { employeeProfileService } from '../../services/admin/employee-profile.service.js';
@@ -845,8 +845,20 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
   });
 
   app.post(`${api}/employees/:id/deactivate`, async (request, reply) => {
+    const actor = requireAdmin(request);
     requireAdminRole(request, 'super_admin', 'admin');
     const { id } = request.params as { id: string };
+    const body = z.object({ confirmPassword: z.string().min(8).max(128) }).parse(request.body ?? {});
+    const { data: actorRow, error: actorErr } = await supabase
+      .from('admin_users')
+      .select('password_hash')
+      .eq('id', actor.id)
+      .eq('active', true)
+      .maybeSingle();
+    throwIfSupabaseError(actorErr, 'Could not verify admin credentials');
+    if (!actorRow?.password_hash || !verifyPassword(body.confirmPassword, actorRow.password_hash)) {
+      return reply.code(401).send({ ok: false, error: 'Password confirmation failed' });
+    }
     const runId = await employeeReassignmentService.runForDeactivation(id);
     const employee = await employeeProfileService.update(id, { status: 'inactive' });
     return reply.send({ ok: true, runId, employee });

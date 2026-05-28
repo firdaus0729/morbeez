@@ -126,6 +126,10 @@ export function EmployeesPage({ canWrite = false }: { canWrite?: boolean }) {
   const [error, setError] = useState('');
   const [showNewEmployee, setShowNewEmployee] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
+  const [deactivatingEmployee, setDeactivatingEmployee] = useState<Employee | null>(null);
+  const [deactivatePassword, setDeactivatePassword] = useState('');
+  const [deactivateSaving, setDeactivateSaving] = useState(false);
+  const [deactivateError, setDeactivateError] = useState('');
 
   const loadWorkspace = useCallback(async () => {
     setLoading(true);
@@ -208,8 +212,11 @@ export function EmployeesPage({ canWrite = false }: { canWrite?: boolean }) {
     await loadWorkspace();
   }
 
-  async function deactivateEmployee(id: string) {
-    await api(`/console/api/v1/employees/${id}/deactivate`, { method: 'POST', body: '{}' });
+  async function deactivateEmployee(id: string, confirmPassword: string) {
+    await api(`/console/api/v1/employees/${id}/deactivate`, {
+      method: 'POST',
+      body: JSON.stringify({ confirmPassword }),
+    });
     await loadWorkspace();
   }
 
@@ -729,51 +736,61 @@ export function EmployeesPage({ canWrite = false }: { canWrite?: boolean }) {
                       </span>
                     </td>
                     <td>
-                      <div className="flex items-center gap-2">
-                        <Btn
-                          size="sm"
-                          variant="primary"
-                          onClick={() => navigate(toPath(`${paths.employees}/${e.id}`))}
-                        >
-                          View
-                        </Btn>
-                        {canWrite ? (
-                          <Btn size="sm" variant="secondary" onClick={() => setEditingEmployee(e)}>
-                            Edit
-                          </Btn>
-                        ) : null}
-                        {canWrite && e.active ? (
-                          <Btn
-                            size="sm"
-                            variant="danger"
-                            onClick={async () => {
-                              if (!confirm(`Deactivate ${e.fullName}?`)) return;
-                              await deactivateEmployee(e.id);
-                            }}
+                      <details className="relative">
+                        <summary className="cursor-pointer list-none rounded-md border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50">
+                          Actions ▾
+                        </summary>
+                        <div className="absolute right-0 z-20 mt-2 w-52 rounded-md border border-slate-200 bg-white p-2 shadow-lg">
+                          <button
+                            type="button"
+                            className="block w-full rounded px-2 py-1.5 text-left text-sm hover:bg-slate-50"
+                            onClick={() => navigate(toPath(`${paths.employees}/${e.id}`))}
                           >
-                            Deactivate
-                          </Btn>
-                        ) : null}
-                        {canWrite ? (
-                          <Btn
-                            size="sm"
-                            variant="secondary"
-                            onClick={async () => {
-                              await sendResetLink(e.id);
-                              alert('Password reset link sent.');
-                            }}
+                            View
+                          </button>
+                          {canWrite ? (
+                            <button
+                              type="button"
+                              className="block w-full rounded px-2 py-1.5 text-left text-sm hover:bg-slate-50"
+                              onClick={() => setEditingEmployee(e)}
+                            >
+                              Edit
+                            </button>
+                          ) : null}
+                          {canWrite && e.active ? (
+                            <button
+                              type="button"
+                              className="block w-full rounded px-2 py-1.5 text-left text-sm text-red-600 hover:bg-red-50"
+                              onClick={() => {
+                                setDeactivatingEmployee(e);
+                                setDeactivatePassword('');
+                                setDeactivateError('');
+                              }}
+                            >
+                              Deactivate
+                            </button>
+                          ) : null}
+                          {canWrite ? (
+                            <button
+                              type="button"
+                              className="block w-full rounded px-2 py-1.5 text-left text-sm hover:bg-slate-50"
+                              onClick={async () => {
+                                await sendResetLink(e.id);
+                                alert('Password reset link sent.');
+                              }}
+                            >
+                              Password Reset Mail Sent
+                            </button>
+                          ) : null}
+                          <button
+                            type="button"
+                            className="block w-full rounded px-2 py-1.5 text-left text-sm hover:bg-slate-50"
+                            onClick={() => window.print()}
                           >
-                            Password Reset Mail Sent
-                          </Btn>
-                        ) : null}
-                        <Btn
-                          size="sm"
-                          variant="secondary"
-                          onClick={() => window.print()}
-                        >
-                          Monthly Payout Print
-                        </Btn>
-                      </div>
+                            Monthly Payout Print
+                          </button>
+                        </div>
+                      </details>
                     </td>
                   </tr>
                 ))
@@ -808,6 +825,45 @@ export function EmployeesPage({ canWrite = false }: { canWrite?: boolean }) {
           }}
           updateEmployee={updateEmployee}
         />
+      ) : null}
+      {deactivatingEmployee ? (
+        <Modal
+          title={`Deactivate ${deactivatingEmployee.fullName}`}
+          onClose={() => {
+            setDeactivatingEmployee(null);
+            setDeactivatePassword('');
+            setDeactivateError('');
+          }}
+          onSave={async () => {
+            setDeactivateSaving(true);
+            setDeactivateError('');
+            try {
+              await deactivateEmployee(deactivatingEmployee.id, deactivatePassword);
+              setDeactivatingEmployee(null);
+              setDeactivatePassword('');
+            } catch (e) {
+              setDeactivateError(e instanceof Error ? e.message : 'Could not deactivate employee');
+            } finally {
+              setDeactivateSaving(false);
+            }
+          }}
+          saveLabel="Confirm Deactivation"
+          saving={deactivateSaving}
+        >
+          {deactivateError ? <Alert tone="error">{deactivateError}</Alert> : null}
+          <p className="mb-2 text-sm text-slate-600">
+            Enter your admin password to confirm deactivation.
+          </p>
+          <Field label="Admin password confirmation">
+            <input
+              type="password"
+              className={inputClass}
+              value={deactivatePassword}
+              onChange={(e) => setDeactivatePassword(e.target.value)}
+              placeholder="Enter your password"
+            />
+          </Field>
+        </Modal>
       ) : null}
     </div>
   );
