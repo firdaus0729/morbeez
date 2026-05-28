@@ -7,6 +7,18 @@ import { whatsappInboundPipeline } from './pipeline/whatsapp-inbound.pipeline.js
 import { whatsappOutboundService } from './whatsapp-outbound.service.js';
 import { logger } from '../../lib/logger.js';
 import { sendReplyButtonMenu } from './whatsapp-interactive-menu.service.js';
+function sleep(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+}
+async function simulateTypingDelay(text) {
+    if (!env.WHATSAPP_TYPING_SIMULATION)
+        return;
+    const min = Math.max(0, env.WHATSAPP_TYPING_MIN_MS);
+    const max = Math.max(min, env.WHATSAPP_TYPING_MAX_MS);
+    const textFactor = Math.min(1800, Math.max(0, Math.floor(text.length * 18)));
+    const jitter = Math.floor(Math.random() * (max - min + 1));
+    await sleep(min + jitter + textFactor);
+}
 function getProvider() {
     if (env.WHATSAPP_PROVIDER === 'adsgyani')
         return adsgyaniWhatsAppProvider;
@@ -89,6 +101,7 @@ export const whatsappService = {
     getProvider,
     async sendText(to, text) {
         try {
+            await simulateTypingDelay(text);
             await getProvider().sendText(to, text);
             logger.info({ to: to.replace(/\d(?=\d{4})/g, '*'), chars: text.length }, 'WhatsApp outbound sent');
         }

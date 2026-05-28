@@ -77,6 +77,16 @@ export async function osOperationsRoutes(app) {
         const rule = await whatsappBroadcastAdminService.upsertRule(body);
         return reply.send({ ok: true, rule });
     });
+    app.delete(`${api}/broadcasts/rules/:id`, async (request, reply) => {
+        await assertModuleAccess(request, 'operations', 'write');
+        const { id } = request.params;
+        const { error } = await supabase
+            .from('crop_dap_broadcast_rules')
+            .update({ active: false, updated_at: new Date().toISOString() })
+            .eq('id', id);
+        throwIfSupabaseError(error, 'Could not archive broadcast rule');
+        return reply.send({ ok: true });
+    });
     app.get(`${api}/crop-prices`, async (request, reply) => {
         await assertModuleAccess(request, 'operations', 'read');
         const q = request.query;
@@ -97,6 +107,16 @@ export async function osOperationsRoutes(app) {
             .parse(request.body);
         const row = await whatsappOsAdminService.upsertCropDailyPrice(body);
         return reply.send({ ok: true, price: row });
+    });
+    app.delete(`${api}/crop-prices/:id`, async (request, reply) => {
+        await assertModuleAccess(request, 'operations', 'write');
+        const { id } = request.params;
+        const { error } = await supabase
+            .from('crop_daily_prices')
+            .update({ active: false, updated_at: new Date().toISOString() })
+            .eq('id', id);
+        throwIfSupabaseError(error, 'Could not archive crop price');
+        return reply.send({ ok: true });
     });
     app.get(`${api}/terminology/tasks`, async (request, reply) => {
         await assertModuleAccess(request, 'operations', 'read');

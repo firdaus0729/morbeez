@@ -41,6 +41,9 @@ declare const envSchema: z.ZodObject<{
     WHATSAPP_WELCOME_TEMPLATE: z.ZodOptional<z.ZodString>;
     WHATSAPP_OUTBOUND_TEMPLATE: z.ZodOptional<z.ZodString>;
     WHATSAPP_SESSION_HOURS: z.ZodDefault<z.ZodNumber>;
+    WHATSAPP_TYPING_SIMULATION: z.ZodDefault<z.ZodEffects<z.ZodString, boolean, string>>;
+    WHATSAPP_TYPING_MIN_MS: z.ZodDefault<z.ZodNumber>;
+    WHATSAPP_TYPING_MAX_MS: z.ZodDefault<z.ZodNumber>;
     SHOPIFY_STOREFRONT_URL: z.ZodOptional<z.ZodString>;
     OPENAI_API_KEY: z.ZodOptional<z.ZodString>;
     OPENAI_VISION_MODEL: z.ZodDefault<z.ZodString>;
@@ -95,6 +98,9 @@ declare const envSchema: z.ZodObject<{
     SHOPIFY_APP_SCOPES: string;
     WHATSAPP_PROVIDER: "cloud" | "wati" | "interakt" | "adsgyani";
     WHATSAPP_SESSION_HOURS: number;
+    WHATSAPP_TYPING_SIMULATION: boolean;
+    WHATSAPP_TYPING_MIN_MS: number;
+    WHATSAPP_TYPING_MAX_MS: number;
     OPENAI_VISION_MODEL: string;
     OPENAI_TEXT_MODEL: string;
     OPENAI_WHISPER_MODEL: string;
@@ -207,6 +213,9 @@ declare const envSchema: z.ZodObject<{
     WHATSAPP_WELCOME_TEMPLATE?: string | undefined;
     WHATSAPP_OUTBOUND_TEMPLATE?: string | undefined;
     WHATSAPP_SESSION_HOURS?: number | undefined;
+    WHATSAPP_TYPING_SIMULATION?: string | undefined;
+    WHATSAPP_TYPING_MIN_MS?: number | undefined;
+    WHATSAPP_TYPING_MAX_MS?: number | undefined;
     SHOPIFY_STOREFRONT_URL?: string | undefined;
     OPENAI_API_KEY?: string | undefined;
     OPENAI_VISION_MODEL?: string | undefined;
@@ -259,6 +268,9 @@ export declare const env: {
     SHOPIFY_APP_SCOPES: string;
     WHATSAPP_PROVIDER: "cloud" | "wati" | "interakt" | "adsgyani";
     WHATSAPP_SESSION_HOURS: number;
+    WHATSAPP_TYPING_SIMULATION: boolean;
+    WHATSAPP_TYPING_MIN_MS: number;
+    WHATSAPP_TYPING_MAX_MS: number;
     OPENAI_VISION_MODEL: string;
     OPENAI_TEXT_MODEL: string;
     OPENAI_WHISPER_MODEL: string;

@@ -41,6 +41,12 @@ const envSchema = z.object({
     WHATSAPP_WELCOME_TEMPLATE: z.string().optional(),
     WHATSAPP_OUTBOUND_TEMPLATE: z.string().optional(),
     WHATSAPP_SESSION_HOURS: z.coerce.number().default(24),
+    WHATSAPP_TYPING_SIMULATION: z
+        .string()
+        .transform((v) => v !== 'false')
+        .default('true'),
+    WHATSAPP_TYPING_MIN_MS: z.coerce.number().default(700),
+    WHATSAPP_TYPING_MAX_MS: z.coerce.number().default(2200),
     SHOPIFY_STOREFRONT_URL: z.string().url().optional(),
     OPENAI_API_KEY: z.string().optional(),
     OPENAI_VISION_MODEL: z.string().default('gpt-4o'),

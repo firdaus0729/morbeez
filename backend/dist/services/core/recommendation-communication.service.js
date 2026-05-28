@@ -7,16 +7,60 @@ function pickSummary(text) {
     return text.trim();
 }
 export function buildApprovedRecommendationMessage(row) {
+    const lang = String(row.language || row.farmers?.preferred_language || 'en').toLowerCase();
+    const copy = {
+        en: {
+            title: '🌾 *Morbeez — Approved recommendation*',
+            issue: '*Issue:*',
+            advice: '*Advice:*',
+            dosage: '*Dosage:*',
+            app: '*Application:*',
+            footer: '_Approved by Morbeez agronomy team. Reply if you need help applying this._',
+        },
+        ml: {
+            title: '🌾 *മോർബീസ് — അംഗീകരിച്ച ശുപാർശ*',
+            issue: '*പ്രശ്നം:*',
+            advice: '*ശുപാർശ:*',
+            dosage: '*ഡോസേജ്:*',
+            app: '*പ്രയോഗം:*',
+            footer: '_മോർബീസ് അഗ്രോണമി ടീം അംഗീകരിച്ചത്. സഹായം വേണമെങ്കിൽ മറുപടി നൽകുക._',
+        },
+        ta: {
+            title: '🌾 *மோர்பீஸ் — அங்கீகரிக்கப்பட்ட பரிந்துரை*',
+            issue: '*பிரச்சனை:*',
+            advice: '*பரிந்துரை:*',
+            dosage: '*அளவு:*',
+            app: '*பயன்பாடு:*',
+            footer: '_மோர்பீஸ் குழுவால் அங்கீகரிக்கப்பட்டது. உதவி வேண்டுமெனில் பதிலளிக்கவும்._',
+        },
+        kn: {
+            title: '🌾 *ಮೋರ್ಬೀಸ್ — ಅನುಮೋದಿತ ಶಿಫಾರಸು*',
+            issue: '*ಸಮಸ್ಯೆ:*',
+            advice: '*ಶಿಫಾರಸು:*',
+            dosage: '*ಡೋಸೇಜ್:*',
+            app: '*ಅನ್ವಯಿಕೆ:*',
+            footer: '_ಮೋರ್ಬೀಸ್ ತಂಡದಿಂದ ಅನುಮೋದಿಸಲಾಗಿದೆ. ಸಹಾಯ ಬೇಕಾದರೆ ಪ್ರತಿಕ್ರಿಯಿಸಿ._',
+        },
+        hi: {
+            title: '🌾 *मॉर्बीज़ — स्वीकृत सलाह*',
+            issue: '*समस्या:*',
+            advice: '*सलाह:*',
+            dosage: '*डोसेज:*',
+            app: '*उपयोग:*',
+            footer: '_मॉर्बीज़ एग्रोनॉमी टीम द्वारा स्वीकृत। मदद चाहिए तो जवाब दें।_',
+        },
+    };
+    const t = copy[lang] ?? copy.en;
     const lines = [
-        '🌾 *Morbeez — Approved recommendation*',
+        t.title,
         '',
-        row.issue_detected ? `*Issue:* ${row.issue_detected}` : null,
-        `*Advice:* ${pickSummary(row.recommendation_text)}`,
-        row.dosage ? `*Dosage:* ${row.dosage}` : null,
-        row.application_type ? `*Application:* ${row.application_type}` : null,
+        row.issue_detected ? `${t.issue} ${row.issue_detected}` : null,
+        `${t.advice} ${pickSummary(row.recommendation_text)}`,
+        row.dosage ? `${t.dosage} ${row.dosage}` : null,
+        row.application_type ? `${t.app} ${row.application_type}` : null,
         row.weather_warning ? `⚠️ ${row.weather_warning}` : null,
         '',
-        '_Approved by Morbeez agronomy team. Reply if you need help applying this._',
+        t.footer,
     ].filter(Boolean);
     return lines.join('\n');
 }

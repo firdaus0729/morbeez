@@ -3,6 +3,8 @@ import { assertModuleAccess } from '../../lib/rbac.js';
 import { agronomistWorkflowService } from '../../services/admin/agronomist-workflow.service.js';
 import { recommendationRecordsService } from '../../services/core/recommendation-records.service.js';
 import { recommendationCommunicationService } from '../../services/core/recommendation-communication.service.js';
+import { supabase } from '../../lib/supabase.js';
+import { throwIfSupabaseError } from '../../lib/supabase-errors.js';
 const draftSchema = z.object({
     findingId: z.string().uuid(),
     farmerId: z.string().uuid(),
@@ -47,6 +49,63 @@ export async function osAgronomistRoutes(app) {
         });
         return reply.send({ ok: true, recommendation: row });
     });
+    app.patch(`${api}/drafts/:id`, async (request, reply) => {
+        const admin = await assertModuleAccess(request, 'agronomist', 'write');
+        const { id } = request.params;
+        const body = draftSchema
+            .partial()
+            .omit({ findingId: true, farmerId: true })
+            .extend({ status: z.enum(['draft', 'pending_approval', 'cancelled']).optional() })
+            .parse(request.body);
+        const updates = {
+            updated_at: new Date().toISOString(),
+            reviewed_by: admin.email,
+        };
+        if (body.blockId !== undefined)
+            updates.block_id = body.blockId ?? null;
+        if (body.leadId !== undefined)
+            updates.lead_id = body.leadId ?? null;
+        if (body.aiSessionId !== undefined)
+            updates.ai_session_id = body.aiSessionId ?? null;
+        if (body.recommendationId !== undefined)
+            updates.crm_recommendation_id = body.recommendationId ?? null;
+        if (body.issueDetected !== undefined)
+            updates.issue_detected = body.issueDetected ?? null;
+        if (body.recommendationText !== undefined)
+            updates.recommendation_text = body.recommendationText;
+        if (body.products !== undefined)
+            updates.products = body.products;
+        if (body.dosage !== undefined)
+            updates.dosage = body.dosage ?? null;
+        if (body.applicationType !== undefined)
+            updates.application_type = body.applicationType ?? null;
+        if (body.weatherWarning !== undefined)
+            updates.weather_warning = body.weatherWarning ?? null;
+        if (body.language !== undefined)
+            updates.language = body.language;
+        if (body.status !== undefined)
+            updates.status = body.status;
+        const { data, error } = await supabase
+            .from('recommendation_records')
+            .update(updates)
+            .eq('id', id)
+            .eq('source', 'field_finding')
+            .select('*')
+            .single();
+        throwIfSupabaseError(error, 'Could not update draft');
+        return reply.send({ ok: true, recommendation: data });
+    });
+    app.delete(`${api}/drafts/:id`, async (request, reply) => {
+        await assertModuleAccess(request, 'agronomist', 'write');
+        const { id } = request.params;
+        const { error } = await supabase
+            .from('recommendation_records')
+            .update({ status: 'cancelled', updated_at: new Date().toISOString() })
+            .eq('id', id)
+            .eq('source', 'field_finding');
+        throwIfSupabaseError(error, 'Could not archive draft');
+        return reply.send({ ok: true });
+    });
     app.post(`${api}/recommendations/:id/submit`, async (request, reply) => {
         const admin = await assertModuleAccess(request, 'agronomist', 'write');
         const { id } = request.params;
@@ -58,6 +117,61 @@ export async function osAgronomistRoutes(app) {
         const q = request.query;
         const rows = await agronomistWorkflowService.listAgronomistSubmissions(q.status, q.limit ? Number(q.limit) : 50);
         return reply.send({ ok: true, recommendations: rows });
+    });
+    app.patch(`${api}/escalations/:id/assign`, async (request, reply) => {
+        const admin = await assertModuleAccess(request, 'agronomist', 'write');
+        const { id } = request.params;
+        const body = z
+            .object({
+            assignedTo: z.string().min(2).max(120),
+            status: z.enum(['assigned', 'in_review']).optional(),
+            slaHours: z.number().int().min(1).max(240).optional(),
+        })
+            .parse(request.body);
+        const dueAt = body.slaHours
+            ? new Date(Date.now() + body.slaHours * 60 * 60 * 1000).toISOString()
+            : null;
+        const { data, error } = await supabase
+            .from('agronomist_escalations')
+            .update({
+            assigned_to: body.assignedTo,
+            status: body.status ?? 'assigned',
+            resolution_eta: dueAt,
+            updated_at: new Date().toISOString(),
+            metadata: { assignedBy: admin.email, slaHours: body.slaHours ?? null },
+        })
+            .eq('id', id)
+            .select('*')
+            .single();
+        throwIfSupabaseError(error, 'Could not assign escalation');
+        return reply.send({ ok: true, escalation: data });
+    });
+    app.patch(`${api}/escalations/:id/status`, async (request, reply) => {
+        const admin = await assertModuleAccess(request, 'agronomist', 'write');
+        const { id } = request.params;
+        const body = z
+            .object({
+            status: z.enum(['pending', 'assigned', 'in_review', 'resolved', 'dismissed']),
+            notes: z.string().max(2000).optional(),
+        })
+            .parse(request.body);
+        const patch = {
+            status: body.status,
+            updated_at: new Date().toISOString(),
+            resolution_notes: body.notes ?? null,
+            assigned_to: admin.email,
+        };
+        if (body.status === 'resolved' || body.status === 'dismissed') {
+            patch.resolved_at = new Date().toISOString();
+        }
+        const { data, error } = await supabase
+            .from('agronomist_escalations')
+            .update(patch)
+            .eq('id', id)
+            .select('*')
+            .single();
+        throwIfSupabaseError(error, 'Could not update escalation status');
+        return reply.send({ ok: true, escalation: data });
     });
     app.get(`${api}/recommendations/:id`, async (request, reply) => {
         await assertModuleAccess(request, 'agronomist', 'read');
@@ -75,6 +189,30 @@ export async function osAgronomistRoutes(app) {
             force: body.force,
         });
         return reply.send({ ok: true, ...result });
+    });
+    app.patch(`${api}/recommendations/:id/outcome`, async (request, reply) => {
+        await assertModuleAccess(request, 'agronomist', 'write');
+        const { id } = request.params;
+        const body = z
+            .object({
+            outcome: z.enum(['better', 'partial', 'no_improvement', 'unknown']),
+            outcomeNotes: z.string().max(2000).optional(),
+        })
+            .parse(request.body);
+        const { data, error } = await supabase
+            .from('recommendation_records')
+            .update({
+            status: 'outcome_recorded',
+            outcome: body.outcome,
+            outcome_notes: body.outcomeNotes ?? null,
+            outcome_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+        })
+            .eq('id', id)
+            .select('*')
+            .single();
+        throwIfSupabaseError(error, 'Could not record outcome');
+        return reply.send({ ok: true, recommendation: data });
     });
 }
 //# sourceMappingURL=os-agronomist.routes.js.map

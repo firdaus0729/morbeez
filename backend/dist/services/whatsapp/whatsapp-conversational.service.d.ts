@@ -9,6 +9,7 @@ export declare const whatsappConversationalService: {
         userMessage: string;
         language: AdvisoryLanguage;
         farmerName?: string;
+        conversationHistory?: string[];
     }): Promise<string>;
 };
 //# sourceMappingURL=whatsapp-conversational.service.d.ts.map

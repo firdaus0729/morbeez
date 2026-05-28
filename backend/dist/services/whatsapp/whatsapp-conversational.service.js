@@ -11,7 +11,11 @@ Rules:
 - For orders, prices, or dealer enquiries: tell them to type "quote" or visit the Morbeez website.
 - For urgent human help: tell them to type "call".
 - Do not claim guaranteed cures. Say advice is AI-assisted with agronomist support when needed.
-- Never discuss crypto, politics, or non-agriculture topics — politely redirect to farming.`;
+- Never discuss crypto, politics, or non-agriculture topics — politely redirect to farming.
+- Converse naturally like a caring agronomy expert, not a rigid bot.
+- Use prior conversation context to avoid repeating the same questions.
+- If crop is unclear, ask one short clarifying question before advising.
+- Avoid making crop assumptions that conflict with user's latest message.`;
 /**
  * Lightweight OpenAI chat reply for WhatsApp (greetings, general questions).
  * Full crop diagnosis still uses cropDoctorService when symptoms/media warrant it.
@@ -26,8 +30,12 @@ export const whatsappConversationalService = {
             return defaultFallback(params.language);
         }
         const name = params.farmerName?.split(' ')[0] ?? 'Farmer';
+        const historyBlock = (params.conversationHistory ?? []).slice(-10).join('\n');
         const userPrompt = `Farmer name: ${name}
 Language hint: ${params.language}
+Recent conversation:
+${historyBlock || '(none)'}
+
 Farmer message: ${params.userMessage.trim() || '(empty)'}
 
 Write a helpful WhatsApp reply.`;

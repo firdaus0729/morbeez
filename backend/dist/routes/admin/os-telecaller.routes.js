@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { assertModuleAccess } from '../../lib/rbac.js';
 import { supabase } from '../../lib/supabase.js';
+import { throwIfSupabaseError } from '../../lib/supabase-errors.js';
 import { telecallerAdminService } from '../../services/admin/telecaller-admin.service.js';
 import { crmFarmerService } from '../../services/admin/crm-farmer.service.js';
 import { whatsappOsAdminService } from '../../services/admin/whatsapp-os-admin.service.js';
@@ -118,10 +119,58 @@ export async function osTelecallerRoutes(app) {
         const tasks = await telecallerAdminService.listTasks(admin.email, q.status ?? 'pending');
         return reply.send({ ok: true, tasks });
     });
+    app.get(`${api}/leads/:id/tasks`, async (request, reply) => {
+        await assertModuleAccess(request, 'telecaller_crm', 'read');
+        const { id } = request.params;
+        const { data, error } = await supabase
+            .from('crm_tasks')
+            .select('*')
+            .eq('lead_id', id)
+            .order('due_at', { ascending: true })
+            .limit(50);
+        throwIfSupabaseError(error, 'Could not load lead tasks');
+        return reply.send({ ok: true, tasks: data ?? [] });
+    });
+    app.get(`${api}/leads/:id/escalations`, async (request, reply) => {
+        await assertModuleAccess(request, 'telecaller_crm', 'read');
+        const { id } = request.params;
+        const detail = await telecallerAdminService.getLeadDetail(id);
+        const { data, error } = await supabase
+            .from('agronomist_escalations')
+            .select('*')
+            .eq('farmer_id', detail.lead.farmerId)
+            .order('created_at', { ascending: false })
+            .limit(30);
+        throwIfSupabaseError(error, 'Could not load lead escalations');
+        return reply.send({ ok: true, escalations: data ?? [] });
+    });
+    app.get(`${api}/leads/:id/notes`, async (request, reply) => {
+        await assertModuleAccess(request, 'telecaller_crm', 'read');
+        const { id } = request.params;
+        const detail = await telecallerAdminService.getLeadDetail(id);
+        const { data, error } = await supabase
+            .from('telecaller_notes')
+            .select('*')
+            .eq('farmer_id', detail.lead.farmerId)
+            .order('created_at', { ascending: false })
+            .limit(50);
+        throwIfSupabaseError(error, 'Could not load lead notes');
+        return reply.send({ ok: true, notes: data ?? [] });
+    });
     app.patch(`${api}/tasks/:id/complete`, async (request, reply) => {
         await assertModuleAccess(request, 'telecaller_crm', 'write');
         const { id } = request.params;
         await telecallerAdminService.completeTask(id);
+        return reply.send({ ok: true });
+    });
+    app.delete(`${api}/tasks/:id`, async (request, reply) => {
+        await assertModuleAccess(request, 'telecaller_crm', 'write');
+        const { id } = request.params;
+        const { error } = await supabase
+            .from('crm_tasks')
+            .update({ status: 'cancelled', updated_at: new Date().toISOString() })
+            .eq('id', id);
+        throwIfSupabaseError(error, 'Could not archive task');
         return reply.send({ ok: true });
     });
     app.get(`${api}/whatsapp/threads`, async (request, reply) => {
@@ -180,6 +229,21 @@ export async function osTelecallerRoutes(app) {
         const detail = await telecallerAdminService.createLead(body, admin.email);
         return reply.status(201).send({ ok: true, lead: detail.lead, farmerId: detail.lead.farmerId });
     });
+    app.delete(`${api}/leads/:id`, async (request, reply) => {
+        await assertModuleAccess(request, 'telecaller_crm', 'write');
+        const { id } = request.params;
+        const { data: deleted, error } = await supabase
+            .from('leads')
+            .delete()
+            .eq('id', id)
+            .select('id')
+            .maybeSingle();
+        throwIfSupabaseError(error, 'Could not delete lead');
+        if (!deleted) {
+            return reply.code(404).send({ ok: false, error: 'Lead not found' });
+        }
+        return reply.send({ ok: true, deletedId: deleted.id });
+    });
     app.post(`${api}/leads/:id/calls`, async (request, reply) => {
         const admin = await assertModuleAccess(request, 'telecaller_crm', 'write');
         const { id } = request.params;
@@ -234,6 +298,12 @@ export async function osTelecallerRoutes(app) {
         const block = await crmFarmerService.updateBlock(blockId, body);
         return reply.send({ ok: true, block });
     });
+    app.delete(`${api}/leads/:leadId/blocks/:blockId`, async (request, reply) => {
+        await assertModuleAccess(request, 'telecaller_crm', 'write');
+        const { blockId } = request.params;
+        const block = await crmFarmerService.updateBlock(blockId, { archived: true });
+        return reply.send({ ok: true, block });
+    });
     app.post(`${api}/leads/:id/interactions`, async (request, reply) => {
         const admin = await assertModuleAccess(request, 'telecaller_crm', 'write');
         const { id } = request.params;
@@ -251,6 +321,16 @@ export async function osTelecallerRoutes(app) {
         const detail = await telecallerAdminService.getLeadDetail(id);
         const interaction = await crmFarmerService.createInteraction(detail.lead.farmerId, id, { ...body, doneBy: admin.email, doneByRole: 'Telecaller' });
         return reply.status(201).send({ ok: true, interaction });
+    });
+    app.delete(`${api}/interactions/:id`, async (request, reply) => {
+        await assertModuleAccess(request, 'telecaller_crm', 'write');
+        const { id } = request.params;
+        const { error } = await supabase
+            .from('interaction_logs')
+            .update({ status: 'archived' })
+            .eq('id', id);
+        throwIfSupabaseError(error, 'Could not archive interaction');
+        return reply.send({ ok: true });
     });
     app.post(`${api}/leads/:id/recommendations`, async (request, reply) => {
         const admin = await assertModuleAccess(request, 'telecaller_crm', 'write');
@@ -273,6 +353,16 @@ export async function osTelecallerRoutes(app) {
         });
         return reply.status(201).send({ ok: true, recommendation: rec });
     });
+    app.delete(`${api}/recommendations/:id`, async (request, reply) => {
+        await assertModuleAccess(request, 'telecaller_crm', 'write');
+        const { id } = request.params;
+        const { error } = await supabase
+            .from('crm_recommendations')
+            .update({ status: 'archived' })
+            .eq('id', id);
+        throwIfSupabaseError(error, 'Could not archive recommendation');
+        return reply.send({ ok: true });
+    });
     app.post(`${api}/leads/:id/field-findings`, async (request, reply) => {
         await assertModuleAccess(request, 'telecaller_crm', 'write');
         const { id } = request.params;
@@ -291,6 +381,16 @@ export async function osTelecallerRoutes(app) {
         const detail = await telecallerAdminService.getLeadDetail(id);
         const finding = await telecallerAdminService.createFieldFinding(detail.lead.farmerId, id, body);
         return reply.status(201).send({ ok: true, finding });
+    });
+    app.delete(`${api}/field-findings/:id`, async (request, reply) => {
+        await assertModuleAccess(request, 'telecaller_crm', 'write');
+        const { id } = request.params;
+        const { error } = await supabase
+            .from('crm_field_findings')
+            .update({ archived_at: new Date().toISOString() })
+            .eq('id', id);
+        throwIfSupabaseError(error, 'Could not archive field finding');
+        return reply.send({ ok: true });
     });
     app.post(`${api}/leads/:id/schedule-visit`, async (request, reply) => {
         const admin = await assertModuleAccess(request, 'telecaller_crm', 'write');
