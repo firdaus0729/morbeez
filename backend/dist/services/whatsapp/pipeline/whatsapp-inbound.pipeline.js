@@ -65,6 +65,9 @@ function isGreeting(text) {
 }
 function languageFromSelection(text) {
     const t = text.trim().toLowerCase();
+    // "hi" is a common greeting — never treat it as Hindi (use lang.hi button or "hindi" text).
+    if (isGreeting(t))
+        return null;
     if (t === 'english' || t === 'en')
         return 'en';
     if (t === 'malayalam' || t === 'ml')
@@ -73,7 +76,7 @@ function languageFromSelection(text) {
         return 'ta';
     if (t === 'kannada' || t === 'kn')
         return 'kn';
-    if (t === 'hindi' || t === 'hi')
+    if (t === 'hindi')
         return 'hi';
     return null;
 }
@@ -234,12 +237,40 @@ export const whatsappInboundPipeline = {
             raw_payload: msg.rawPayload,
             purge_after: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(),
         });
+        // Recover farmers who said "hi" before fix (was misread as Hindi → skipped language menu).
+        const ctxEarly = await conversationSessionService.getContext(captured.farmerId);
+        const onboardingDoneEarly = await onboardingFlowService.isComplete(captured.farmerId);
+        if (!onboardingDoneEarly &&
+            session.preferred_language &&
+            msg.text &&
+            isGreeting(msg.text) &&
+            ctxEarly.onboardingStep === 'acreage' &&
+            !ctxEarly.onboardingAcreageBucket) {
+            const now = new Date().toISOString();
+            await supabase
+                .from('conversation_sessions')
+                .update({
+                preferred_language: null,
+                state: 'language_select',
+                updated_at: now,
+            })
+                .eq('farmer_id', captured.farmerId)
+                .eq('channel', 'whatsapp');
+            session = { ...session, preferred_language: null, state: 'language_select' };
+        }
         // Step 1 — language selection (required before anything else for new farmers)
         if (!session.preferred_language) {
-            if (msg.text) {
-                const selected = msg.text.startsWith('lang.')
-                    ? msg.text.replace('lang.', '')
-                    : languageFromSelection(msg.text);
+            if (msg.text?.startsWith('lang.')) {
+                const code = msg.text.replace('lang.', '');
+                if (['en', 'ml', 'ta', 'kn', 'hi'].includes(code)) {
+                    await conversationSessionService.setLanguageForOnboarding(captured.farmerId, code);
+                    await whatsappScenarioRouter.startMinimalOnboarding(msg.phone, captured.farmerId, code, send);
+                    return;
+                }
+            }
+            const typedLang = msg.text ? languageFromSelection(msg.text) : null;
+            if (typedLang) {
+                const selected = typedLang;
                 if (selected && ['en', 'ml', 'ta', 'kn', 'hi'].includes(selected)) {
                     await conversationSessionService.setLanguageForOnboarding(captured.farmerId, selected);
                     await whatsappScenarioRouter.startMinimalOnboarding(msg.phone, captured.farmerId, selected, send);
