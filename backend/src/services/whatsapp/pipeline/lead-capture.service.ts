@@ -20,6 +20,11 @@ export const leadCaptureService = {
 
     const meta = (farmer.metadata ?? {}) as Record<string, unknown>;
     const isPremium = Boolean(meta.premium ?? meta.is_premium);
+    const { count: historicalLeadCount } = await supabase
+      .from('leads')
+      .select('id', { count: 'exact', head: true })
+      .eq('farmer_id', farmer.id);
+    const hadHistoricalLead = (historicalLeadCount ?? 0) > 0;
 
     const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
     const { data: recentLead } = await supabase
@@ -56,6 +61,7 @@ export const leadCaptureService = {
       phone: msg.phone,
       language,
       isPremium,
+      hadHistoricalLead,
     };
   },
 };

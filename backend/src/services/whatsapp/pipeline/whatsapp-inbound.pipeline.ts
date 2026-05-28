@@ -199,7 +199,25 @@ export const whatsappInboundPipeline = {
     const captured = await leadCaptureService.captureAndIdentify(msg, language);
 
     // Conversation state + ownership (human takeover / pause AI)
-    const session = await conversationSessionService.ensureWhatsAppSession(captured.farmerId);
+    let session = await conversationSessionService.ensureWhatsAppSession(captured.farmerId);
+    if (!captured.hadHistoricalLead) {
+      const now = new Date().toISOString();
+      await supabase
+        .from('conversation_sessions')
+        .update({
+          preferred_language: null,
+          state: 'language_select',
+          conversation_owner: 'ai',
+          ai_paused: false,
+          active_plot_id: null,
+          active_block_id: null,
+          context: {},
+          updated_at: now,
+        })
+        .eq('farmer_id', captured.farmerId)
+        .eq('channel', 'whatsapp');
+      session = { ...session, preferred_language: null, state: 'language_select', context: {} };
+    }
     if (await conversationSessionService.shouldPauseAi(captured.farmerId)) {
       logger.info({ farmerId: captured.farmerId }, 'AI paused for WhatsApp conversation');
       return;
