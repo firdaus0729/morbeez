@@ -4,6 +4,7 @@ import { NotFoundError, AppError } from '../../lib/errors.js';
 import { whatsappService } from '../whatsapp/whatsapp.service.js';
 import { env } from '../../config/env.js';
 import type { RecommendationStatus } from './recommendation-records.service.js';
+import { recommendationFollowUpService } from './recommendation-follow-up.service.js';
 
 type RecRow = {
   id: string;
@@ -141,14 +142,7 @@ export const recommendationCommunicationService = {
 
     throwIfSupabaseError(updErr, 'Could not mark recommendation communicated');
 
-    if (env.ENABLE_ADVISORY_FOLLOW_UPS) {
-      await supabase.from('advisory_automation_jobs').insert({
-        farmer_id: row.farmer_id,
-        job_type: 'whatsapp_follow_up',
-        scheduled_at: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(),
-        payload: { recommendationRecordId: recommendationId, language: row.language },
-      });
-    }
+    await recommendationFollowUpService.onRecommendationCommunicated(recommendationId);
 
     return { sent: true, message: text };
   },

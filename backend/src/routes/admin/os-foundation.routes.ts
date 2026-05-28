@@ -11,6 +11,7 @@ import { pincodeService } from '../../services/core/pincode.service.js';
 import { recommendationRecordsService } from '../../services/core/recommendation-records.service.js';
 import { recommendationCommunicationService } from '../../services/core/recommendation-communication.service.js';
 import { productGapService } from '../../services/core/product-gap.service.js';
+import { recommendationFollowUpService } from '../../services/core/recommendation-follow-up.service.js';
 import { UnauthorizedError } from '../../lib/errors.js';
 
 const blockCreateSchema = z.object({
@@ -190,5 +191,20 @@ export async function osFoundationRoutes(app: FastifyInstance): Promise<void> {
     const q = request.query as { limit?: string };
     const rows = await productGapService.listOpen(q.limit ? Number(q.limit) : 50);
     return reply.send({ ok: true, gaps: rows });
+  });
+
+  app.get(`${api}/recommendations/follow-up/kpis`, async (request, reply) => {
+    await assertModuleAccess(request, 'analytics', 'read');
+    const q = request.query as { days?: string };
+    const kpis = await recommendationFollowUpService.getKpis(q.days ? Number(q.days) : 30);
+    return reply.send({ ok: true, kpis });
+  });
+
+  app.get(`${api}/recommendations/:id/follow-up`, async (request, reply) => {
+    await assertModuleAccess(request, 'telecaller_crm', 'read');
+    const { id } = request.params as { id: string };
+    const detail = await recommendationFollowUpService.getTelecallerFollowUpDetail(id);
+    if (!detail) return reply.code(404).send({ ok: false, message: 'Recommendation not found' });
+    return reply.send({ ok: true, ...detail });
   });
 }

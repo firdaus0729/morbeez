@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabase.js';
 import { whatsappService } from '../whatsapp/whatsapp.service.js';
 import { farmerService } from '../farmer/farmer.service.js';
 import { cultivationLoggingService } from '../whatsapp/cultivation/cultivation-logging.service.js';
+import { recommendationFollowUpService } from '../core/recommendation-follow-up.service.js';
 const POLL_MS = 60_000;
 async function processJob(job) {
     const { data: farmer } = await supabase
@@ -14,11 +15,23 @@ async function processJob(job) {
     if (!farmer?.phone)
         throw new Error('Farmer phone missing');
     const lang = job.payload.language ?? farmer.preferred_language ?? 'en';
-    if (job.job_type === 'whatsapp_follow_up') {
-        const msg = lang === 'ml'
-            ? 'നമസ്കാരം! നിങ്ങളുടെ വിള നില പരിശോധിക്കാൻ Morbeez ടീം സഹായിക്കാം. ചിത്രം അയയ്ക്കാം.'
-            : 'Hi! Morbeez follow-up on your crop advisory. Reply with a photo or symptoms if you need more help.';
-        await whatsappService.sendText(farmer.phone, msg);
+    if (job.job_type === 'rec_application_check' ||
+        job.job_type === 'rec_application_reminder' ||
+        job.job_type === 'rec_outcome_check' ||
+        job.job_type === 'rec_no_response_escalation') {
+        await recommendationFollowUpService.processAutomationJob(job);
+    }
+    else if (job.job_type === 'whatsapp_follow_up') {
+        const recId = job.payload.recommendationRecordId;
+        if (recId) {
+            await recommendationFollowUpService.sendApplicationCheck(String(recId));
+        }
+        else {
+            const msg = lang === 'ml'
+                ? 'നമസ്കാരം! നിങ്ങളുടെ വിള നില പരിശോധിക്കാൻ Morbeez ടീം സഹായിക്കാം. ചിത്രം അയയ്ക്കാം.'
+                : 'Hi! Morbeez follow-up on your crop advisory. Reply with a photo or symptoms if you need more help.';
+            await whatsappService.sendText(farmer.phone, msg);
+        }
     }
     else if (job.job_type === 'callback_reminder') {
         await farmerService.logInteraction(job.farmer_id, 'system', 'outbound', 'Callback reminder queued for telecaller', { sessionId: job.payload.sessionId });

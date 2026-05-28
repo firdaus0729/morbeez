@@ -1,1 +1,1 @@
-{"version":3,"file":"os-foundation.routes.d.ts","sourceRoot":"","sources":["../../../src/routes/admin/os-foundation.routes.ts"],"names":[],"mappings":"AAAA,OAAO,KAAK,EAAE,eAAe,EAAE,MAAM,SAAS,CAAC;AAiD/C,wBAAsB,kBAAkB,CAAC,GAAG,EAAE,eAAe,GAAG,OAAO,CAAC,IAAI,CAAC,CAgJ5E"}
+{"version":3,"file":"os-foundation.routes.d.ts","sourceRoot":"","sources":["../../../src/routes/admin/os-foundation.routes.ts"],"names":[],"mappings":"AAAA,OAAO,KAAK,EAAE,eAAe,EAAE,MAAM,SAAS,CAAC;AAkD/C,wBAAsB,kBAAkB,CAAC,GAAG,EAAE,eAAe,GAAG,OAAO,CAAC,IAAI,CAAC,CA+J5E"}

@@ -3,6 +3,7 @@ import { throwIfSupabaseError } from '../../lib/supabase-errors.js';
 import { NotFoundError, ValidationError } from '../../lib/errors.js';
 import { shopifyProductsService } from '../shopify/shopify.products.service.js';
 import { crmInternalNotesService } from './crm-internal-notes.service.js';
+import { recommendationFollowUpService } from '../core/recommendation-follow-up.service.js';
 function formatDateTime(iso) {
     if (!iso)
         return null;
@@ -209,8 +210,18 @@ export const crmFarmerService = {
             timeline: await this.blockTimeline(farmerId, blockId),
         };
     },
-    async blockTimeline(_farmerId, blockId) {
+    async blockTimeline(farmerId, blockId) {
         const items = [];
+        const recEvents = await recommendationFollowUpService.buildBlockTimelineEvents(blockId, farmerId);
+        for (const e of recEvents) {
+            items.push({
+                title: e.title,
+                at: e.at,
+                atLabel: formatDateTime(e.at) ?? '',
+                kind: e.kind,
+                detail: e.detail,
+            });
+        }
         const { data: findings } = await supabase
             .from('crm_field_findings')
             .select('visited_at, observations')

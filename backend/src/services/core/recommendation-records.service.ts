@@ -48,6 +48,9 @@ export const recommendationRecordsService = {
     language?: string;
     createdBy?: string;
     status?: RecommendationStatus;
+    technicalName?: string;
+    tradeName?: string;
+    severity?: 'low' | 'medium' | 'high';
   }) {
     let dap: number | null = null;
     let cropType: string | undefined;
@@ -81,6 +84,10 @@ export const recommendationRecordsService = {
         language: input.language ?? 'en',
         status,
         created_by: input.createdBy ?? null,
+        technical_name: input.technicalName ?? null,
+        trade_name: input.tradeName ?? null,
+        severity: input.severity ?? null,
+        application_status: 'pending_application',
       })
       .select('*')
       .single();

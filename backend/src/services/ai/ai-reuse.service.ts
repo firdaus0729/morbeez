@@ -163,6 +163,14 @@ export const aiReuseService = {
     });
   },
 
+  async markOutcomeForSession(sessionId: string | null | undefined, outcomeOk: boolean): Promise<void> {
+    if (!sessionId) return;
+    await supabase
+      .from('advisory_reuse_cases')
+      .update({ outcome_ok: outcomeOk, updated_at: new Date().toISOString() })
+      .eq('source_session_id', sessionId);
+  },
+
   async tryReuse(
     input: DiagnoseInput & { activePlotId?: string | null },
     sessionId: string

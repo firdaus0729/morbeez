@@ -183,9 +183,6 @@ export const cropDoctorService = {
             severity: advisory.confidence < 0.5 ? 'high' : advisory.confidence < 0.7 ? 'medium' : 'low',
         });
         await eventBus.publish('advisory.completed', { sessionId, farmerId: input.farmerId, escalated, confidence }, 'crop-doctor');
-        if (env.ENABLE_ADVISORY_FOLLOW_UPS) {
-            await this.scheduleFollowUp(input.farmerId, sessionId, input.language);
-        }
         const { data: farmerRow } = await supabase
             .from('farmers')
             .select('district')
@@ -214,6 +211,13 @@ export const cropDoctorService = {
         const recText = input.language === 'ml' && advisory.farmerSummaryMl
             ? advisory.farmerSummaryMl
             : advisory.farmerSummaryEn || advisory.probableIssue;
+        const firstProduct = productRecommendations[0];
+        const technicalName = firstProduct && typeof firstProduct === 'object' && 'activeIngredient' in firstProduct
+            ? String(firstProduct.activeIngredient ?? '')
+            : undefined;
+        const tradeName = firstProduct && typeof firstProduct === 'object' && 'productTitle' in firstProduct
+            ? String(firstProduct.productTitle ?? '')
+            : undefined;
         await recommendationRecordsService.create({
             farmerId: input.farmerId,
             blockId: activeBlockId ?? undefined,
@@ -222,8 +226,13 @@ export const cropDoctorService = {
             issueDetected: advisory.probableIssue,
             recommendationText: recText,
             products: productRecommendations,
+            dosage: advisory.dosageGuidance?.[0]?.rate,
+            applicationType: advisory.dosageGuidance?.[0]?.method,
             language: input.language,
             status: 'draft',
+            technicalName: technicalName || undefined,
+            tradeName: tradeName || undefined,
+            severity: advisory.confidence < 0.5 ? 'high' : advisory.confidence < 0.7 ? 'medium' : 'low',
         });
         return {
             sessionId,

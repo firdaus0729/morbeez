@@ -20,6 +20,7 @@ import { cropSelectionService } from './crop-selection.service.js';
 import { farmerPurgeService } from '../../farmer/farmer-purge.service.js';
 import { blockService } from '../../core/block.service.js';
 import { onboardingFlowService, plantingDatePrompt } from './onboarding-flow.service.js';
+import { recommendationFollowUpService } from '../../core/recommendation-follow-up.service.js';
 import { returnUserGreetingService } from './return-user-greeting.service.js';
 const CROP_MEDIA = new Set(['image', 'image_message', 'document']);
 const MENU_IDS = new Set([
@@ -242,9 +243,53 @@ export const whatsappScenarioRouter = {
             await send.text(msg.phone, farmerResetAck(lang));
             return { handled: true };
         }
-        // Follow-up outcome capture (Step 8/9)
+        // Recommendation follow-up buttons (application + Day-5 outcome)
+        if (text?.startsWith('rec.')) {
+            const recId = await recommendationFollowUpService.resolvePendingRecommendationId(captured.farmerId);
+            if (recId) {
+                let reply;
+                if (text === 'rec.apply_yes') {
+                    reply = await recommendationFollowUpService.handleApplicationReply(captured.farmerId, recId, 'yes_applied');
+                }
+                else if (text === 'rec.apply_not') {
+                    reply = await recommendationFollowUpService.handleApplicationReply(captured.farmerId, recId, 'not_yet');
+                }
+                else if (text === 'rec.apply_help') {
+                    reply = await recommendationFollowUpService.handleApplicationReply(captured.farmerId, recId, 'need_clarification');
+                }
+                else if (text === 'rec.outcome_yes') {
+                    reply = await recommendationFollowUpService.handleOutcomeReply(captured.farmerId, recId, 'improved');
+                }
+                else if (text === 'rec.outcome_no') {
+                    reply = await recommendationFollowUpService.handleOutcomeReply(captured.farmerId, recId, 'no_improvement');
+                }
+                else if (text === 'rec.outcome_worse') {
+                    reply = await recommendationFollowUpService.handleOutcomeReply(captured.farmerId, recId, 'worsened');
+                }
+                else {
+                    return { handled: false };
+                }
+                await send.text(msg.phone, reply);
+                return { handled: true };
+            }
+        }
+        // Follow-up outcome capture (Step 8/9) — legacy free-text + recommendation engine
         if (text && /^(improved|better|partial|no improvement|worse|worsening)$/i.test(text)) {
             const ctx = await conversationSessionService.getContext(captured.farmerId);
+            const recId = ctx.pendingRecommendationRecordId ??
+                (await recommendationFollowUpService.resolvePendingRecommendationId(captured.farmerId));
+            if (recId && ctx.pendingRecommendationFollowUp === 'outcome') {
+                const normalized = text.toLowerCase();
+                const reply = await recommendationFollowUpService.handleOutcomeReply(captured.farmerId, recId, normalized.includes('worse')
+                    ? 'worsened'
+                    : normalized.includes('no improvement')
+                        ? 'no_improvement'
+                        : normalized.includes('partial')
+                            ? 'partial'
+                            : 'improved');
+                await send.text(msg.phone, reply);
+                return { handled: true };
+            }
             const normalized = text.toLowerCase();
             const outcome = normalized.includes('worse')
                 ? 'worsened'
@@ -933,6 +978,9 @@ export const whatsappScenarioRouter = {
             hasProductRecommendations: hasProducts,
         })
             .catch((err) => logger.error({ err }, 'Cultivation follow-up schedule failed'));
+        await recommendationFollowUpService
+            .bootstrapFromDiagnosisSession(params.sessionId, params.farmerId)
+            .catch((err) => logger.error({ err }, 'Recommendation follow-up bootstrap failed'));
     },
 };
 //# sourceMappingURL=whatsapp-scenario-router.service.js.map

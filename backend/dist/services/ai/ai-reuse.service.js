@@ -117,6 +117,14 @@ export const aiReuseService = {
             ignoreDuplicates: false,
         });
     },
+    async markOutcomeForSession(sessionId, outcomeOk) {
+        if (!sessionId)
+            return;
+        await supabase
+            .from('advisory_reuse_cases')
+            .update({ outcome_ok: outcomeOk, updated_at: new Date().toISOString() })
+            .eq('source_session_id', sessionId);
+    },
     async tryReuse(input, sessionId) {
         if (!env.ENABLE_AI_REUSE_CACHE)
             return null;

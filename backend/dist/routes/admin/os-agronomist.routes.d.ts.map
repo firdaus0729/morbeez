@@ -1,1 +1,1 @@
-{"version":3,"file":"os-agronomist.routes.d.ts","sourceRoot":"","sources":["../../../src/routes/admin/os-agronomist.routes.ts"],"names":[],"mappings":"AAAA,OAAO,KAAK,EAAE,eAAe,EAAE,MAAM,SAAS,CAAC;AAyB/C,wBAAsB,kBAAkB,CAAC,GAAG,EAAE,eAAe,GAAG,OAAO,CAAC,IAAI,CAAC,CAyM5E"}
+{"version":3,"file":"os-agronomist.routes.d.ts","sourceRoot":"","sources":["../../../src/routes/admin/os-agronomist.routes.ts"],"names":[],"mappings":"AAAA,OAAO,KAAK,EAAE,eAAe,EAAE,MAAM,SAAS,CAAC;AA2B/C,wBAAsB,kBAAkB,CAAC,GAAG,EAAE,eAAe,GAAG,OAAO,CAAC,IAAI,CAAC,CAuO5E"}

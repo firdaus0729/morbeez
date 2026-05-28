@@ -3,6 +3,7 @@ import { throwIfSupabaseError } from '../../lib/supabase-errors.js';
 import { NotFoundError, ValidationError } from '../../lib/errors.js';
 import { shopifyProductsService } from '../shopify/shopify.products.service.js';
 import { crmInternalNotesService } from './crm-internal-notes.service.js';
+import { recommendationFollowUpService } from '../core/recommendation-follow-up.service.js';
 
 export type MasterType =
   | 'crop'
@@ -256,8 +257,24 @@ export const crmFarmerService = {
     };
   },
 
-  async blockTimeline(_farmerId: string, blockId: string) {
-    const items: { title: string; atLabel: string; at: string }[] = [];
+  async blockTimeline(farmerId: string, blockId: string) {
+    const items: { title: string; atLabel: string; at: string; kind?: string; detail?: string }[] =
+      [];
+
+    const recEvents = await recommendationFollowUpService.buildBlockTimelineEvents(
+      blockId,
+      farmerId
+    );
+    for (const e of recEvents) {
+      items.push({
+        title: e.title,
+        at: e.at,
+        atLabel: formatDateTime(e.at) ?? '',
+        kind: e.kind,
+        detail: e.detail,
+      });
+    }
+
     const { data: findings } = await supabase
       .from('crm_field_findings')
       .select('visited_at, observations')

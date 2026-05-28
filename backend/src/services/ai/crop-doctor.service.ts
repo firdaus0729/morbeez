@@ -220,9 +220,6 @@ export const cropDoctorService = {
       'crop-doctor'
     );
 
-    if (env.ENABLE_ADVISORY_FOLLOW_UPS) {
-      await this.scheduleFollowUp(input.farmerId, sessionId, input.language);
-    }
 
     const { data: farmerRow } = await supabase
       .from('farmers')
@@ -261,6 +258,16 @@ export const cropDoctorService = {
         ? advisory.farmerSummaryMl
         : advisory.farmerSummaryEn || advisory.probableIssue;
 
+    const firstProduct = productRecommendations[0];
+    const technicalName =
+      firstProduct && typeof firstProduct === 'object' && 'activeIngredient' in firstProduct
+        ? String((firstProduct as { activeIngredient?: string }).activeIngredient ?? '')
+        : undefined;
+    const tradeName =
+      firstProduct && typeof firstProduct === 'object' && 'productTitle' in firstProduct
+        ? String((firstProduct as { productTitle?: string }).productTitle ?? '')
+        : undefined;
+
     await recommendationRecordsService.create({
       farmerId: input.farmerId,
       blockId: activeBlockId ?? undefined,
@@ -269,8 +276,14 @@ export const cropDoctorService = {
       issueDetected: advisory.probableIssue,
       recommendationText: recText,
       products: productRecommendations,
+      dosage: advisory.dosageGuidance?.[0]?.rate,
+      applicationType: advisory.dosageGuidance?.[0]?.method,
       language: input.language,
       status: 'draft',
+      technicalName: technicalName || undefined,
+      tradeName: tradeName || undefined,
+      severity:
+        advisory.confidence < 0.5 ? 'high' : advisory.confidence < 0.7 ? 'medium' : 'low',
     });
 
     return {

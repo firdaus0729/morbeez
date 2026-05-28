@@ -229,12 +229,16 @@ export declare const crmFarmerService: {
             title: string;
             atLabel: string;
             at: string;
+            kind?: string;
+            detail?: string;
         }[];
     }>;
-    blockTimeline(_farmerId: string, blockId: string): Promise<{
+    blockTimeline(farmerId: string, blockId: string): Promise<{
         title: string;
         atLabel: string;
         at: string;
+        kind?: string;
+        detail?: string;
     }[]>;
     listSoilReports(farmerId: string, blockId?: string): Promise<any[]>;
     createSoilReport(farmerId: string, input: {

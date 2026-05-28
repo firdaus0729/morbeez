@@ -17,6 +17,9 @@ export declare const recommendationRecordsService: {
         language?: string;
         createdBy?: string;
         status?: RecommendationStatus;
+        technicalName?: string;
+        tradeName?: string;
+        severity?: "low" | "medium" | "high";
     }): Promise<any>;
     submitForApproval(id: string, reviewedBy?: string): Promise<any>;
     approve(id: string, approvedBy: string): Promise<any>;

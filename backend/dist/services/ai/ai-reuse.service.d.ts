@@ -33,6 +33,7 @@ export declare const aiReuseService: {
         products: DiagnoseResult["productRecommendations"];
         escalated: boolean;
     }): Promise<void>;
+    markOutcomeForSession(sessionId: string | null | undefined, outcomeOk: boolean): Promise<void>;
     tryReuse(input: DiagnoseInput & {
         activePlotId?: string | null;
     }, sessionId: string): Promise<DiagnoseResult | null>;

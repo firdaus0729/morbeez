@@ -5,6 +5,8 @@ import { recommendationRecordsService } from '../../services/core/recommendation
 import { recommendationCommunicationService } from '../../services/core/recommendation-communication.service.js';
 import { supabase } from '../../lib/supabase.js';
 import { throwIfSupabaseError } from '../../lib/supabase-errors.js';
+import { recommendationFollowUpService } from '../../services/core/recommendation-follow-up.service.js';
+import { crmFarmerService } from '../../services/admin/crm-farmer.service.js';
 const draftSchema = z.object({
     findingId: z.string().uuid(),
     farmerId: z.string().uuid(),
@@ -213,6 +215,35 @@ export async function osAgronomistRoutes(app) {
             .single();
         throwIfSupabaseError(error, 'Could not record outcome');
         return reply.send({ ok: true, recommendation: data });
+    });
+    /** Full treatment timeline for agronomist review (recommendations + applications + visits). */
+    app.get(`${api}/farmers/:farmerId/blocks/:blockId/timeline`, async (request, reply) => {
+        await assertModuleAccess(request, 'agronomist', 'read');
+        const { farmerId, blockId } = request.params;
+        const [timeline, followUpRecs] = await Promise.all([
+            crmFarmerService.blockTimeline(farmerId, blockId),
+            recommendationFollowUpService.buildBlockTimelineEvents(blockId, farmerId),
+        ]);
+        const { data: applications } = await supabase
+            .from('recommendation_applications')
+            .select('*')
+            .eq('farmer_id', farmerId)
+            .eq('block_id', blockId)
+            .order('applied_at', { ascending: false });
+        const { data: recs } = await supabase
+            .from('recommendation_records')
+            .select('*')
+            .eq('farmer_id', farmerId)
+            .eq('block_id', blockId)
+            .order('created_at', { ascending: false })
+            .limit(20);
+        return reply.send({
+            ok: true,
+            timeline,
+            recommendationRecords: recs ?? [],
+            applications: applications ?? [],
+            events: followUpRecs,
+        });
     });
 }
 //# sourceMappingURL=os-agronomist.routes.js.map

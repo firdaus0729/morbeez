@@ -30,5 +30,8 @@ export interface SessionContext {
     onboardingAcreageBucket?: '0_1' | '2_5' | '5_plus';
     /** Set true after acre → plot → planting date flow completes */
     onboardingComplete?: boolean;
+    /** Auto recommendation follow-up engine */
+    pendingRecommendationRecordId?: string;
+    pendingRecommendationFollowUp?: 'application' | 'outcome';
 }
 //# sourceMappingURL=session-context.types.d.ts.map
