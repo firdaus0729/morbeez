@@ -55,4 +55,18 @@ export async function osAnalyticsRoutes(app: FastifyInstance): Promise<void> {
     const recommendations = await osAnalyticsService.getRecommendationSuccess(days);
     return reply.send({ ok: true, recommendations });
   });
+
+  app.get(`${api}/ai-accuracy`, async (request, reply) => {
+    await assertModuleAccess(request, 'analytics', 'read');
+    const days = parseDays(request.query as { days?: string });
+    const aiAccuracy = await osAnalyticsService.getAiAccuracy(days);
+    return reply.send({ ok: true, aiAccuracy });
+  });
+
+  app.get(`${api}/ai-accuracy/trends`, async (request, reply) => {
+    await assertModuleAccess(request, 'analytics', 'read');
+    const days = parseDays(request.query as { days?: string });
+    const trends = await osAnalyticsService.getAiAccuracyTrends(days);
+    return reply.send({ ok: true, trends });
+  });
 }

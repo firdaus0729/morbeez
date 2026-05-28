@@ -5,7 +5,7 @@ import { StatIcon } from '../components/NavIcon';
 
 const base = '/console/api/v1/os/analytics';
 
-type Tab = 'geography' | 'retention' | 'broadcasts' | 'recommendations';
+type Tab = 'geography' | 'retention' | 'broadcasts' | 'recommendations' | 'ai_accuracy';
 
 type Summary = {
   periodDays: number;
@@ -18,6 +18,10 @@ type Summary = {
     recommendationsTotal: number;
     recommendationSuccessRate: number;
     topDistrict: string;
+    aiDiagnosisCount: number;
+    aiEscalationRate: number;
+    aiLowConfidenceRate: number;
+    aiFollowupImprovementRate: number;
   };
   geography: {
     districts: Array<{
@@ -58,6 +62,12 @@ type Summary = {
     byOutcome: Array<{ outcome: string; count: number }>;
     funnel: Array<{ stage: string; count: number }>;
   };
+  aiAccuracy: {
+    diagnosisCount: number;
+    escalationRate: number;
+    lowConfidenceRate: number;
+    followupImprovementRate: number;
+  };
 };
 
 type PincodeRow = {
@@ -73,7 +83,17 @@ const TABS: Array<{ id: Tab; label: string }> = [
   { id: 'retention', label: 'Retention' },
   { id: 'broadcasts', label: 'Broadcasts' },
   { id: 'recommendations', label: 'Recommendations' },
+  { id: 'ai_accuracy', label: 'AI Accuracy' },
 ];
+
+type AiTrends = {
+  labels: string[];
+  dailyDiagnoses: number[];
+  dailyEscalations: number[];
+  dailyLowConfidence: number[];
+  confidenceBands: { high: number; medium: number; low: number };
+  outcomeDistribution: Array<{ outcome: string; count: number }>;
+};
 
 export function AnalyticsHubPage() {
   const [days, setDays] = useState(30);
@@ -84,6 +104,8 @@ export function AnalyticsHubPage() {
   const [selectedDistrict, setSelectedDistrict] = useState<string | null>(null);
   const [pincodes, setPincodes] = useState<PincodeRow[]>([]);
   const [pinLoading, setPinLoading] = useState(false);
+  const [aiTrends, setAiTrends] = useState<AiTrends | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -103,6 +125,15 @@ export function AnalyticsHubPage() {
   useEffect(() => {
     load();
   }, [load]);
+
+  useEffect(() => {
+    if (tab !== 'ai_accuracy') return;
+    setAiLoading(true);
+    api<{ ok: boolean; trends: AiTrends }>(`${base}/ai-accuracy/trends?days=${days}`)
+      .then((d) => setAiTrends(d.trends))
+      .catch(() => setAiTrends(null))
+      .finally(() => setAiLoading(false));
+  }, [tab, days]);
 
   async function drillDistrict(district: string) {
     setSelectedDistrict(district);
@@ -142,7 +173,7 @@ export function AnalyticsHubPage() {
       {error ? <Alert tone="error">{error}</Alert> : null}
 
       {k && !loading && data ? (
-        <div className="stat-grid" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
+        <div className="stat-grid" style={{ gridTemplateColumns: 'repeat(5, 1fr)' }}>
           <article className="stat-card">
             <div className="stat-card-head">
               <span className="stat-label">Farmers</span>
@@ -188,6 +219,23 @@ export function AnalyticsHubPage() {
             </div>
             <div className="stat-value" style={{ fontSize: '1.1rem' }}>
               {k.topDistrict}
+            </div>
+          </article>
+          <article className="stat-card">
+            <div className="stat-card-head">
+              <span className="stat-label">AI diagnosis</span>
+              <span className="stat-icon stat-icon-purple">
+                <StatIcon name="ai" />
+              </span>
+            </div>
+            <div className="stat-value">{k.aiDiagnosisCount}</div>
+            <div className="stat-trend trend-up">
+              <span className="trend-pct">{k.aiFollowupImprovementRate}%</span>
+              <span className="trend-vs">follow-up improved</span>
+            </div>
+            <div className="stat-trend">
+              <span className="trend-pct">{k.aiEscalationRate}% escalated</span>
+              <span className="trend-vs">{k.aiLowConfidenceRate}% low confidence</span>
             </div>
           </article>
         </div>
@@ -391,6 +439,73 @@ export function AnalyticsHubPage() {
               </div>
             </div>
           ) : null}
+
+          {tab === 'ai_accuracy' ? (
+            <div className="space-y-6">
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <KpiCard label="Diagnoses" value={String(data.aiAccuracy.diagnosisCount)} />
+                <KpiCard
+                  label="Escalation rate"
+                  value={`${Math.round(data.aiAccuracy.escalationRate * 1000) / 10}%`}
+                  tone={rateTone(data.aiAccuracy.escalationRate, { goodMax: 0.2, warnMax: 0.35 })}
+                />
+                <KpiCard
+                  label="Low confidence rate"
+                  value={`${Math.round(data.aiAccuracy.lowConfidenceRate * 1000) / 10}%`}
+                  tone={rateTone(data.aiAccuracy.lowConfidenceRate, { goodMax: 0.15, warnMax: 0.3 })}
+                />
+                <KpiCard
+                  label="Follow-up improved"
+                  value={`${Math.round(data.aiAccuracy.followupImprovementRate * 1000) / 10}%`}
+                  tone={inverseRateTone(data.aiAccuracy.followupImprovementRate, {
+                    goodMin: 0.6,
+                    warnMin: 0.4,
+                  })}
+                />
+              </div>
+              {aiLoading ? (
+                <Panel title="AI accuracy trends">
+                  <p className="text-sm text-slate-500">Loading AI trend charts…</p>
+                </Panel>
+              ) : aiTrends ? (
+                <>
+                  <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                    <h2 className="font-medium text-slate-900">Daily diagnoses</h2>
+                    <MiniBarChart labels={aiTrends.labels} values={aiTrends.dailyDiagnoses} />
+                  </section>
+                  <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                    <h2 className="font-medium text-slate-900">Daily escalations</h2>
+                    <MiniBarChart labels={aiTrends.labels} values={aiTrends.dailyEscalations} />
+                  </section>
+                  <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                    <h2 className="font-medium text-slate-900">Daily low-confidence cases</h2>
+                    <MiniBarChart labels={aiTrends.labels} values={aiTrends.dailyLowConfidence} />
+                  </section>
+                  <div className="grid gap-6 lg:grid-cols-2">
+                    <StatusTable
+                      title="Confidence bands"
+                      rows={[
+                        { status: 'high (>90%)', count: aiTrends.confidenceBands.high },
+                        { status: 'medium (70-90%)', count: aiTrends.confidenceBands.medium },
+                        { status: 'low (<70%)', count: aiTrends.confidenceBands.low },
+                      ]}
+                    />
+                    <StatusTable
+                      title="Outcome distribution"
+                      rows={aiTrends.outcomeDistribution.map((o) => ({
+                        status: o.outcome,
+                        count: o.count,
+                      }))}
+                    />
+                  </div>
+                </>
+              ) : (
+                <Panel title="AI accuracy trends">
+                  <p className="text-sm text-slate-500">No AI trend data for this period.</p>
+                </Panel>
+              )}
+            </div>
+          ) : null}
         </div>
         )}
       </PageShell>
@@ -398,11 +513,46 @@ export function AnalyticsHubPage() {
   );
 }
 
-function KpiCard({ label, value, sub }: { label: string; value: string; sub?: string }) {
+function rateTone(
+  value: number,
+  limits: { goodMax: number; warnMax: number }
+): 'good' | 'warn' | 'risk' {
+  if (value <= limits.goodMax) return 'good';
+  if (value <= limits.warnMax) return 'warn';
+  return 'risk';
+}
+
+function inverseRateTone(
+  value: number,
+  limits: { goodMin: number; warnMin: number }
+): 'good' | 'warn' | 'risk' {
+  if (value >= limits.goodMin) return 'good';
+  if (value >= limits.warnMin) return 'warn';
+  return 'risk';
+}
+
+function toneClass(tone?: 'good' | 'warn' | 'risk'): string {
+  if (tone === 'good') return 'text-emerald-700 bg-emerald-50 border-emerald-200';
+  if (tone === 'warn') return 'text-amber-700 bg-amber-50 border-amber-200';
+  if (tone === 'risk') return 'text-rose-700 bg-rose-50 border-rose-200';
+  return 'text-slate-900 bg-white border-slate-200';
+}
+
+function KpiCard({
+  label,
+  value,
+  sub,
+  tone,
+}: {
+  label: string;
+  value: string;
+  sub?: string;
+  tone?: 'good' | 'warn' | 'risk';
+}) {
   return (
-    <article className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+    <article className={`rounded-xl border p-4 shadow-sm ${toneClass(tone)}`}>
       <p className="text-xs uppercase tracking-wide text-slate-500">{label}</p>
-      <p className="mt-2 text-2xl font-semibold text-slate-900">{value}</p>
+      <p className="mt-2 text-2xl font-semibold">{value}</p>
       {sub ? <p className="mt-1 text-xs text-slate-500">{sub}</p> : null}
     </article>
   );

@@ -20,14 +20,34 @@ export async function createTelecallerTask(params: {
   });
 
   if (params.priority === 'urgent' || params.priority === 'high') {
-    await supabase.from('leads').insert({
-      farmer_id: params.farmerId,
-      intent: 'callback',
-      source: 'whatsapp_escalation',
-      status: 'new',
-      priority: params.priority,
-      stage: 'follow_up',
-      notes: params.notes?.slice(0, 500) ?? params.title,
-    });
+    const { data: lead } = await supabase
+      .from('leads')
+      .select('id, notes')
+      .eq('farmer_id', params.farmerId)
+      .order('updated_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (lead?.id) {
+      const mergedNotes = [lead.notes, params.notes?.slice(0, 500) ?? params.title].filter(Boolean).join('\n');
+      await supabase
+        .from('leads')
+        .update({
+          priority: params.priority,
+          stage: 'follow_up',
+          notes: mergedNotes,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', lead.id);
+    } else {
+      await supabase.from('leads').insert({
+        farmer_id: params.farmerId,
+        intent: 'callback',
+        source: 'whatsapp_escalation',
+        status: 'new',
+        priority: params.priority,
+        stage: 'follow_up',
+        notes: params.notes?.slice(0, 500) ?? params.title,
+      });
+    }
   }
 }

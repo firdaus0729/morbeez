@@ -15,15 +15,19 @@ export const leadCaptureService = {
         }
         const meta = (farmer.metadata ?? {});
         const isPremium = Boolean(meta.premium ?? meta.is_premium);
-        const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-        const { data: recentLead } = await supabase
+        const { count: historicalLeadCount } = await supabase
             .from('leads')
-            .select('id')
+            .select('id', { count: 'exact', head: true })
+            .eq('farmer_id', farmer.id);
+        const hadHistoricalLead = (historicalLeadCount ?? 0) > 0;
+        const { data: existingLead } = await supabase
+            .from('leads')
+            .select('id, notes')
             .eq('farmer_id', farmer.id)
             .eq('source', 'whatsapp')
-            .gte('created_at', since)
+            .order('updated_at', { ascending: false })
             .limit(1);
-        if (!recentLead?.length) {
+        if (!existingLead?.length) {
             await supabase.from('leads').insert({
                 farmer_id: farmer.id,
                 intent: 'general',
@@ -39,16 +43,23 @@ export const leadCaptureService = {
             });
         }
         else {
+            const noteLine = msg.text?.trim() ? `Request: ${msg.text.trim().slice(0, 240)}` : null;
+            const mergedNotes = [existingLead[0].notes, noteLine].filter(Boolean).join('\n');
             await supabase
                 .from('leads')
-                .update({ last_interaction_at: new Date().toISOString() })
-                .eq('id', recentLead[0].id);
+                .update({
+                last_interaction_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+                notes: mergedNotes || existingLead[0].notes,
+            })
+                .eq('id', existingLead[0].id);
         }
         return {
             farmerId: farmer.id,
             phone: msg.phone,
             language,
             isPremium,
+            hadHistoricalLead,
         };
     },
 };

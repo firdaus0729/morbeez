@@ -11,6 +11,10 @@ export declare const osAnalyticsService: {
             recommendationsTotal: number;
             recommendationSuccessRate: number;
             topDistrict: string;
+            aiDiagnosisCount: number;
+            aiEscalationRate: number;
+            aiLowConfidenceRate: number;
+            aiFollowupImprovementRate: number;
         };
         geography: {
             periodDays: number;
@@ -86,6 +90,34 @@ export declare const osAnalyticsService: {
                 count: number;
             }[];
         };
+        aiAccuracy: {
+            diagnosisCount: number;
+            escalationRate: number;
+            lowConfidenceRate: number;
+            followupImprovementRate: number;
+        };
+    }>;
+    getAiAccuracy(days?: number): Promise<{
+        diagnosisCount: number;
+        escalationRate: number;
+        lowConfidenceRate: number;
+        followupImprovementRate: number;
+    }>;
+    getAiAccuracyTrends(days?: number): Promise<{
+        periodDays: number;
+        labels: string[];
+        dailyDiagnoses: number[];
+        dailyEscalations: number[];
+        dailyLowConfidence: number[];
+        confidenceBands: {
+            high: number;
+            medium: number;
+            low: number;
+        };
+        outcomeDistribution: {
+            outcome: string;
+            count: number;
+        }[];
     }>;
     getDistrictHeatmap(days?: number): Promise<{
         periodDays: number;

@@ -44,10 +44,16 @@ export type ScenarioRouterResult = {
     duplicateImage: true;
 };
 export declare const whatsappScenarioRouter: {
+    askSoilReportConfirmation(phone: string, farmerId: string, lang: AdvisoryLanguage, send: ScenarioSenders): Promise<void>;
+    startMinimalOnboarding(phone: string, farmerId: string, lang: AdvisoryLanguage, send: ScenarioSenders): Promise<void>;
     sendPlotPicker(phone: string, farmerId: string, lang: AdvisoryLanguage, send: ScenarioSenders, pendingText?: string): Promise<void>;
     applyPlotSelection(msg: InboundMessage, captured: ScenarioCapture, lang: AdvisoryLanguage, plotId: string, send: ScenarioSenders): Promise<void>;
     tryRoute(msg: InboundMessage, captured: ScenarioCapture, session: ConversationSession, send: ScenarioSenders): Promise<ScenarioRouterResult>;
-    showMainMenu(phone: string, lang: AdvisoryLanguage, send: ScenarioSenders): Promise<void>;
+    showMainMenu(phone: string, lang: AdvisoryLanguage, send: ScenarioSenders, options?: {
+        includeTrackOrder?: boolean;
+        welcomeOverride?: string;
+        returningQuickActionsOnly?: boolean;
+    }): Promise<void>;
     handleMenuSelection(msg: InboundMessage, captured: ScenarioCapture, lang: AdvisoryLanguage, menuId: string, send: ScenarioSenders): Promise<void>;
     handleSoilAction(msg: InboundMessage, captured: ScenarioCapture, lang: AdvisoryLanguage, action: string, send: ScenarioSenders): Promise<void>;
     handleWaterVolume(msg: InboundMessage, captured: ScenarioCapture, lang: AdvisoryLanguage, text: string, send: ScenarioSenders): Promise<boolean>;

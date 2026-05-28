@@ -82,6 +82,7 @@ export const cropDoctorService = {
         symptoms_text: input.symptomsText ?? null,
         voice_transcript: input.voiceTranscript ?? null,
         status: 'processing',
+        metadata: input.contextPack ?? {},
       })
       .select()
       .single();

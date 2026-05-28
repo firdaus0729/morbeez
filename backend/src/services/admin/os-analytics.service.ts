@@ -1,5 +1,6 @@
 import { supabase } from '../../lib/supabase.js';
 import { throwIfSupabaseError } from '../../lib/supabase-errors.js';
+import { kpiDashboardService } from '../ai/kpi-dashboard.service.js';
 
 function daysAgoIso(days: number): string {
   const d = new Date();
@@ -49,11 +50,12 @@ function dayLabels(days: number): string[] {
 export const osAnalyticsService = {
   async getSummary(days = 30) {
     const since = daysAgoIso(days);
-    const [geo, retention, broadcasts, recommendations] = await Promise.all([
+    const [geo, retention, broadcasts, recommendations, aiAccuracy] = await Promise.all([
       this.getDistrictHeatmap(days),
       this.getRetention(days),
       this.getBroadcastPerformance(days),
       this.getRecommendationSuccess(days),
+      this.getAiAccuracy(days),
     ]);
 
     const topDistrict = geo.districts[0]?.district ?? '—';
@@ -69,11 +71,80 @@ export const osAnalyticsService = {
         recommendationsTotal: recommendations.totals.created,
         recommendationSuccessRate: recommendations.totals.successRate,
         topDistrict,
+        aiDiagnosisCount: aiAccuracy.diagnosisCount,
+        aiEscalationRate: Math.round(aiAccuracy.escalationRate * 1000) / 10,
+        aiLowConfidenceRate: Math.round(aiAccuracy.lowConfidenceRate * 1000) / 10,
+        aiFollowupImprovementRate: Math.round(aiAccuracy.followupImprovementRate * 1000) / 10,
       },
       geography: geo,
       retention,
       broadcasts,
       recommendations,
+      aiAccuracy,
+    };
+  },
+
+  async getAiAccuracy(days = 30) {
+    return kpiDashboardService.summary(days);
+  },
+
+  async getAiAccuracyTrends(days = 30) {
+    const since = daysAgoIso(days);
+    const { data: events, error: eErr } = await supabase
+      .from('ai_accuracy_events')
+      .select('created_at, confidence, escalated, weather_risk')
+      .eq('event_type', 'diagnosis')
+      .gte('created_at', since)
+      .order('created_at', { ascending: true });
+    throwIfSupabaseError(eErr, 'Could not load AI accuracy events');
+
+    const { data: outcomes, error: oErr } = await supabase
+      .from('ai_case_outcomes')
+      .select('created_at, outcome')
+      .gte('created_at', since)
+      .order('created_at', { ascending: true });
+    throwIfSupabaseError(oErr, 'Could not load AI outcomes');
+
+    const labels = dayLabels(days);
+    const byDay = new Map<string, { diagnoses: number; escalations: number; lowConfidence: number }>();
+    for (const label of labels) {
+      byDay.set(label, { diagnoses: 0, escalations: 0, lowConfidence: 0 });
+    }
+
+    for (const row of events ?? []) {
+      const label = new Date(String(row.created_at)).toLocaleDateString('en-IN', {
+        day: 'numeric',
+        month: 'short',
+      });
+      const bucket = byDay.get(label);
+      if (!bucket) continue;
+      bucket.diagnoses += 1;
+      if (row.escalated) bucket.escalations += 1;
+      if (Number(row.confidence ?? 0) < 0.7) bucket.lowConfidence += 1;
+    }
+
+    const outcomeDist = new Map<string, number>();
+    for (const o of outcomes ?? []) {
+      const key = String(o.outcome ?? 'unknown');
+      outcomeDist.set(key, (outcomeDist.get(key) ?? 0) + 1);
+    }
+
+    const confidenceBands = { high: 0, medium: 0, low: 0 };
+    for (const row of events ?? []) {
+      const c = Number(row.confidence ?? 0);
+      if (c > 0.9) confidenceBands.high += 1;
+      else if (c >= 0.7) confidenceBands.medium += 1;
+      else confidenceBands.low += 1;
+    }
+
+    return {
+      periodDays: days,
+      labels,
+      dailyDiagnoses: labels.map((l) => byDay.get(l)?.diagnoses ?? 0),
+      dailyEscalations: labels.map((l) => byDay.get(l)?.escalations ?? 0),
+      dailyLowConfidence: labels.map((l) => byDay.get(l)?.lowConfidence ?? 0),
+      confidenceBands,
+      outcomeDistribution: [...outcomeDist.entries()].map(([outcome, count]) => ({ outcome, count })),
     };
   },
 

@@ -56,6 +56,8 @@ export interface DiagnoseInput {
     channel: 'api' | 'whatsapp' | 'web';
     /** WhatsApp pipeline: minimal history string (low token cost) */
     compactHistory?: string;
+    /** Optional structured context for post-analysis policy checks */
+    contextPack?: Record<string, unknown>;
 }
 export interface DiagnoseResult {
     sessionId: string;

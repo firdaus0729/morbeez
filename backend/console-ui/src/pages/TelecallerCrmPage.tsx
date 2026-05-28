@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { api } from '../lib/api';
 import { LeadDetailPanel } from '../components/telecaller/LeadDetailPanel';
 import { EscalationsPanel } from '../components/telecaller/EscalationsPanel';
 import { Field, Modal, inputClass } from '../components/Modal';
 import { Alert, Btn, HubTabs, Loading, ReadOnlyBanner } from '../components/ui';
+import { getRealtimeClient } from '../lib/realtime';
 const STAGE_CLASS: Record<string, string> = {
   new_lead: 'stage-new',
   interested: 'stage-interested',
@@ -42,6 +43,7 @@ type TaskRow = {
 };
 
 type CrmView = 'workspace' | 'escalations';
+type CrmNotification = { id: string; message: string; at: string };
 
 export function TelecallerCrmPage({ canWrite }: { canWrite: boolean }) {
   const [crmView, setCrmView] = useState<CrmView>('workspace');
@@ -58,12 +60,23 @@ export function TelecallerCrmPage({ canWrite }: { canWrite: boolean }) {
   const [showNewLead, setShowNewLead] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
+  const [notifications, setNotifications] = useState<CrmNotification[]>([]);
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
+  const [showNotifications, setShowNotifications] = useState(false);
 
   const base = '/console/api/v1/os/telecaller';
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError('');
+  const pushNotification = useCallback((message: string) => {
+    const at = new Date().toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' });
+    setNotifications((prev) => [{ id: `${Date.now()}-${Math.random()}`, message, at }, ...prev.slice(0, 19)]);
+    setUnreadNotifications((v) => v + 1);
+  }, []);
+
+  const load = useCallback(async (opts?: { silent?: boolean }) => {
+    if (!opts?.silent) {
+      setLoading(true);
+      setError('');
+    }
     try {
       const params = new URLSearchParams({
         scope,
@@ -92,9 +105,9 @@ export function TelecallerCrmPage({ canWrite }: { canWrite: boolean }) {
         return leadRes.leads?.[0]?.id ?? null;
       });
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to load CRM');
+      if (!opts?.silent) setError(e instanceof Error ? e.message : 'Failed to load CRM');
     } finally {
-      setLoading(false);
+      if (!opts?.silent) setLoading(false);
     }
   }, [scope, stage, search]);
 
@@ -106,6 +119,45 @@ export function TelecallerCrmPage({ canWrite }: { canWrite: boolean }) {
     const t = setTimeout(() => load(), 300);
     return () => clearTimeout(t);
   }, [search]);
+
+  const realtimeClient = useMemo(() => getRealtimeClient(), []);
+
+  useEffect(() => {
+    if (!realtimeClient) return;
+
+    const leadsChannel = realtimeClient
+      .channel('telecaller-leads-live')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'leads' },
+        (payload) => {
+          const eventType = payload.eventType;
+          if (eventType === 'INSERT') pushNotification('New lead added.');
+          else if (eventType === 'UPDATE') pushNotification('Lead updated.');
+          else if (eventType === 'DELETE') pushNotification('Lead deleted.');
+          void load({ silent: true });
+        }
+      )
+      .subscribe();
+
+    const tasksChannel = realtimeClient
+      .channel('telecaller-tasks-live')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'crm_tasks' },
+        (payload) => {
+          if (payload.eventType === 'INSERT') pushNotification('New follow-up task assigned.');
+          if (payload.eventType === 'UPDATE') pushNotification('Task updated.');
+          void load({ silent: true });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      void realtimeClient.removeChannel(leadsChannel);
+      void realtimeClient.removeChannel(tasksChannel);
+    };
+  }, [realtimeClient, load, pushNotification]);
 
   async function completeTask(taskId: string) {
     if (!canWrite) return;
@@ -134,15 +186,64 @@ export function TelecallerCrmPage({ canWrite }: { canWrite: boolean }) {
 
   return (
     <div className="telecaller-page">
+      <div className="tc-workspace-header">
+        <h1>Telecaller CRM Workspace</h1>
+        <div className="tc-header-search-wrap">
+          <input
+            className="tc-header-search"
+            placeholder="Search farmer, mobile, order ID, lead ID..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
+        <div className="tc-header-actions">
+          {canWrite ? (
+            <Btn variant="primary" onClick={() => setShowNewLead(true)}>
+              + Add Lead
+            </Btn>
+          ) : null}
+          <button
+            type="button"
+            className="tc-header-icon-btn"
+            aria-label="Notifications"
+            onClick={() => {
+              setShowNotifications((v) => !v);
+              setUnreadNotifications(0);
+            }}
+          >
+            🔔
+            {unreadNotifications > 0 ? <span className="tc-notification-badge">{unreadNotifications}</span> : null}
+          </button>
+          <button type="button" className="tc-header-icon-btn" aria-label="Call">
+            📞
+          </button>
+          <button type="button" className="tc-header-icon-btn" aria-label="WhatsApp">
+            🟢
+          </button>
+          <div className="tc-admin-chip">
+            <span>Admin</span>
+            <small>Super Admin</small>
+          </div>
+        </div>
+      </div>
+
+      {showNotifications ? (
+        <div className="tc-notification-panel">
+          <h4>Notifications</h4>
+          {notifications.length === 0 ? <p className="muted">No new notifications.</p> : null}
+          {notifications.map((n) => (
+            <div key={n.id} className="tc-notification-item">
+              <strong>{n.message}</strong>
+              <span>{n.at}</span>
+            </div>
+          ))}
+        </div>
+      ) : null}
+
       <div className="tc-page-header filter-bar">
         <p className="muted" style={{ margin: 0, flex: 1 }}>
           Manage leads, follow-ups, and farmer conversations
         </p>
-        {canWrite ? (
-          <Btn variant="primary" onClick={() => setShowNewLead(true)}>
-            + New lead
-          </Btn>
-        ) : null}
       </div>
 
       {!canWrite ? <ReadOnlyBanner /> : null}

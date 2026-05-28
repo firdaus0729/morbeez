@@ -353,11 +353,30 @@ export function LeadDetailPanel({ leadId, canWrite }: Props) {
               <h2>{l.farmerName}</h2>
               <span className="tc-customer-chip">Customer</span>
               <div className="tc-header-quick-actions">
-                <button type="button" className="tc-icon-btn" aria-label="WhatsApp">🟢</button>
-                <button type="button" className="tc-icon-btn" aria-label="Call">📞</button>
+                <a
+                  className="tc-icon-btn"
+                  aria-label="WhatsApp"
+                  href={l.phone ? `https://wa.me/${String(l.phone).replace(/\D/g, '')}` : undefined}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  🟢
+                </a>
+                <a
+                  className="tc-icon-btn"
+                  aria-label="Call"
+                  href={l.phone ? `tel:${String(l.phone).replace(/\s+/g, '')}` : undefined}
+                >
+                  📞
+                </a>
                 <button type="button" className="tc-icon-btn" aria-label="More">⋯</button>
               </div>
-              <button type="button" className="tc-call-btn">📞 Call</button>
+              <a
+                className="tc-call-btn"
+                href={l.phone ? `tel:${String(l.phone).replace(/\s+/g, '')}` : undefined}
+              >
+                📞 Call
+              </a>
               <button type="button" className="tc-note-btn" onClick={() => canWrite && setModal('task')}>
                 ⊕ Add Note
               </button>

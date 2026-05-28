@@ -17,12 +17,17 @@ import { shopifyLinksService } from '../../shopify/shopify-links.service.js';
 import { whatsappConversationalService } from '../whatsapp-conversational.service.js';
 import { farmerService } from '../../farmer/farmer.service.js';
 import { conversationSessionService } from '../conversation-session.service.js';
-import { mainMenuCopy } from '../scenarios/whatsapp-menu.service.js';
 import { whatsappScenarioRouter } from '../scenarios/whatsapp-scenario-router.service.js';
+import { returnUserGreetingService } from '../scenarios/return-user-greeting.service.js';
 import { sendReplyButtonMenu } from '../whatsapp-interactive-menu.service.js';
 import { diagnosisFlowService } from '../scenarios/diagnosis-flow.service.js';
 import { multiPlotService } from '../scenarios/multi-plot.service.js';
 import { aiReuseService } from '../../ai/ai-reuse.service.js';
+import { cropDetectionService } from './crop-detection.service.js';
+import { contextPackService } from './context-pack.service.js';
+import { policyEngineService } from '../../ai/policy-engine.service.js';
+import { createTelecallerTask } from './telecaller-tasks.service.js';
+import { accuracyMetricsService } from '../../ai/accuracy-metrics.service.js';
 const CROP_MEDIA_TYPES = new Set(['image', 'image_message', 'document']);
 const VOICE_TYPES = new Set(['audio', 'voice', 'audio_message']);
 const CROP_HINTS = [
@@ -33,6 +38,42 @@ const CROP_HINTS = [
     { crop: 'turmeric', terms: ['turmeric', 'manjal', 'മഞ്ഞൾ', 'हल्दी', 'ಅರಿಶಿನ'] },
     { crop: 'coconut', terms: ['coconut', 'thenga', 'തേങ്ങ', 'नारियल', 'ತೆಂಗು'] },
 ];
+async function askCropSelection(send, phone, language) {
+    const body = language === 'ml'
+        ? 'വിള കണ്ടെത്താനായില്ല. ദയവായി വിള തിരഞ്ഞെടുക്കുക.'
+        : 'AI could not detect crop clearly. Please select crop.';
+    const options = [
+        { id: 'crop.ginger', title: 'Ginger' },
+        { id: 'crop.banana', title: 'Banana' },
+        { id: 'crop.cardamom', title: 'Cardamom' },
+        { id: 'crop.pepper', title: 'Pepper' },
+        { id: 'crop.other', title: 'Other' },
+    ];
+    if (send.list) {
+        await send.list({
+            phone,
+            body,
+            buttonText: language === 'ml' ? 'വിള' : 'Crop',
+            sections: [{ title: 'Crop', rows: options }],
+        });
+        return;
+    }
+    if (send.buttons) {
+        await sendReplyButtonMenu({
+            to: phone,
+            body,
+            options,
+            continuationBody: language === 'ml' ? 'മറ്റു വിളകൾ:' : 'More crop options:',
+            sendButtons: (p) => send.buttons({
+                phone: p.to,
+                body: p.body,
+                buttons: p.buttons,
+            }),
+        });
+        return;
+    }
+    await send.text(phone, `${body}\n\nGinger / Banana / Cardamom / Pepper / Other`);
+}
 function localizedSummary(advisory, language) {
     if (language === 'ml' && advisory.farmerSummaryMl)
         return advisory.farmerSummaryMl;
@@ -104,6 +145,22 @@ async function fetchRecentConversationHistory(farmerId, limit = 8) {
         .map((row) => `${row.direction === 'outbound' ? 'Assistant' : 'Farmer'}: ${String(row.content ?? '')}`)
         .filter((line) => line.trim().length > 0);
 }
+function validationQuestion(issue, language) {
+    const lower = issue.toLowerCase();
+    if (/root|rot|nematode|rhizome/.test(lower)) {
+        return language === 'ml'
+            ? 'സ്ഥിരീകരിക്കാൻ: വേരുകൾ മൃദുവായിട്ടുണ്ടോ, ദുർഗന്ധമുണ്ടോ?'
+            : 'To confirm: are roots soft and is there any foul smell?';
+    }
+    if (/yellow|chlorosis|deficien/.test(lower)) {
+        return language === 'ml'
+            ? 'സ്ഥിരീകരിക്കാൻ: ഇലമഞ്ഞപ്പ് താഴെ നിന്ന് മുകളിലേക്ക് പടരുന്നുണ്ടോ?'
+            : 'To confirm: is yellowing spreading from lower leaves upward?';
+    }
+    return language === 'ml'
+        ? 'സ്ഥിരീകരിക്കാൻ: പ്രശ്നം എത്ര വേഗത്തിൽ പടരുന്നു?'
+        : 'To confirm: how fast is this issue spreading in the field?';
+}
 function languageSelectCopy() {
     return {
         body: 'Welcome to Morbeez Agriculture Assistant.\n\nPlease select your language.',
@@ -146,7 +203,25 @@ export const whatsappInboundPipeline = {
         const language = normalizeLanguage(detected, null);
         const captured = await leadCaptureService.captureAndIdentify(msg, language);
         // Conversation state + ownership (human takeover / pause AI)
-        const session = await conversationSessionService.ensureWhatsAppSession(captured.farmerId);
+        let session = await conversationSessionService.ensureWhatsAppSession(captured.farmerId);
+        if (!captured.hadHistoricalLead) {
+            const now = new Date().toISOString();
+            await supabase
+                .from('conversation_sessions')
+                .update({
+                preferred_language: null,
+                state: 'language_select',
+                conversation_owner: 'ai',
+                ai_paused: false,
+                active_plot_id: null,
+                active_block_id: null,
+                context: {},
+                updated_at: now,
+            })
+                .eq('farmer_id', captured.farmerId)
+                .eq('channel', 'whatsapp');
+            session = { ...session, preferred_language: null, state: 'language_select', context: {} };
+        }
         if (await conversationSessionService.shouldPauseAi(captured.farmerId)) {
             logger.info({ farmerId: captured.farmerId }, 'AI paused for WhatsApp conversation');
             return;
@@ -205,38 +280,25 @@ export const whatsappInboundPipeline = {
                 : languageFromSelection(msg.text);
             if (selected && ['en', 'ml', 'ta', 'kn', 'hi'].includes(selected)) {
                 await conversationSessionService.setLanguage(captured.farmerId, selected);
-                const menu = mainMenuCopy(selected);
-                if (send.list || send.buttons) {
-                    if (send.list) {
-                        await send.list({
-                            phone: msg.phone,
-                            body: menu.welcome,
-                            buttonText: menu.buttonText,
-                            sections: [{ title: 'Menu', rows: menu.rows }],
-                        });
-                    }
-                    else if (send.buttons) {
-                        await sendReplyButtonMenu({
-                            to: msg.phone,
-                            body: menu.welcome,
-                            options: menu.rows.map((r) => ({ id: r.id, title: r.title })),
-                            continuationBody: 'More menu options:',
-                            sendButtons: (p) => send.buttons({
-                                phone: p.to,
-                                body: p.body,
-                                buttons: p.buttons,
-                            }),
-                        });
-                    }
-                }
-                else {
-                    await send.text(msg.phone, `${menu.welcome}\n\nReply with: Disease Diagnosis / Weather Alerts / Daily Prices / Soil Testing / Talk to Expert`);
-                }
+                await whatsappScenarioRouter.startMinimalOnboarding(msg.phone, captured.farmerId, selected, send);
                 return;
             }
         }
         const activeLang = (session.preferred_language ?? captured.language);
         captured.language = activeLang;
+        if (session.preferred_language && msg.text && isGreeting(msg.text)) {
+            const smartGreeting = await returnUserGreetingService.buildSmartGreeting(captured.farmerId, activeLang);
+            if (smartGreeting) {
+                await whatsappScenarioRouter.showMainMenu(msg.phone, activeLang, send, {
+                    includeTrackOrder: smartGreeting.includeTrackOrder,
+                    returningQuickActionsOnly: true,
+                    welcomeOverride: `${smartGreeting.greeting}\n\n${smartGreeting.optionsIntro}`,
+                });
+                await conversationSessionService.setState(captured.farmerId, 'main_menu');
+                await eventBus.publish('whatsapp.message.received', { phone: msg.phone, farmerId: captured.farmerId, text: msg.text, messageType: msg.msgType }, 'whatsapp');
+                return;
+            }
+        }
         const routeResult = await whatsappScenarioRouter.tryRoute(msg, captured, session, send);
         if (routeResult.handled && 'runDiagnosis' in routeResult && routeResult.runDiagnosis) {
             if (routeResult.welcomePrefix) {
@@ -323,6 +385,7 @@ export const whatsappInboundPipeline = {
         });
     },
     async processImage(msg, captured, sendText, senders) {
+        const plots = await multiPlotService.listPlots(captured.farmerId);
         const context = await resolveDiagnosisContext({
             farmerId: captured.farmerId,
             symptomsText: msg.text || undefined,
@@ -376,6 +439,23 @@ export const whatsappInboundPipeline = {
             return;
         }
         await recordImageHash(captured.farmerId, quality.contentHash);
+        const hasCaptionCrop = Boolean(inferCropHint(msg.text || undefined));
+        if (plots.length <= 1 && !hasCaptionCrop && senders) {
+            const detected = await cropDetectionService.detectFromImage({
+                imageBase64: media.imageBase64,
+                imageMimeType: media.imageMimeType ?? 'image/jpeg',
+                caption: msg.text || undefined,
+            });
+            if (detected.crop && detected.crop !== 'other' && detected.confidence >= 0.62) {
+                await multiPlotService.setPrimaryCropType(captured.farmerId, detected.crop);
+            }
+            else {
+                await askCropSelection(senders, captured.phone, captured.language);
+                await conversationSessionService.patchContext(captured.farmerId, { pendingCropSelection: true });
+                await conversationSessionService.setState(captured.farmerId, 'crop_select');
+                return;
+            }
+        }
         await this.runDiagnosis({
             farmerId: captured.farmerId,
             phone: captured.phone,
@@ -468,6 +548,7 @@ export const whatsappInboundPipeline = {
                 farmerId: params.farmerId,
                 symptomsText,
             });
+            const contextPack = await contextPackService.build(params.farmerId);
             const result = await cropDoctorService.diagnose({
                 farmerId: params.farmerId,
                 cropType: context.cropType,
@@ -479,10 +560,51 @@ export const whatsappInboundPipeline = {
                 imageMimeType: params.imageMimeType,
                 channel: params.channel ?? 'whatsapp',
                 compactHistory: context.compactHistory,
+                contextPack,
             });
+            const assessment = policyEngineService.evaluate(result.advisory, contextPack);
             const safety = validateAdvisorySafety(result.advisory, params.language);
             if (!safety.safe) {
                 await params.sendText(params.phone, safety.farmerMessage);
+                return;
+            }
+            await accuracyMetricsService.logDiagnosisEvent({
+                sessionId: result.sessionId,
+                farmerId: params.farmerId,
+                cropType: context.cropType,
+                confidence: result.advisory.confidence,
+                escalated: Boolean(result.escalated),
+                source: params.channel ?? 'whatsapp',
+                weatherRisk: assessment.weatherRiskBand,
+            });
+            await createTelecallerTask({
+                farmerId: params.farmerId,
+                title: 'Symptom Confirmation Required',
+                notes: `Probable issue: ${result.advisory.probableIssue}; confidence ${Math.round(result.advisory.confidence * 100)}%; crop ${context.cropType}`,
+                priority: assessment.escalationPriority === 'urgent' ? 'urgent' : 'normal',
+            });
+            if (assessment.shouldRequestMoreEvidence) {
+                await createTelecallerTask({
+                    farmerId: params.farmerId,
+                    title: 'Symptom confirmation required',
+                    notes: `Confidence ${Math.round(result.advisory.confidence * 100)}%, Crop ${context.cropType}, WeatherRisk ${assessment.weatherRiskBand}`,
+                    priority: assessment.escalationPriority === 'urgent' ? 'urgent' : 'high',
+                });
+                await params.sendText(params.phone, params.language === 'ml'
+                    ? 'ലക്ഷണങ്ങൾ കൂടുതൽ സ്ഥിരീകരിക്കണം. ദയവായി കൂടുതൽ വ്യക്തമായ ഇല/വേരിന്റെ ചിത്രങ്ങൾ അയയ്ക്കുക. ടീം നിങ്ങളെ ബന്ധപ്പെടും.'
+                    : 'Symptoms need further confirmation. Please send clearer leaf/root images. Our team will contact you.');
+                await conversationSessionService.setState(params.farmerId, 'root_photos_requested');
+                return;
+            }
+            if (assessment.needsValidationQuestion) {
+                await createTelecallerTask({
+                    farmerId: params.farmerId,
+                    title: 'Telecaller symptom validation',
+                    notes: `AI confidence in medium band. Issue: ${result.advisory.probableIssue}`,
+                    priority: 'normal',
+                });
+                await params.sendText(params.phone, `${localizedSummary(result.advisory, params.language)}\n\n${validationQuestion(result.advisory.probableIssue, params.language)}`);
+                await conversationSessionService.setState(params.farmerId, 'diagnosis');
                 return;
             }
             let reply = localizedSummary(result.advisory, params.language);
@@ -503,6 +625,12 @@ export const whatsappInboundPipeline = {
             }
             if (result.escalated) {
                 reply += '\n\nOur agronomist team will review your case shortly.';
+            }
+            reply += `\n\nCrop Health Score: ${assessment.cropHealthScore}/100`;
+            reply += `\nDisease Severity: ${assessment.diseaseSeverity}`;
+            reply += `\nWeather Risk: ${assessment.weatherRiskBand}`;
+            if (assessment.safetyNotes.length) {
+                reply += `\n\n⚠️ ${assessment.safetyNotes.join(' ')}`;
             }
             const productBlock = shopifyLinksService.formatRecommendationsForWhatsApp(result.productRecommendations, params.language);
             if (productBlock)

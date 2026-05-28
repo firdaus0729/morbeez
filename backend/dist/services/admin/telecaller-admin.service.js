@@ -364,6 +364,33 @@ export const telecallerAdminService = {
             cropType: input.cropType,
             district: input.district,
         });
+        const { data: existing } = await supabase
+            .from('leads')
+            .select('id, notes')
+            .eq('farmer_id', result.farmer.id)
+            .order('updated_at', { ascending: false })
+            .limit(2);
+        const reusableLead = (existing ?? []).find((l) => l.id !== result.lead.id);
+        if (reusableLead) {
+            const requestNote = input.notes?.trim() || `Inbound request from ${input.phone}`;
+            const merged = [reusableLead.notes, requestNote].filter(Boolean).join('\n');
+            await supabase
+                .from('leads')
+                .update({
+                notes: merged,
+                assigned_to: agentEmail,
+                stage: 'new_lead',
+                follow_up_at: new Date(Date.now() + 86400000).toISOString(),
+                updated_at: new Date().toISOString(),
+            })
+                .eq('id', reusableLead.id);
+            await supabase.from('leads').delete().eq('id', result.lead.id);
+            if (input.state) {
+                await supabase.from('farmers').update({ state: input.state }).eq('id', result.farmer.id);
+            }
+            await logInteraction(result.farmer.id, 'crm', `New request attached to existing lead by ${agentEmail}`);
+            return this.getLeadDetail(reusableLead.id);
+        }
         await supabase
             .from('leads')
             .update({

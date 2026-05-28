@@ -82,6 +82,21 @@ export const multiPlotService = {
             activePlotLabel: plotDisplayName(plot, 'en'),
         });
     },
+    async setPrimaryCropType(farmerId, cropType) {
+        const blocks = await this.listPlots(farmerId);
+        const primary = blocks.find((b) => b.is_primary) ?? blocks[0];
+        if (!primary)
+            return;
+        await supabase
+            .from('farm_blocks')
+            .update({
+            crop_type: cropType,
+            crop_name: cropType,
+            plot_label: `${cropType.charAt(0).toUpperCase()}${cropType.slice(1)} Plot`,
+        })
+            .eq('id', primary.id)
+            .eq('farmer_id', farmerId);
+    },
     parsePlotSelection(text, plots) {
         const t = text.trim();
         if (t.startsWith('plot.')) {

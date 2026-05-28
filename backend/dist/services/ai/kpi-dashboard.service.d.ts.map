@@ -1,0 +1,1 @@
+{"version":3,"file":"kpi-dashboard.service.d.ts","sourceRoot":"","sources":["../../../src/services/ai/kpi-dashboard.service.ts"],"names":[],"mappings":"AAEA,eAAO,MAAM,mBAAmB;4BACJ,OAAO,CAAC;QAChC,cAAc,EAAE,MAAM,CAAC;QACvB,cAAc,EAAE,MAAM,CAAC;QACvB,iBAAiB,EAAE,MAAM,CAAC;QAC1B,uBAAuB,EAAE,MAAM,CAAC;KACjC,CAAC;CAkCH,CAAC"}

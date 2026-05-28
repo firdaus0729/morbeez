@@ -12,10 +12,12 @@ export type ConversationState =
   | 'diagnosis_awaiting_photos'
   | 'diagnosis_water_volume'
   | 'root_photos_requested'
+  | 'nutrient_soil_confirm'
   | 'soil_flow'
   | 'terminology_clarify'
   | 'chimb_followup'
   | 'plot_select'
+  | 'crop_select'
   | 'human_takeover';
 
 export interface ConversationSession {

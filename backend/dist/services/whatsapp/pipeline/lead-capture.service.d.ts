@@ -6,6 +6,7 @@ export declare const leadCaptureService: {
         phone: string;
         language: AdvisoryLanguage;
         isPremium: boolean;
+        hadHistoricalLead: boolean;
     }>;
 };
 //# sourceMappingURL=lead-capture.service.d.ts.map
