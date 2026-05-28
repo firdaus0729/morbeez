@@ -32,6 +32,8 @@ import { conversationSessionService } from '../conversation-session.service.js';
 import { whatsappScenarioRouter } from '../scenarios/whatsapp-scenario-router.service.js';
 import { returnUserGreetingService } from '../scenarios/return-user-greeting.service.js';
 import { cropSelectionService } from '../scenarios/crop-selection.service.js';
+import { farmerPurgeService } from '../../farmer/farmer-purge.service.js';
+import { orderWhatsappService } from '../orders/order-whatsapp.service.js';
 import { sendReplyButtonMenu } from '../whatsapp-interactive-menu.service.js';
 import { diagnosisFlowService } from '../scenarios/diagnosis-flow.service.js';
 import { multiPlotService } from '../scenarios/multi-plot.service.js';
@@ -226,6 +228,15 @@ async function classifyCommercialLead(farmerId: string, text: string): Promise<v
   }
 }
 
+function isFarmerResetCommand(text: string): boolean {
+  const t = text.trim().toLowerCase();
+  return (
+    /^(delete my data|erase my data|reset account|reset my account|delete account|forget me)$/i.test(t) ||
+    /^(ഡാറ്റ ഇല്ലാതാക്കുക|എന്റെ ഡാറ്റ മായ്ക്കുക|അക്കൗണ്ട് റീസെറ്റ്)$/i.test(t) ||
+    /^(मेरा डेटा हटाएं|खाता रीसेट)$/i.test(t)
+  );
+}
+
 export const whatsappInboundPipeline = {
   async process(
     msg: InboundMessage,
@@ -236,6 +247,17 @@ export const whatsappInboundPipeline = {
   ): Promise<void> {
     const detected = detectLanguageFromText(msg.text);
     const language = normalizeLanguage(detected, null);
+
+    if (msg.text?.trim() && isFarmerResetCommand(msg.text)) {
+      const phone = orderWhatsappService.normalizePhone(msg.phone);
+      await farmerPurgeService.purgeByPhone(phone);
+      const ack =
+        language === 'ml'
+          ? 'നിങ്ങളുടെ മോർബീസ് ഡാറ്റ പൂർണ്ണമായും ഇല്ലാതാക്കി. പുതിയ കർഷകനായി രജിസ്റ്റർ ചെയ്യാൻ *Hi* അയയ്ക്കുക.'
+          : 'Your Morbeez data has been fully removed. Send *Hi* anytime to register as a new farmer.';
+      await send.text(msg.phone, ack);
+      return;
+    }
 
     const captured = await leadCaptureService.captureAndIdentify(msg, language);
 

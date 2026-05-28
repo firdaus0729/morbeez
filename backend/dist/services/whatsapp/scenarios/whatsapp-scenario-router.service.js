@@ -17,6 +17,7 @@ import { sendReplyButtonMenu } from '../whatsapp-interactive-menu.service.js';
 import { accuracyMetricsService } from '../../ai/accuracy-metrics.service.js';
 import { createTelecallerTask } from '../pipeline/telecaller-tasks.service.js';
 import { cropSelectionService } from './crop-selection.service.js';
+import { farmerPurgeService } from '../../farmer/farmer-purge.service.js';
 const CROP_MEDIA = new Set(['image', 'image_message', 'document']);
 const MENU_IDS = new Set([
     'menu.diagnosis',
@@ -58,6 +59,22 @@ function resolveMenuAction(text) {
 }
 function isChangePlotCommand(text) {
     return /^(change plot|switch plot|plot change|മറ്റ് പ്ലോട്ട്|ப்ளாட் மாற்று)$/i.test(text.trim());
+}
+function isFarmerResetCommand(text) {
+    const t = text.trim().toLowerCase();
+    return (/^(delete my data|erase my data|reset account|reset my account|delete account|forget me)$/i.test(t) ||
+        /^(ഡാറ്റ ഇല്ലാതാക്കുക|എന്റെ ഡാറ്റ മായ്ക്കുക|അക്കൗണ്ട് റീസെറ്റ്)$/i.test(t) ||
+        /^(मेरा डेटा हटाएं|खाता रीसेट)$/i.test(t));
+}
+function farmerResetAck(lang) {
+    const map = {
+        en: 'Your Morbeez data has been fully removed. Send *Hi* anytime to register as a new farmer.',
+        ml: 'നിങ്ങളുടെ മോർബീസ് ഡാറ്റ പൂർണ്ണമായും ഇല്ലാതാക്കി. പുതിയ കർഷകനായി രജിസ്റ്റർ ചെയ്യാൻ *Hi* അയയ്ക്കുക.',
+        ta: 'உங்கள் Morbeez தரவு முழுமையாக நீக்கப்பட்டது. புதிய விவசாயியாக பதிவு செய்ய *Hi* அனுப்பவும்.',
+        kn: 'ನಿಮ್ಮ Morbeez ಡೇಟಾ ಸಂಪೂರ್ಣವಾಗಿ ಅಳಿಸಲಾಗಿದೆ. ಹೊಸ ರೈತರಾಗಿ ನೋಂದಣಿಗೆ *Hi* ಕಳುಹಿಸಿ.',
+        hi: 'आपका Morbeez डेटा पूरी तरह हटा दिया गया है। नए किसान के रूप में पंजीकरण के लिए *Hi* भेजें।',
+    };
+    return map[lang] ?? map.en;
 }
 function plantingDatePrompt(lang) {
     return lang === 'ml'
@@ -220,6 +237,11 @@ export const whatsappScenarioRouter = {
         }
         // Scenario 44 — always use stored language
         captured.language = lang;
+        if (text && isFarmerResetCommand(text)) {
+            await farmerPurgeService.purgeByPhone(captured.phone);
+            await send.text(msg.phone, farmerResetAck(lang));
+            return { handled: true };
+        }
         // Follow-up outcome capture (Step 8/9)
         if (text && /^(improved|better|partial|no improvement|worse|worsening)$/i.test(text)) {
             const ctx = await conversationSessionService.getContext(captured.farmerId);
@@ -287,7 +309,7 @@ export const whatsappScenarioRouter = {
                 return { handled: true };
             }
             if (ctx.onboardingStep === 'crop' && text.startsWith('crop.')) {
-                const pick = cropSelectionService.parseSelection(text);
+                const pick = await cropSelectionService.resolveSelection(captured.farmerId, text);
                 if (!pick) {
                     await cropSelectionService.sendCropPicker({
                         farmerId: captured.farmerId,
@@ -419,7 +441,7 @@ export const whatsappScenarioRouter = {
             return { handled: true };
         }
         if (session.state === 'crop_select' || text.startsWith('crop.')) {
-            const pick = cropSelectionService.parseSelection(text);
+            const pick = await cropSelectionService.resolveSelection(captured.farmerId, text);
             if (!pick) {
                 await cropSelectionService.sendCropPicker({
                     farmerId: captured.farmerId,
@@ -427,8 +449,8 @@ export const whatsappScenarioRouter = {
                     language: lang,
                     send,
                     body: lang === 'ml'
-                        ? 'വിള കണ്ടെത്താനായില്ല. ദയവായി വിള തിരഞ്ഞെടുക്കുക.'
-                        : 'AI could not detect crop clearly. Please select crop.',
+                        ? 'വിള കണ്ടെത്താനായില്ല. ദയവായി പ്ലോട്ട് തിരഞ്ഞെടുക്കുക.'
+                        : 'AI could not detect crop clearly. Please select your plot.',
                 });
                 return { handled: true };
             }
@@ -619,7 +641,7 @@ export const whatsappScenarioRouter = {
                         await multiPlotService.setActivePlot(captured.farmerId, selectedFromText);
                     }
                     else {
-                        const requested = cropSelectionService.parseSelection(msg.text);
+                        const requested = await cropSelectionService.resolveSelection(captured.farmerId, msg.text);
                         const requestedCrop = requested && requested.kind !== 'other' ? requested.slug : null;
                         if (requestedCrop && !plots.some((p) => p.crop_type.toLowerCase() === requestedCrop)) {
                             await send.text(msg.phone, lang === 'ml'

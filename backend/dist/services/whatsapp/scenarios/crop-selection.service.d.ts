@@ -36,9 +36,11 @@ export type CropPickResult = {
 } | null;
 declare function normalizeSlug(raw: string): string;
 declare function displayLabel(raw: string): string;
+declare function plotTitle(label: string): string;
 export declare const cropSelectionService: {
     normalizeSlug: typeof normalizeSlug;
     displayLabel: typeof displayLabel;
+    plotTitle: typeof plotTitle;
     getCustomCrops(farmerId: string): Promise<Array<{
         slug: string;
         label: string;
@@ -56,6 +58,7 @@ export declare const cropSelectionService: {
         description?: string;
     }>;
     parseSelection(text: string): CropPickResult;
+    resolveSelection(farmerId: string, text: string): Promise<CropPickResult>;
     applyCropToPrimaryBlock(farmerId: string, slug: string, label?: string): Promise<void>;
     sendCropPicker(params: {
         farmerId: string;

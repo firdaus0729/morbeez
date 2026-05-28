@@ -292,17 +292,17 @@ export async function osTelecallerRoutes(app: FastifyInstance): Promise<void> {
   app.delete(`${api}/leads/:id`, async (request, reply) => {
     await assertModuleAccess(request, 'telecaller_crm', 'write');
     const { id } = request.params as { id: string };
-    const { data: deleted, error } = await supabase
-      .from('leads')
-      .delete()
-      .eq('id', id)
-      .select('id')
-      .maybeSingle();
-    throwIfSupabaseError(error, 'Could not delete lead');
-    if (!deleted) {
+    const { farmerPurgeService } = await import('../../services/farmer/farmer-purge.service.js');
+    const result = await farmerPurgeService.purgeByLeadId(id);
+    if (!result.ok) {
       return reply.code(404).send({ ok: false, error: 'Lead not found' });
     }
-    return reply.send({ ok: true, deletedId: deleted.id });
+    return reply.send({
+      ok: true,
+      deletedLeadId: id,
+      purgedFarmerId: result.farmerId,
+      phone: result.phone,
+    });
   });
 
   app.post(`${api}/leads/:id/calls`, async (request, reply) => {

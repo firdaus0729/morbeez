@@ -45,9 +45,14 @@ function normalizeSlug(raw: string): string {
 }
 
 function displayLabel(raw: string): string {
-  const trimmed = raw.trim();
+  const trimmed = raw.trim().replace(/\s+plot$/i, '');
   if (!trimmed) return 'Crop';
   return trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
+}
+
+function plotTitle(label: string): string {
+  const base = displayLabel(label);
+  return `${base} Plot`;
 }
 
 function readCustomCrops(metadata: unknown): Array<{ slug: string; label: string }> {
@@ -64,8 +69,8 @@ function readCustomCrops(metadata: unknown): Array<{ slug: string; label: string
     if (item && typeof item === 'object') {
       const row = item as Record<string, unknown>;
       const slug = normalizeSlug(String(row.slug ?? row.label ?? ''));
-      const label = String(row.label ?? slug).trim();
-      if (slug) out.push({ slug, label: displayLabel(label) });
+      const label = displayLabel(String(row.label ?? slug));
+      if (slug) out.push({ slug, label });
     }
   }
   return out;
@@ -74,6 +79,7 @@ function readCustomCrops(metadata: unknown): Array<{ slug: string; label: string
 export const cropSelectionService = {
   normalizeSlug,
   displayLabel,
+  plotTitle,
 
   async getCustomCrops(farmerId: string): Promise<Array<{ slug: string; label: string }>> {
     const { data } = await supabase.from('farmers').select('metadata').eq('id', farmerId).maybeSingle();
@@ -111,12 +117,12 @@ export const cropSelectionService = {
   }> {
     const rows = DEFAULT_CROP_KEYS.map((slug) => ({
       id: `crop.${slug}`,
-      title: CROP_TITLES[slug] ?? displayLabel(slug),
+      title: plotTitle(CROP_TITLES[slug] ?? slug),
     }));
 
     for (const custom of customCrops) {
       if (rows.some((r) => r.id === `crop.${custom.slug}`)) continue;
-      rows.push({ id: `crop.${custom.slug}`, title: custom.label });
+      rows.push({ id: `crop.${custom.slug}`, title: plotTitle(custom.label) });
     }
 
     rows.push({ id: 'crop.other', title: 'Others' });
@@ -138,7 +144,9 @@ export const cropSelectionService = {
     }
 
     for (const slug of DEFAULT_CROP_KEYS) {
-      if (t === slug || t === CROP_TITLES[slug]?.toLowerCase()) {
+      const name = CROP_TITLES[slug]?.toLowerCase() ?? slug;
+      const plot = plotTitle(CROP_TITLES[slug] ?? slug).toLowerCase();
+      if (t === slug || t === name || t === plot) {
         return { kind: 'default', slug };
       }
     }
@@ -146,12 +154,24 @@ export const cropSelectionService = {
     return null;
   },
 
-  async applyCropToPrimaryBlock(
-    farmerId: string,
-    slug: string,
-    label?: string
-  ): Promise<void> {
+  async resolveSelection(farmerId: string, text: string): Promise<CropPickResult> {
+    const direct = this.parseSelection(text);
+    if (direct) return direct;
+
+    const custom = await this.getCustomCrops(farmerId);
+    const lower = text.trim().toLowerCase();
+    for (const row of custom) {
+      const plot = plotTitle(row.label).toLowerCase();
+      if (lower === plot || lower === row.label.toLowerCase() || lower === row.slug.replace(/_/g, ' ')) {
+        return { kind: 'custom', slug: row.slug, label: row.label };
+      }
+    }
+    return null;
+  },
+
+  async applyCropToPrimaryBlock(farmerId: string, slug: string, label?: string): Promise<void> {
     const cropLabel = label ?? displayLabel(slug.replace(/_/g, ' '));
+    const plotLabel = plotTitle(cropLabel);
     const { data: blocks } = await supabase
       .from('farm_blocks')
       .select('id, is_primary')
@@ -168,7 +188,8 @@ export const cropSelectionService = {
       .update({
         crop_type: slug,
         crop_name: cropLabel,
-        plot_label: `${cropLabel} Plot`,
+        plot_label: plotLabel,
+        name: plotLabel,
       })
       .eq('id', primary.id)
       .eq('farmer_id', farmerId);
@@ -186,21 +207,21 @@ export const cropSelectionService = {
     const body =
       params.body ??
       (params.language === 'ml'
-        ? 'ഏത് വിളയാണ്?'
+        ? 'ഏത് പ്ലോട്ടാണ്?'
         : params.language === 'ta'
-          ? 'எந்த பயிர்?'
+          ? 'எந்த ப்ளாட்?'
           : params.language === 'kn'
-            ? 'ಯಾವ ಬೆಳೆ?'
+            ? 'ಯಾವ ಪ್ಲಾಟ್?'
             : params.language === 'hi'
-              ? 'कौन सी फसल?'
-              : 'Which crop do you grow?');
+              ? 'कौन सा प्लॉट?'
+              : 'Which plot is this for?');
 
     if (params.send.list) {
       await params.send.list({
         phone: params.phone,
         body,
-        buttonText: params.language === 'ml' ? 'വിള' : 'Crop',
-        sections: [{ title: 'Crop', rows }],
+        buttonText: params.language === 'ml' ? 'പ്ലോട്ട്' : 'Plot',
+        sections: [{ title: 'Crop plots', rows }],
       });
       return;
     }
@@ -211,7 +232,7 @@ export const cropSelectionService = {
         body,
         options: rows.map((r) => ({ id: r.id, title: r.title })),
         continuationBody:
-          params.language === 'ml' ? 'മറ്റു വിളകൾ:' : 'More crops — tap a button:',
+          params.language === 'ml' ? 'മറ്റു പ്ലോട്ടുകൾ:' : 'More plots — tap a button:',
         sendButtons: (p) =>
           params.send.buttons!({
             phone: p.to,
@@ -222,19 +243,16 @@ export const cropSelectionService = {
       return;
     }
 
-    await params.send.text(
-      params.phone,
-      `${body}\n\n${rows.map((r) => r.title).join(' / ')}`
-    );
+    await params.send.text(params.phone, `${body}\n\n${rows.map((r) => r.title).join(' / ')}`);
   },
 
   customCropPrompt(language: AdvisoryLanguage): string {
     const map: Record<AdvisoryLanguage, string> = {
-      en: 'Please type your crop name.',
-      ml: 'നിങ്ങളുടെ വിളയുടെ പേര് ടൈപ്പ് ചെയ്യുക.',
-      ta: 'உங்கள் பயிர் பெயரை தட்டச்சு செய்யவும்.',
-      kn: 'ನಿಮ್ಮ ಬೆಳೆಯ ಹೆಸರನ್ನು ಟೈಪ್ ಮಾಡಿ.',
-      hi: 'अपनी फसल का नाम लिखें।',
+      en: 'Please type your crop name (we will save it as a new plot).',
+      ml: 'നിങ്ങളുടെ വിളയുടെ പേര് ടൈപ്പ് ചെയ്യുക (പുതിയ പ്ലോട്ടായി സേവ് ചെയ്യും).',
+      ta: 'உங்கள் பயிர் பெயரை தட்டச்சு செய்யவும் (புதிய ப்ளாட்டாக சேமிக்கப்படும்).',
+      kn: 'ನಿಮ್ಮ ಬೆಳೆಯ ಹೆಸರನ್ನು ಟೈಪ್ ಮಾಡಿ (ಹೊಸ ಪ್ಲಾಟ್ ಆಗಿ ಉಳಿಸಲಾಗುತ್ತದೆ).',
+      hi: 'अपनी फसल का नाम लिखें (नया प्लॉट के रूप में सेव होगा)।',
     };
     return map[language] ?? map.en;
   },
