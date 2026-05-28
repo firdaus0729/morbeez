@@ -164,6 +164,47 @@ export async function osTelecallerRoutes(app: FastifyInstance): Promise<void> {
     return reply.send({ ok: true, tasks });
   });
 
+  app.get(`${api}/leads/:id/tasks`, async (request, reply) => {
+    await assertModuleAccess(request, 'telecaller_crm', 'read');
+    const { id } = request.params as { id: string };
+    const { data, error } = await supabase
+      .from('crm_tasks')
+      .select('*')
+      .eq('lead_id', id)
+      .order('due_at', { ascending: true })
+      .limit(50);
+    throwIfSupabaseError(error, 'Could not load lead tasks');
+    return reply.send({ ok: true, tasks: data ?? [] });
+  });
+
+  app.get(`${api}/leads/:id/escalations`, async (request, reply) => {
+    await assertModuleAccess(request, 'telecaller_crm', 'read');
+    const { id } = request.params as { id: string };
+    const detail = await telecallerAdminService.getLeadDetail(id);
+    const { data, error } = await supabase
+      .from('agronomist_escalations')
+      .select('*')
+      .eq('farmer_id', detail.lead.farmerId)
+      .order('created_at', { ascending: false })
+      .limit(30);
+    throwIfSupabaseError(error, 'Could not load lead escalations');
+    return reply.send({ ok: true, escalations: data ?? [] });
+  });
+
+  app.get(`${api}/leads/:id/notes`, async (request, reply) => {
+    await assertModuleAccess(request, 'telecaller_crm', 'read');
+    const { id } = request.params as { id: string };
+    const detail = await telecallerAdminService.getLeadDetail(id);
+    const { data, error } = await supabase
+      .from('telecaller_notes')
+      .select('*')
+      .eq('farmer_id', detail.lead.farmerId)
+      .order('created_at', { ascending: false })
+      .limit(50);
+    throwIfSupabaseError(error, 'Could not load lead notes');
+    return reply.send({ ok: true, notes: data ?? [] });
+  });
+
   app.patch(`${api}/tasks/:id/complete`, async (request, reply) => {
     await assertModuleAccess(request, 'telecaller_crm', 'write');
     const { id } = request.params as { id: string };

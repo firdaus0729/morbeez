@@ -34,6 +34,12 @@ import { throwIfSupabaseError } from '../../lib/supabase-errors.js';
 import { hashPassword } from '../../lib/password.js';
 import { logAdminMutation } from '../../lib/admin-mutation-audit.js';
 import { assertSuperAdminDeactivationAllowed } from '../../lib/admin-guards.js';
+import { employeeProfileService } from '../../services/admin/employee-profile.service.js';
+import { employeeAccessService } from '../../services/admin/employee-access.service.js';
+import { employeeReassignmentService } from '../../services/admin/employee-reassignment.service.js';
+import { attendanceCalculatorService } from '../../services/admin/attendance-calculator.service.js';
+import { incentiveCalculatorService } from '../../services/admin/incentive-calculator.service.js';
+import { payrollGeneratorService } from '../../services/admin/payroll-generator.service.js';
 
 const loginSchema = z.object({
   email: z.string().email().max(255),
@@ -209,6 +215,17 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
       modules,
       canApproveRecommendations: canApproveRecommendations(role),
     });
+  });
+
+  app.post(`${api}/auth/setup-password`, async (request, reply) => {
+    const body = z
+      .object({
+        token: z.string().min(16),
+        password: z.string().min(8).max(128),
+      })
+      .parse(request.body);
+    await employeeAccessService.consumeToken(body);
+    return reply.send({ ok: true });
   });
 
   app.get(`${api}/stats`, async (request, reply) => {
@@ -697,6 +714,206 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
       throw new AppError('Employee not found', 404, 'NOT_FOUND');
     }
     return reply.send({ ok: true, ...detail });
+  });
+
+  app.get(`${api}/employees`, async (request, reply) => {
+    requireAdminRole(request, 'super_admin', 'admin', 'manager');
+    const q = request.query as { role?: string; status?: string; search?: string; limit?: string };
+    const rows = await employeeProfileService.list({
+      role: q.role,
+      status: q.status,
+      search: q.search,
+      limit: q.limit ? Number(q.limit) : 80,
+    });
+    return reply.send({ ok: true, employees: rows });
+  });
+
+  app.get(`${api}/employees/:id`, async (request, reply) => {
+    requireAdminRole(request, 'super_admin', 'admin', 'manager');
+    const { id } = request.params as { id: string };
+    const employee = await employeeProfileService.getById(id);
+    return reply.send({ ok: true, employee });
+  });
+
+  app.post(`${api}/employees`, async (request, reply) => {
+    requireAdminRole(request, 'super_admin', 'admin');
+    const body = z
+      .object({
+        fullName: z.string().min(2).max(120),
+        email: z.string().email().max(255).optional(),
+        role: z.string().min(2).max(50),
+        status: z.enum(['active', 'inactive']).optional(),
+        personalMobile: z.string().max(20).optional(),
+        companyWhatsapp: z.string().max(20).optional(),
+        alternateMobile: z.string().max(20).optional(),
+        gender: z.string().max(30).optional(),
+        dateOfBirth: z.string().optional(),
+        joiningDate: z.string().optional(),
+        department: z.string().max(100).optional(),
+        reportingManagerId: z.string().uuid().nullable().optional(),
+        employmentType: z.string().max(50).optional(),
+        state: z.string().max(100).optional(),
+        district: z.string().max(100).optional(),
+        taluk: z.string().max(100).optional(),
+        pincodeId: z.string().uuid().nullable().optional(),
+        address: z.string().max(1000).optional(),
+        languages: z.array(z.string()).optional(),
+        cropsExpertise: z.array(z.string()).optional(),
+        diseaseKnowledgeRating: z.number().int().min(0).max(100).optional(),
+        whatsappSkillRating: z.number().int().min(0).max(100).optional(),
+        customerHandlingRating: z.number().int().min(0).max(100).optional(),
+        fieldExperienceYears: z.number().min(0).max(50).optional(),
+        compensation: z.record(z.any()).optional(),
+        attendanceRules: z.record(z.any()).optional(),
+      })
+      .parse(request.body);
+    const employee = await employeeProfileService.create(body);
+    return reply.status(201).send({ ok: true, employee });
+  });
+
+  app.patch(`${api}/employees/:id`, async (request, reply) => {
+    requireAdminRole(request, 'super_admin', 'admin');
+    const { id } = request.params as { id: string };
+    const body = z
+      .object({
+        fullName: z.string().min(2).max(120).optional(),
+        email: z.string().email().max(255).optional(),
+        role: z.string().min(2).max(50).optional(),
+        status: z.enum(['active', 'inactive']).optional(),
+        personalMobile: z.string().max(20).optional(),
+        companyWhatsapp: z.string().max(20).optional(),
+        alternateMobile: z.string().max(20).optional(),
+        gender: z.string().max(30).optional(),
+        dateOfBirth: z.string().optional(),
+        joiningDate: z.string().optional(),
+        department: z.string().max(100).optional(),
+        reportingManagerId: z.string().uuid().nullable().optional(),
+        employmentType: z.string().max(50).optional(),
+        state: z.string().max(100).optional(),
+        district: z.string().max(100).optional(),
+        taluk: z.string().max(100).optional(),
+        pincodeId: z.string().uuid().nullable().optional(),
+        address: z.string().max(1000).optional(),
+        languages: z.array(z.string()).optional(),
+        cropsExpertise: z.array(z.string()).optional(),
+        diseaseKnowledgeRating: z.number().int().min(0).max(100).optional(),
+        whatsappSkillRating: z.number().int().min(0).max(100).optional(),
+        customerHandlingRating: z.number().int().min(0).max(100).optional(),
+        fieldExperienceYears: z.number().min(0).max(50).optional(),
+        compensation: z.record(z.any()).optional(),
+        attendanceRules: z.record(z.any()).optional(),
+      })
+      .parse(request.body);
+    const employee = await employeeProfileService.update(id, body);
+    return reply.send({ ok: true, employee });
+  });
+
+  app.post(`${api}/employees/:id/send-setup-link`, async (request, reply) => {
+    const actor = requireAdmin(request);
+    requireAdminRole(request, 'super_admin', 'admin', 'manager');
+    const { id } = request.params as { id: string };
+    const body = z
+      .object({
+        channels: z.array(z.enum(['personal_mobile', 'company_whatsapp', 'email'])).min(1),
+      })
+      .parse(request.body ?? {});
+    const token = await employeeAccessService.createSetupToken({
+      employeeProfileId: id,
+      purpose: 'setup_password',
+      createdBy: actor.id,
+      channels: body.channels,
+    });
+    return reply.send({ ok: true, setup: token });
+  });
+
+  app.post(`${api}/employees/:id/reset-password-link`, async (request, reply) => {
+    const actor = requireAdmin(request);
+    requireAdminRole(request, 'super_admin', 'admin', 'manager');
+    const { id } = request.params as { id: string };
+    const body = z
+      .object({
+        channels: z.array(z.enum(['personal_mobile', 'company_whatsapp', 'email'])).min(1),
+      })
+      .parse(request.body ?? {});
+    const token = await employeeAccessService.createSetupToken({
+      employeeProfileId: id,
+      purpose: 'reset_password',
+      createdBy: actor.id,
+      channels: body.channels,
+    });
+    return reply.send({ ok: true, reset: token });
+  });
+
+  app.post(`${api}/employees/:id/deactivate`, async (request, reply) => {
+    requireAdminRole(request, 'super_admin', 'admin');
+    const { id } = request.params as { id: string };
+    const runId = await employeeReassignmentService.runForDeactivation(id);
+    const employee = await employeeProfileService.update(id, { status: 'inactive' });
+    return reply.send({ ok: true, runId, employee });
+  });
+
+  app.post(`${api}/employees/:id/attendance/recompute`, async (request, reply) => {
+    requireAdminRole(request, 'super_admin', 'admin', 'manager');
+    const { id } = request.params as { id: string };
+    const body = z.object({ date: z.string() }).parse(request.body);
+    const daily = await attendanceCalculatorService.recomputeDaily(id, body.date);
+    return reply.send({ ok: true, daily });
+  });
+
+  app.get(`${api}/employees/:id/attendance/monthly`, async (request, reply) => {
+    requireAdminRole(request, 'super_admin', 'admin', 'manager');
+    const { id } = request.params as { id: string };
+    const q = request.query as { year?: string; month?: string };
+    const now = new Date();
+    const year = q.year ? Number(q.year) : now.getUTCFullYear();
+    const month = q.month ? Number(q.month) : now.getUTCMonth() + 1;
+    const summary = await attendanceCalculatorService.summarizeMonth(id, year, month);
+    return reply.send({ ok: true, summary });
+  });
+
+  app.post(`${api}/employees/:id/incentives/preview`, async (request, reply) => {
+    requireAdminRole(request, 'super_admin', 'admin', 'manager');
+    const { id } = request.params as { id: string };
+    const body = z
+      .object({
+        monthlySalesInr: z.number().min(0),
+        conversionRatePct: z.number().min(0).max(100),
+      })
+      .parse(request.body);
+    const preview = await incentiveCalculatorService.estimateMonthlyIncentive(
+      id,
+      body.monthlySalesInr,
+      body.conversionRatePct
+    );
+    return reply.send({ ok: true, preview });
+  });
+
+  app.post(`${api}/payroll/cycles/generate`, async (request, reply) => {
+    requireAdminRole(request, 'super_admin', 'admin');
+    const actor = requireAdmin(request);
+    const body = z.object({ year: z.number().int(), month: z.number().int().min(1).max(12) }).parse(request.body);
+    const cycle = await payrollGeneratorService.generateCycle(body.year, body.month, actor.id);
+    return reply.send({ ok: true, cycle });
+  });
+
+  app.post(`${api}/payroll/entries/:id/publish`, async (request, reply) => {
+    requireAdminRole(request, 'super_admin', 'admin', 'manager');
+    const actor = requireAdmin(request);
+    const { id } = request.params as { id: string };
+    const pdf = await payrollGeneratorService.publishPayrollEntry(id, actor.id);
+    return reply.send({ ok: true, pdf });
+  });
+
+  app.post(`${api}/payroll/entries/:id/deliver`, async (request, reply) => {
+    requireAdminRole(request, 'super_admin', 'admin', 'manager');
+    const { id } = request.params as { id: string };
+    const body = z
+      .object({
+        channels: z.array(z.enum(['whatsapp', 'email', 'dashboard'])).min(1),
+      })
+      .parse(request.body);
+    await payrollGeneratorService.deliverPayout(id, body.channels);
+    return reply.send({ ok: true });
   });
 
   app.get(`${api}/farmers`, async (request, reply) => {

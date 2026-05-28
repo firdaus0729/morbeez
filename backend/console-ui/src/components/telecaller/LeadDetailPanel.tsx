@@ -24,12 +24,15 @@ const STAGES = [
 
 type Tab =
   | 'overview'
-  | 'blocks'
   | 'interactions'
-  | 'recommendations'
+  | 'whatsapp'
+  | 'blocks'
   | 'findings'
-  | 'orders'
-  | 'whatsapp';
+  | 'agronomist'
+  | 'pending_tasks'
+  | 'escalations'
+  | 'notes'
+  | 'orders';
 
 type LeadDetail = {
   lead: {
@@ -79,13 +82,29 @@ type Props = {
 
 const TABS: Array<{ id: Tab; label: string }> = [
   { id: 'overview', label: 'Overview' },
-  { id: 'blocks', label: 'Blocks' },
   { id: 'interactions', label: 'Interactions' },
-  { id: 'recommendations', label: 'Recommendations' },
-  { id: 'findings', label: 'Field findings' },
-  { id: 'orders', label: 'Orders' },
   { id: 'whatsapp', label: 'WhatsApp' },
+  { id: 'blocks', label: 'Blocks' },
+  { id: 'findings', label: 'Field findings' },
+  { id: 'agronomist', label: 'Agronomist' },
+  { id: 'pending_tasks', label: 'Pending Tasks' },
+  { id: 'escalations', label: 'Escalations' },
+  { id: 'notes', label: 'Notes' },
+  { id: 'orders', label: 'Orders' },
 ];
+
+const TAB_ICONS: Record<Tab, string> = {
+  overview: '◉',
+  interactions: '☎',
+  whatsapp: '🟢',
+  blocks: '▦',
+  findings: '🧪',
+  agronomist: '🧑‍🌾',
+  pending_tasks: '⏰',
+  escalations: '⚠',
+  notes: '📝',
+  orders: '🛒',
+};
 
 export function LeadDetailPanel({ leadId, canWrite }: Props) {
   const [tab, setTab] = useState<Tab>('overview');
@@ -98,6 +117,9 @@ export function LeadDetailPanel({ leadId, canWrite }: Props) {
   const [interactions, setInteractions] = useState<Array<Record<string, unknown>>>([]);
   const [recommendations, setRecommendations] = useState<Array<Record<string, unknown>>>([]);
   const [findings, setFindings] = useState<Array<Record<string, unknown>>>([]);
+  const [pendingTasks, setPendingTasks] = useState<Array<Record<string, unknown>>>([]);
+  const [escalations, setEscalations] = useState<Array<Record<string, unknown>>>([]);
+  const [notesHistory, setNotesHistory] = useState<Array<Record<string, unknown>>>([]);
   const [orders, setOrders] = useState<Array<Record<string, unknown>>>([]);
   const [messages, setMessages] = useState<Array<Record<string, unknown>>>([]);
   const [modal, setModal] = useState<CrmModalType>(null);
@@ -159,11 +181,14 @@ export function LeadDetailPanel({ leadId, canWrite }: Props) {
           `${base}/leads/${leadId}/interactions`
         );
         setInteractions(ix.interactions ?? []);
-      } else if (tab === 'recommendations') {
+      } else if (tab === 'agronomist') {
         const rec = await api<{ ok: boolean; recommendations: Array<Record<string, unknown>> }>(
           `${base}/leads/${leadId}/recommendations`
         );
         setRecommendations(rec.recommendations ?? []);
+      } else if (tab === 'pending_tasks') {
+        const t = await api<{ ok: boolean; tasks: Array<Record<string, unknown>> }>(`${base}/leads/${leadId}/tasks`);
+        setPendingTasks(t.tasks ?? []);
       } else if (tab === 'findings') {
         const ff = await api<{ ok: boolean; findings: Array<Record<string, unknown>> }>(
           `${base}/leads/${leadId}/field-findings`
@@ -185,6 +210,14 @@ export function LeadDetailPanel({ leadId, canWrite }: Props) {
         ]);
         setMessages(msg.messages ?? []);
         setSession(sess.session);
+      } else if (tab === 'escalations') {
+        const r = await api<{ ok: boolean; escalations: Array<Record<string, unknown>> }>(
+          `${base}/leads/${leadId}/escalations`
+        );
+        setEscalations(r.escalations ?? []);
+      } else if (tab === 'notes') {
+        const r = await api<{ ok: boolean; notes: Array<Record<string, unknown>> }>(`${base}/leads/${leadId}/notes`);
+        setNotesHistory(r.notes ?? []);
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load tab');
@@ -316,12 +349,23 @@ export function LeadDetailPanel({ leadId, canWrite }: Props) {
         <div className="tc-detail-identity-row">
           <span className="tc-avatar-lg">{l.farmerInitials}</span>
           <div className="min-w-0 flex-1">
-            <div className="tc-detail-badges" style={{ justifyContent: 'space-between' }}>
+            <div className="tc-detail-topline">
               <h2>{l.farmerName}</h2>
+              <span className="tc-customer-chip">Customer</span>
+              <div className="tc-header-quick-actions">
+                <button type="button" className="tc-icon-btn" aria-label="WhatsApp">🟢</button>
+                <button type="button" className="tc-icon-btn" aria-label="Call">📞</button>
+                <button type="button" className="tc-icon-btn" aria-label="More">⋯</button>
+              </div>
+              <button type="button" className="tc-call-btn">📞 Call</button>
+              <button type="button" className="tc-note-btn" onClick={() => canWrite && setModal('task')}>
+                ⊕ Add Note
+              </button>
               <LeadExportMenu leadId={leadId} canShare={Boolean(l.phone)} />
             </div>
             <p className="tc-detail-subline">
-              {l.phone ?? '—'} · {f.territory} · <span className="tc-rating">★ {Number(l.leadScore).toFixed(1)}</span>
+              <strong>{l.phone ?? '—'}</strong> <span className="mx-2">•</span> {f.territory}{' '}
+              <span className="mx-2">•</span> Pincode: 670645
             </p>
             {canWrite ? (
               <select
@@ -351,6 +395,7 @@ export function LeadDetailPanel({ leadId, canWrite }: Props) {
               onClick={() => setTab(t.id)}
               className={`tc-detail-tab ${tab === t.id ? 'active' : ''}`}
             >
+              <span className="tc-tab-icon">{TAB_ICONS[t.id]}</span>
               {t.label}
             </button>
           ))}
@@ -399,11 +444,19 @@ export function LeadDetailPanel({ leadId, canWrite }: Props) {
               </article>
               <article className="tc-profile-metric">
                 <span>Farmer score</span>
-                <strong>{Math.round(Number(l.leadScore) * 20) || 0}</strong>
+                <strong>
+                  {Math.round(Number(l.leadScore) * 20) || 0}
+                  <small>/100</small>
+                  <em className="tc-badge-high">High</em>
+                </strong>
               </article>
               <article className="tc-profile-metric">
                 <span>Relationship score</span>
-                <strong>{Math.min(100, Math.round(Number(l.leadScore) * 18 + 10))}</strong>
+                <strong>
+                  {Math.min(100, Math.round(Number(l.leadScore) * 18 + 10))}
+                  <small>/100</small>
+                  <em className="tc-badge-strong">Strong</em>
+                </strong>
               </article>
               <article className="tc-profile-metric">
                 <span>Customer since</span>
@@ -411,7 +464,10 @@ export function LeadDetailPanel({ leadId, canWrite }: Props) {
               </article>
               <article className="tc-profile-metric">
                 <span>Next follow-up</span>
-                <strong>{detail.nextFollowUp?.dueLabel ?? 'None'}</strong>
+                <strong>
+                  {detail.nextFollowUp?.dueLabel ?? 'None'}
+                  <em className="tc-badge-due">In 1 day</em>
+                </strong>
               </article>
             </section>
 
@@ -651,11 +707,11 @@ export function LeadDetailPanel({ leadId, canWrite }: Props) {
           </>
         ) : null}
 
-        {tab === 'recommendations' ? (
+        {tab === 'agronomist' ? (
           <>
             {canWrite ? (
               <div className="mb-3">
-                <ActionBtn onClick={() => setModal('recommendation')}>+ Add recommendation</ActionBtn>
+                <ActionBtn onClick={() => setModal('recommendation')}>+ Add agronomist recommendation</ActionBtn>
               </div>
             ) : null}
             <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
@@ -774,6 +830,66 @@ export function LeadDetailPanel({ leadId, canWrite }: Props) {
               ) : null}
             </div>
           </>
+        ) : null}
+
+        {tab === 'pending_tasks' ? (
+          <DataTable
+            headers={['Task', 'Due', 'Farmer', 'Status']}
+            rows={pendingTasks.map((t) => [
+              String(t.title ?? '—'),
+              String(t.dueLabel ?? t.due_at ?? '—'),
+              String(t.farmerName ?? '—'),
+              String(t.status ?? 'pending'),
+            ])}
+            empty="No pending tasks."
+          />
+        ) : null}
+
+        {tab === 'escalations' ? (
+          <DataTable
+            headers={['Case', 'Reason', 'Status', 'When']}
+            rows={escalations.map((e) => [
+              String(e.id ?? '—').slice(0, 8),
+              String(e.reason ?? e.escalation_reason ?? 'Escalated case'),
+              String(e.status ?? 'pending'),
+              String(e.created_at ?? '—'),
+            ])}
+            empty="No active escalations for this farmer."
+          />
+        ) : null}
+
+        {tab === 'notes' ? (
+          <div className="rounded-xl border border-slate-200 bg-white p-4 text-sm">
+            <h3 className="mb-2 font-medium text-slate-900">Internal notes</h3>
+            <ul className="mb-3 space-y-2">
+              {notesHistory.map((n) => (
+                <li key={String(n.id)} className="rounded border border-slate-200 bg-slate-50 px-3 py-2 text-slate-700">
+                  <div className="text-xs text-slate-500">
+                    {String(n.created_at ?? '—')} · {String(n.created_by ?? 'telecaller')}
+                  </div>
+                  <div>{String(n.note ?? n.content ?? '—')}</div>
+                </li>
+              ))}
+              {!notesHistory.length ? <li className="text-slate-500">{l.notes ?? 'No saved notes yet.'}</li> : null}
+            </ul>
+            {canWrite ? (
+              <form onSubmit={addNote}>
+                <textarea
+                  className="w-full rounded border border-slate-200 px-2 py-1.5 text-sm"
+                  rows={3}
+                  value={noteText}
+                  onChange={(e) => setNoteText(e.target.value)}
+                  placeholder="Add note"
+                />
+                <button
+                  type="submit"
+                  className="mt-2 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-700"
+                >
+                  Save note
+                </button>
+              </form>
+            ) : null}
+          </div>
         ) : null}
 
         {tab === 'orders' ? (

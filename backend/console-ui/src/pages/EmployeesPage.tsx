@@ -167,10 +167,30 @@ export function EmployeesPage({ canWrite = false }: { canWrite?: boolean }) {
     fullName: string;
     email: string;
     role: string;
-    password: string;
-    active: boolean;
+    status: 'active' | 'inactive';
+    personalMobile?: string;
+    companyWhatsapp?: string;
+    alternateMobile?: string;
+    gender?: string;
+    dateOfBirth?: string;
+    joiningDate?: string;
+    department?: string;
+    reportingManagerId?: string | null;
+    employmentType?: string;
+    state?: string;
+    district?: string;
+    taluk?: string;
+    address?: string;
+    languages?: string[];
+    cropsExpertise?: string[];
+    diseaseKnowledgeRating?: number;
+    whatsappSkillRating?: number;
+    customerHandlingRating?: number;
+    fieldExperienceYears?: number;
+    compensation?: Record<string, unknown>;
+    attendanceRules?: Record<string, unknown>;
   }) {
-    await api<{ ok: boolean; employee: { id: string } }>('/console/api/v1/staff', {
+    await api<{ ok: boolean; employee: { id: string } }>('/console/api/v1/employees', {
       method: 'POST',
       body: JSON.stringify(input),
     });
@@ -189,7 +209,15 @@ export function EmployeesPage({ canWrite = false }: { canWrite?: boolean }) {
   }
 
   async function deactivateEmployee(id: string) {
-    await api(`/console/api/v1/staff/${id}`, { method: 'DELETE' });
+    await api(`/console/api/v1/employees/${id}/deactivate`, { method: 'POST', body: '{}' });
+    await loadWorkspace();
+  }
+
+  async function sendResetLink(id: string) {
+    await api(`/console/api/v1/employees/${id}/reset-password-link`, {
+      method: 'POST',
+      body: JSON.stringify({ channels: ['email'] }),
+    });
     await loadWorkspace();
   }
 
@@ -726,6 +754,25 @@ export function EmployeesPage({ canWrite = false }: { canWrite?: boolean }) {
                             Deactivate
                           </Btn>
                         ) : null}
+                        {canWrite ? (
+                          <Btn
+                            size="sm"
+                            variant="secondary"
+                            onClick={async () => {
+                              await sendResetLink(e.id);
+                              alert('Password reset link sent.');
+                            }}
+                          >
+                            Password Reset Mail Sent
+                          </Btn>
+                        ) : null}
+                        <Btn
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => window.print()}
+                        >
+                          Monthly Payout Print
+                        </Btn>
                       </div>
                     </td>
                   </tr>
@@ -777,15 +824,65 @@ function NewEmployeeModal({
     fullName: string;
     email: string;
     role: string;
-    password: string;
-    active: boolean;
+    status: 'active' | 'inactive';
+    personalMobile?: string;
+    companyWhatsapp?: string;
+    alternateMobile?: string;
+    gender?: string;
+    dateOfBirth?: string;
+    joiningDate?: string;
+    department?: string;
+    reportingManagerId?: string | null;
+    employmentType?: string;
+    state?: string;
+    district?: string;
+    taluk?: string;
+    address?: string;
+    languages?: string[];
+    cropsExpertise?: string[];
+    diseaseKnowledgeRating?: number;
+    whatsappSkillRating?: number;
+    customerHandlingRating?: number;
+    fieldExperienceYears?: number;
+    compensation?: Record<string, unknown>;
+    attendanceRules?: Record<string, unknown>;
   }) => Promise<void>;
 }) {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [role, setRole] = useState('viewer');
-  const [password, setPassword] = useState('');
   const [active, setActive] = useState(true);
+  const [personalMobile, setPersonalMobile] = useState('');
+  const [companyWhatsapp, setCompanyWhatsapp] = useState('');
+  const [alternateMobile, setAlternateMobile] = useState('');
+  const [gender, setGender] = useState('male');
+  const [dateOfBirth, setDateOfBirth] = useState('');
+  const [joiningDate, setJoiningDate] = useState('');
+  const [department, setDepartment] = useState('Operations');
+  const [employmentType, setEmploymentType] = useState('full_time');
+  const [state, setState] = useState('Kerala');
+  const [district, setDistrict] = useState('');
+  const [taluk, setTaluk] = useState('');
+  const [address, setAddress] = useState('');
+  const [languages, setLanguages] = useState<string[]>(['English']);
+  const [cropsExpertise, setCropsExpertise] = useState<string[]>([]);
+  const [diseaseKnowledgeRating, setDiseaseKnowledgeRating] = useState(70);
+  const [whatsappSkillRating, setWhatsappSkillRating] = useState(70);
+  const [customerHandlingRating, setCustomerHandlingRating] = useState(70);
+  const [fieldExperienceYears, setFieldExperienceYears] = useState(0);
+  const [fixedSalary, setFixedSalary] = useState(30000);
+  const [incentiveEnabled, setIncentiveEnabled] = useState(true);
+  const [monthlySalesTarget, setMonthlySalesTarget] = useState(300000);
+  const [incentivePct, setIncentivePct] = useState(2);
+  const [conversionTarget, setConversionTarget] = useState(50);
+  const [additionalBonus, setAdditionalBonus] = useState(1000);
+  const [travelAllowance, setTravelAllowance] = useState(0);
+  const [joiningBonus, setJoiningBonus] = useState(0);
+  const [minDailyHours, setMinDailyHours] = useState(9);
+  const [monthlyWorkingDays, setMonthlyWorkingDays] = useState(23);
+  const [workingWindowStart, setWorkingWindowStart] = useState('08:00');
+  const [workingWindowEnd, setWorkingWindowEnd] = useState('19:00');
+  const [idleWarningMinutes, setIdleWarningMinutes] = useState(45);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
@@ -797,8 +894,44 @@ function NewEmployeeModal({
         fullName: fullName.trim(),
         email: email.trim().toLowerCase(),
         role,
-        password,
-        active,
+        status: active ? 'active' : 'inactive',
+        personalMobile: personalMobile.trim() || undefined,
+        companyWhatsapp: companyWhatsapp.trim() || undefined,
+        alternateMobile: alternateMobile.trim() || undefined,
+        gender,
+        dateOfBirth: dateOfBirth || undefined,
+        joiningDate: joiningDate || undefined,
+        department,
+        employmentType,
+        state,
+        district: district.trim() || undefined,
+        taluk: taluk.trim() || undefined,
+        address: address.trim() || undefined,
+        languages,
+        cropsExpertise,
+        diseaseKnowledgeRating,
+        whatsappSkillRating,
+        customerHandlingRating,
+        fieldExperienceYears,
+        compensation: {
+          fixed_salary: fixedSalary,
+          incentive_enabled: incentiveEnabled,
+          salary_cycle: 'monthly',
+          joining_bonus: joiningBonus,
+          travel_allowance: travelAllowance,
+          monthly_sales_target: monthlySalesTarget,
+          incentive_pct_after_target: incentivePct,
+          conversion_target_pct: conversionTarget,
+          additional_bonus_after_conversion: additionalBonus,
+          conversion_bonus_enabled: true,
+        },
+        attendanceRules: {
+          min_daily_hours: minDailyHours,
+          monthly_working_days: monthlyWorkingDays,
+          working_window_start: workingWindowStart,
+          working_window_end: workingWindowEnd,
+          idle_warning_threshold_minutes: idleWarningMinutes,
+        },
       });
       await onCreated();
     } catch (e) {
@@ -812,6 +945,7 @@ function NewEmployeeModal({
     <Modal title="New employee" onClose={onClose} onSave={save} saveLabel="Create" saving={saving}>
       {error ? <Alert tone="error">{error}</Alert> : null}
       <div className="space-y-3">
+        <h4 className="text-sm font-semibold text-slate-800">Basic Information</h4>
         <Field label="Full name">
           <input
             className={inputClass}
@@ -840,14 +974,150 @@ function NewEmployeeModal({
             <option value="viewer">Viewer</option>
           </select>
         </Field>
-        <Field label="Temporary password">
-          <input
-            type="password"
-            className={inputClass}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="Minimum 8 characters"
-          />
+        <Field label="Personal mobile">
+          <input className={inputClass} value={personalMobile} onChange={(e) => setPersonalMobile(e.target.value)} />
+        </Field>
+        <Field label="Company WhatsApp">
+          <input className={inputClass} value={companyWhatsapp} onChange={(e) => setCompanyWhatsapp(e.target.value)} />
+        </Field>
+        <Field label="Alternate number">
+          <input className={inputClass} value={alternateMobile} onChange={(e) => setAlternateMobile(e.target.value)} />
+        </Field>
+        <Field label="Gender">
+          <select className={inputClass} value={gender} onChange={(e) => setGender(e.target.value)}>
+            <option value="male">Male</option>
+            <option value="female">Female</option>
+            <option value="other">Other</option>
+          </select>
+        </Field>
+        <Field label="Date of birth">
+          <input type="date" className={inputClass} value={dateOfBirth} onChange={(e) => setDateOfBirth(e.target.value)} />
+        </Field>
+        <Field label="Joining date">
+          <input type="date" className={inputClass} value={joiningDate} onChange={(e) => setJoiningDate(e.target.value)} />
+        </Field>
+        <h4 className="text-sm font-semibold text-slate-800">Role & Department</h4>
+        <Field label="Department">
+          <input className={inputClass} value={department} onChange={(e) => setDepartment(e.target.value)} />
+        </Field>
+        <Field label="Employment type">
+          <select className={inputClass} value={employmentType} onChange={(e) => setEmploymentType(e.target.value)}>
+            <option value="full_time">Full-time</option>
+            <option value="contract">Contract</option>
+            <option value="part_time">Part-time</option>
+          </select>
+        </Field>
+        <h4 className="text-sm font-semibold text-slate-800">Location & Languages</h4>
+        <Field label="State">
+          <input className={inputClass} value={state} onChange={(e) => setState(e.target.value)} />
+        </Field>
+        <Field label="District">
+          <input className={inputClass} value={district} onChange={(e) => setDistrict(e.target.value)} />
+        </Field>
+        <Field label="Taluk">
+          <input className={inputClass} value={taluk} onChange={(e) => setTaluk(e.target.value)} />
+        </Field>
+        <Field label="Address">
+          <textarea className={inputClass} value={address} onChange={(e) => setAddress(e.target.value)} />
+        </Field>
+        <Field label="Languages">
+          <div className="grid grid-cols-2 gap-2 text-sm">
+            {['Malayalam', 'Tamil', 'Kannada', 'English', 'Hindi'].map((lang) => (
+              <label key={lang} className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={languages.includes(lang)}
+                  onChange={(e) =>
+                    setLanguages((prev) =>
+                      e.target.checked ? [...prev, lang] : prev.filter((x) => x !== lang)
+                    )
+                  }
+                />
+                {lang}
+              </label>
+            ))}
+          </div>
+        </Field>
+        <h4 className="text-sm font-semibold text-slate-800">Agriculture Skills</h4>
+        <Field label="Crops expertise">
+          <div className="grid grid-cols-2 gap-2 text-sm">
+            {['Ginger', 'Banana', 'Cardamom', 'Pepper', 'Vegetables'].map((crop) => (
+              <label key={crop} className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={cropsExpertise.includes(crop)}
+                  onChange={(e) =>
+                    setCropsExpertise((prev) =>
+                      e.target.checked ? [...prev, crop] : prev.filter((x) => x !== crop)
+                    )
+                  }
+                />
+                {crop}
+              </label>
+            ))}
+          </div>
+        </Field>
+        <Field label="Disease knowledge rating">
+          <input type="number" className={inputClass} value={diseaseKnowledgeRating} onChange={(e) => setDiseaseKnowledgeRating(Number(e.target.value || 0))} />
+        </Field>
+        <Field label="WhatsApp communication skill">
+          <input type="number" className={inputClass} value={whatsappSkillRating} onChange={(e) => setWhatsappSkillRating(Number(e.target.value || 0))} />
+        </Field>
+        <Field label="Customer handling skill">
+          <input type="number" className={inputClass} value={customerHandlingRating} onChange={(e) => setCustomerHandlingRating(Number(e.target.value || 0))} />
+        </Field>
+        <Field label="Field experience years">
+          <input type="number" className={inputClass} value={fieldExperienceYears} onChange={(e) => setFieldExperienceYears(Number(e.target.value || 0))} />
+        </Field>
+        <h4 className="text-sm font-semibold text-slate-800">Salary & Incentives</h4>
+        <Field label="Fixed salary">
+          <input type="number" className={inputClass} value={fixedSalary} onChange={(e) => setFixedSalary(Number(e.target.value || 0))} />
+        </Field>
+        <Field label="Monthly sales target">
+          <input type="number" className={inputClass} value={monthlySalesTarget} onChange={(e) => setMonthlySalesTarget(Number(e.target.value || 0))} />
+        </Field>
+        <Field label="Incentive % after target">
+          <input type="number" className={inputClass} value={incentivePct} onChange={(e) => setIncentivePct(Number(e.target.value || 0))} />
+        </Field>
+        <Field label="Conversion target %">
+          <input type="number" className={inputClass} value={conversionTarget} onChange={(e) => setConversionTarget(Number(e.target.value || 0))} />
+        </Field>
+        <Field label="Additional bonus after conversion">
+          <input type="number" className={inputClass} value={additionalBonus} onChange={(e) => setAdditionalBonus(Number(e.target.value || 0))} />
+        </Field>
+        <Field label="Joining bonus">
+          <input type="number" className={inputClass} value={joiningBonus} onChange={(e) => setJoiningBonus(Number(e.target.value || 0))} />
+        </Field>
+        <Field label="Travel allowance">
+          <input type="number" className={inputClass} value={travelAllowance} onChange={(e) => setTravelAllowance(Number(e.target.value || 0))} />
+        </Field>
+        <label className="flex items-center gap-2 text-sm text-slate-700">
+          <input type="checkbox" checked={incentiveEnabled} onChange={(e) => setIncentiveEnabled(e.target.checked)} />
+          Incentive enabled
+        </label>
+        <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm">
+          <div>Estimated Monthly Earnings</div>
+          <div>Fixed Salary: {formatInrFull(fixedSalary)}</div>
+          <div>Estimated Incentive: {formatInrFull(Math.round((monthlySalesTarget * incentivePct) / 10000))}</div>
+          <strong>
+            Estimated Total: {formatInrFull(fixedSalary + Math.round((monthlySalesTarget * incentivePct) / 10000))}
+          </strong>
+        </div>
+        <h4 className="text-sm font-semibold text-slate-800">Attendance Rules</h4>
+        <Field label="Minimum daily hours">
+          <input type="number" className={inputClass} value={minDailyHours} onChange={(e) => setMinDailyHours(Number(e.target.value || 0))} />
+        </Field>
+        <Field label="Monthly working days">
+          <input type="number" className={inputClass} value={monthlyWorkingDays} onChange={(e) => setMonthlyWorkingDays(Number(e.target.value || 0))} />
+        </Field>
+        <Field label="Working window start">
+          <input type="time" className={inputClass} value={workingWindowStart} onChange={(e) => setWorkingWindowStart(e.target.value)} />
+        </Field>
+        <Field label="Working window end">
+          <input type="time" className={inputClass} value={workingWindowEnd} onChange={(e) => setWorkingWindowEnd(e.target.value)} />
+        </Field>
+        <Field label="Idle warning threshold (minutes)">
+          <input type="number" className={inputClass} value={idleWarningMinutes} onChange={(e) => setIdleWarningMinutes(Number(e.target.value || 0))} />
         </Field>
         <label className="flex items-center gap-2 text-sm text-slate-700">
           <input type="checkbox" checked={active} onChange={(e) => setActive(e.target.checked)} />
