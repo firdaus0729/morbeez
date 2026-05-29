@@ -11,11 +11,19 @@ import { employeeAccessService } from './employee-access.service.js';
 function sha256(input) {
     return createHash('sha256').update(input).digest('hex');
 }
+/** Staff SPA base URL for invite/reset links (always uses /morbeez-staff, not legacy /console). */
 export function getConsolePublicUrl() {
-    if (env.CONSOLE_PUBLIC_URL) {
-        return env.CONSOLE_PUBLIC_URL.replace(/\/$/, '');
-    }
     const api = env.API_BASE_URL?.replace(/\/$/, '');
+    if (env.CONSOLE_PUBLIC_URL) {
+        let base = env.CONSOLE_PUBLIC_URL.replace(/\/$/, '');
+        if (base.endsWith('/console')) {
+            base = `${base.slice(0, -'/console'.length)}${STAFF_PORTAL_PATH}`;
+        }
+        else if (!base.endsWith(STAFF_PORTAL_PATH)) {
+            base = `${base}${STAFF_PORTAL_PATH}`;
+        }
+        return base;
+    }
     if (api)
         return `${api}${STAFF_PORTAL_PATH}`;
     return `http://localhost:3000${STAFF_PORTAL_PATH}`;

@@ -1,3 +1,4 @@
+/** Staff SPA base URL for invite/reset links (always uses /morbeez-staff, not legacy /console). */
 export declare function getConsolePublicUrl(): string;
 export declare function buildInviteUrl(token: string): string;
 export declare const staffInviteService: {
