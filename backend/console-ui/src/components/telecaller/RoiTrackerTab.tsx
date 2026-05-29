@@ -103,15 +103,15 @@ export function RoiTrackerTab({ leadId, canWrite }: Props) {
     <div className="tc-roi-tab p-4">
       <div className="tc-roi-summary mb-4 grid gap-3 sm:grid-cols-3">
         <article className="tc-dashboard-card">
-          <span className="text-xs uppercase text-slate-500">Total debit</span>
+          <span className="text-xs uppercase text-slate-500">Expense</span>
           <strong className="block text-lg">₹{summary.debits.toFixed(0)}</strong>
         </article>
         <article className="tc-dashboard-card">
-          <span className="text-xs uppercase text-slate-500">Total credit</span>
+          <span className="text-xs uppercase text-slate-500">Income</span>
           <strong className="block text-lg">₹{summary.credits.toFixed(0)}</strong>
         </article>
         <article className="tc-dashboard-card">
-          <span className="text-xs uppercase text-slate-500">Balance</span>
+          <span className="text-xs uppercase text-slate-500">Profit</span>
           <strong className="block text-lg text-emerald-700">₹{summary.balance.toFixed(0)}</strong>
         </article>
       </div>
@@ -129,8 +129,8 @@ export function RoiTrackerTab({ leadId, canWrite }: Props) {
               <th className="px-3 py-2">Date</th>
               <th className="px-3 py-2">Category</th>
               <th className="px-3 py-2">Comments</th>
-              <th className="px-3 py-2">Debit</th>
-              <th className="px-3 py-2">Credit</th>
+              <th className="px-3 py-2">Expense</th>
+              <th className="px-3 py-2">Income</th>
               <th className="px-3 py-2">Edited</th>
               {canWrite ? <th className="px-3 py-2" /> : null}
             </tr>
@@ -207,7 +207,7 @@ export function RoiTrackerTab({ leadId, canWrite }: Props) {
               />
             </label>
             <label className="text-sm">
-              Debit ₹
+              Expense ₹
               <input
                 className="mt-1 w-full rounded border border-slate-200 px-2 py-1.5"
                 value={debitInr}
@@ -215,7 +215,7 @@ export function RoiTrackerTab({ leadId, canWrite }: Props) {
               />
             </label>
             <label className="text-sm">
-              Credit ₹
+              Income ₹
               <input
                 className="mt-1 w-full rounded border border-slate-200 px-2 py-1.5"
                 value={creditInr}

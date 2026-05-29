@@ -473,7 +473,7 @@ export const telecallerAdminService = {
       assignedCropAdvisor?: string;
       roiEnabled?: boolean;
       farmerNotes?: string;
-      cropBlocks?: Array<{ cropName: string; acreage?: number; plantingDate?: string }>;
+      cropBlocks?: Array<{ blockName?: string; cropName: string; acreage?: number; plantingDate?: string }>;
     },
     agentEmail: string
   ) {

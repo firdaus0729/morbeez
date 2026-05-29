@@ -49,4 +49,8 @@ export interface SessionContext {
     advisory: StructuredAdvisory;
     productTitles?: string[];
   };
+  /** WhatsApp manual soil lab entry (macro → micro) */
+  soilLabStep?: 'macro' | 'micro';
+  soilLabDraft?: Record<string, unknown>;
+  soilLabBlockId?: string;
 }

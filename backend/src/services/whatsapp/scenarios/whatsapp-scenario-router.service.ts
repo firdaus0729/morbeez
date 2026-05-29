@@ -777,16 +777,26 @@ export const whatsappScenarioRouter = {
       if (pick.kind === 'custom') {
         await cropSelectionService.registerCustomCrop(captured.farmerId, pick.label);
       }
-      await cropSelectionService.applyCropToPrimaryBlock(
-        captured.farmerId,
-        pick.slug,
-        pick.kind === 'custom' ? pick.label : undefined
-      );
+      const cropSlug = pick.slug;
+      const cropLabel = pick.kind === 'custom' ? pick.label : undefined;
+      let plot = await multiPlotService.setActivePlotByCropSlug(captured.farmerId, cropSlug);
+      if (!plot) {
+        await cropSelectionService.applyCropToPrimaryBlock(captured.farmerId, cropSlug, cropLabel);
+        plot = await multiPlotService.setActivePlotByCropSlug(captured.farmerId, cropSlug);
+        if (!plot) {
+          const allPlots = await multiPlotService.listPlots(captured.farmerId);
+          if (allPlots[0]) {
+            await multiPlotService.setActivePlot(captured.farmerId, allPlots[0]);
+            plot = allPlots[0];
+          }
+        }
+      }
       await conversationSessionService.patchContext(captured.farmerId, {
         pendingCropSelection: false,
         onboardingStep: undefined,
+        activeCropType: cropSlug,
+        activePlotLabel: plot?.plot_label ?? (plot ? `${plot.crop_type} plot` : undefined),
       });
-      await conversationSessionService.clearActivePlot(captured.farmerId);
       await conversationSessionService.setState(captured.farmerId, 'diagnosis_awaiting_photos');
       await send.text(msg.phone, t('diagnosisPrompt', lang));
       return { handled: true };
@@ -811,8 +821,9 @@ export const whatsappScenarioRouter = {
         await conversationSessionService.patchContext(captured.farmerId, {
           pendingCropSelection: false,
           onboardingStep: undefined,
+          activeCropType: custom.slug,
         });
-        await conversationSessionService.clearActivePlot(captured.farmerId);
+        await multiPlotService.setActivePlotByCropSlug(captured.farmerId, custom.slug);
         await conversationSessionService.setState(captured.farmerId, 'diagnosis_awaiting_photos');
         await send.text(msg.phone, t('diagnosisPrompt', lang));
       }
@@ -822,7 +833,11 @@ export const whatsappScenarioRouter = {
     if (ctxCrop.pendingCropSelection && !ctxCrop.onboardingStep && text && !text.startsWith('crop.')) {
       const custom = await cropSelectionService.registerCustomCrop(captured.farmerId, text);
       await cropSelectionService.applyCropToPrimaryBlock(captured.farmerId, custom.slug, custom.label);
-      await conversationSessionService.patchContext(captured.farmerId, { pendingCropSelection: false });
+      await multiPlotService.setActivePlotByCropSlug(captured.farmerId, custom.slug);
+      await conversationSessionService.patchContext(captured.farmerId, {
+        pendingCropSelection: false,
+        activeCropType: custom.slug,
+      });
       await conversationSessionService.setState(captured.farmerId, 'diagnosis_awaiting_photos');
       await send.text(msg.phone, t('diagnosisPrompt', lang));
       return { handled: true };
@@ -1069,6 +1084,11 @@ export const whatsappScenarioRouter = {
       return { handled: true };
     }
 
+    if (session.state === 'soil_lab_entry' && text) {
+      const handled = await this.handleSoilLabEntry(msg, captured, lang, text, send);
+      if (handled) return { handled: true };
+    }
+
     if (session.state === 'soil_flow' && text && !text.startsWith('soil.')) {
       await send.text(msg.phone, t('mainMenuHint', lang));
       return { handled: true };
@@ -1203,28 +1223,34 @@ export const whatsappScenarioRouter = {
       }
       case 'menu.crop_assessment':
       case 'menu.diagnosis': {
+        const assessmentPlots = await multiPlotService.listPlots(captured.farmerId);
+        const diagnoseBody =
+          lang === 'ml'
+            ? 'ഏത് പ്ലോട്ടിനാണ് രോഗനിർണയം വേണ്ടത്?'
+            : lang === 'ta'
+              ? 'எந்த ப்ளாட்டுக்கு நோய் கண்டறிதல் வேண்டும்?'
+              : lang === 'kn'
+                ? 'ಯಾವ ಪ್ಲಾಟ್‌ಗೆ ರೋಗ ನಿರ್ಧಾರ ಬೇಕು?'
+                : lang === 'hi'
+                  ? 'किस प्लॉट के लिए जांच चाहिए?'
+                  : 'Which plot do you want to diagnose?';
         await conversationSessionService.patchContext(captured.farmerId, {
           diagnosis: { imageCount: 0 },
-          pendingCropSelection: true,
+          pendingCropSelection: false,
         });
         await conversationSessionService.clearActivePlot(captured.farmerId);
-        await cropSelectionService.sendCropPicker({
-          farmerId: captured.farmerId,
-          phone: msg.phone,
-          language: lang,
-          send,
-          body:
-            lang === 'ml'
-              ? 'ഏത് പ്ലോട്ടിനാണ് രോഗനിർണയം വേണ്ടത്?'
-              : lang === 'ta'
-                ? 'எந்த ப்ளாட்டுக்கு நோய் கண்டறிதல் வேண்டும்?'
-                : lang === 'kn'
-                  ? 'ಯಾವ ಪ್ಲಾಟ್‌ಗೆ ರೋಗ ನಿರ್ಧಾರ ಬೇಕು?'
-                  : lang === 'hi'
-                    ? 'किस प्लॉट के लिए जांच चाहिए?'
-                    : 'Which plot do you want to diagnose?',
-        });
-        await conversationSessionService.setState(captured.farmerId, 'crop_select');
+        if (assessmentPlots.length >= 2) {
+          await this.sendPlotPicker(msg.phone, captured.farmerId, lang, send);
+        } else {
+          await cropSelectionService.sendCropPicker({
+            farmerId: captured.farmerId,
+            phone: msg.phone,
+            language: lang,
+            send,
+            body: diagnoseBody,
+          });
+          await conversationSessionService.setState(captured.farmerId, 'crop_select');
+        }
         break;
       }
       case 'menu.track_order': {
@@ -1290,6 +1316,17 @@ export const whatsappScenarioRouter = {
             : 'Please send your soil report PDF or photo.'
         );
         break;
+      case 'soil.enter_lab': {
+        const activePlot = await multiPlotService.getActivePlotId(captured.farmerId);
+        await conversationSessionService.patchContext(captured.farmerId, {
+          soilLabStep: 'macro',
+          soilLabDraft: {},
+          soilLabBlockId: activePlot ?? undefined,
+        });
+        await conversationSessionService.setState(captured.farmerId, 'soil_lab_entry');
+        await send.text(msg.phone, soilFlowService.macroEntryPrompt(lang));
+        return;
+      }
       case 'soil.expert':
         await send.text(msg.phone, await callbackFlowService.createCallback(captured.farmerId, lang, 'Soil expert'));
         break;
@@ -1297,6 +1334,62 @@ export const whatsappScenarioRouter = {
         break;
     }
     await conversationSessionService.setState(captured.farmerId, 'soil_flow');
+  },
+
+  async handleSoilLabEntry(
+    msg: InboundMessage,
+    captured: ScenarioCapture,
+    lang: AdvisoryLanguage,
+    text: string,
+    send: ScenarioSenders
+  ): Promise<boolean> {
+    const ctx = await conversationSessionService.getContext(captured.farmerId);
+    const step = ctx.soilLabStep ?? 'macro';
+
+    if (step === 'macro') {
+      const draft = soilFlowService.parseMacroInput(text);
+      if (!draft) {
+        await send.text(msg.phone, soilFlowService.invalidValuesReply(lang, 'macro'));
+        return true;
+      }
+      await conversationSessionService.patchContext(captured.farmerId, {
+        soilLabStep: 'micro',
+        soilLabDraft: soilFlowService.draftToContext(draft),
+      });
+      await send.text(msg.phone, soilFlowService.microEntryPrompt(lang));
+      return true;
+    }
+
+    const draft = soilFlowService.draftFromContext(ctx as Record<string, unknown>);
+    const complete = soilFlowService.parseMicroInput(draft, text);
+    if (!complete || !soilFlowService.metricsHasValues(complete)) {
+      await send.text(msg.phone, soilFlowService.invalidValuesReply(lang, 'micro'));
+      return true;
+    }
+
+    const summary = await soilFlowService.saveLabMetrics(captured.farmerId, complete, {
+      blockId: ctx.soilLabBlockId,
+      uploadedBy: 'whatsapp',
+    });
+    await nutrientSoilGateService.markSoilReportReceived(captured.farmerId);
+    await conversationSessionService.patchContext(captured.farmerId, {
+      soilLabStep: undefined,
+      soilLabDraft: undefined,
+      soilLabBlockId: undefined,
+    });
+    await conversationSessionService.setState(captured.farmerId, 'main_menu');
+    await send.text(msg.phone, soilFlowService.savedLabReply(lang, summary));
+
+    const delivered = await nutrientSoilGateService.deliverPending({
+      farmerId: captured.farmerId,
+      phone: msg.phone,
+      language: lang,
+      sendText: (phone, body) => send.text(phone, body),
+    });
+    if (delivered?.delivered && delivered.summary) {
+      await send.text(msg.phone, delivered.summary);
+    }
+    return true;
   },
 
   async handleWaterVolume(

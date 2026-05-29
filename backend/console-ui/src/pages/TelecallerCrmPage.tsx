@@ -4,6 +4,12 @@ import { api } from '../lib/api';
 import { LeadDetailPanel } from '../components/telecaller/LeadDetailPanel';
 import { EscalationsPanel } from '../components/telecaller/EscalationsPanel';
 import { Field, Modal, inputClass } from '../components/Modal';
+import {
+  CropBlockFields,
+  emptyCropBlock,
+  toApiCropBlock,
+  type CropBlockFormValue,
+} from '../components/telecaller/CropBlockFields';
 import { Alert, Btn, HubTabs, Loading, ReadOnlyBanner } from '../components/ui';
 import { getRealtimeClient } from '../lib/realtime';
 const STAGE_CLASS: Record<string, string> = {
@@ -443,8 +449,6 @@ export function TelecallerCrmPage({ canWrite }: { canWrite: boolean }) {
   );
 }
 
-type NewCropBlock = { cropName: string; acreage: string; plantingDate: string };
-
 function NewLeadModal({
   onClose,
   onCreated,
@@ -468,9 +472,7 @@ function NewLeadModal({
   const [assignedCropAdvisor, setAssignedCropAdvisor] = useState('');
   const [roiEnabled, setRoiEnabled] = useState(true);
   const [farmerNotes, setFarmerNotes] = useState('');
-  const [cropBlocks, setCropBlocks] = useState<NewCropBlock[]>([
-    { cropName: '', acreage: '', plantingDate: '' },
-  ]);
+  const [cropBlocks, setCropBlocks] = useState<CropBlockFormValue[]>([emptyCropBlock()]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
@@ -491,13 +493,7 @@ function NewLeadModal({
     setSaving(true);
     setError('');
     try {
-      const blocks = cropBlocks
-        .filter((c) => c.cropName.trim())
-        .map((c) => ({
-          cropName: c.cropName.trim(),
-          acreage: c.acreage.trim() ? Number(c.acreage) : undefined,
-          plantingDate: c.plantingDate || undefined,
-        }));
+      const blocks = cropBlocks.map(toApiCropBlock).filter((b): b is NonNullable<typeof b> => Boolean(b));
       const res = await api<{ ok: boolean; lead: { id: string } }>(`${base}/leads`, {
         method: 'POST',
         body: JSON.stringify({
@@ -587,44 +583,11 @@ function NewLeadModal({
               <input className={inputClass} value={totalAcreage} onChange={(e) => setTotalAcreage(e.target.value)} />
             </Field>
           </div>
-          {cropBlocks.map((c, idx) => (
-            <div key={idx} className="mt-2 grid gap-2 rounded border border-slate-100 p-2 sm:grid-cols-3">
-              <input
-                className={inputClass}
-                placeholder="Crop (ginger, banana…)"
-                value={c.cropName}
-                onChange={(e) => {
-                  const next = [...cropBlocks];
-                  next[idx] = { ...next[idx], cropName: e.target.value };
-                  setCropBlocks(next);
-                }}
-              />
-              <input
-                className={inputClass}
-                placeholder="Acreage"
-                value={c.acreage}
-                onChange={(e) => {
-                  const next = [...cropBlocks];
-                  next[idx] = { ...next[idx], acreage: e.target.value };
-                  setCropBlocks(next);
-                }}
-              />
-              <input
-                type="date"
-                className={inputClass}
-                value={c.plantingDate}
-                onChange={(e) => {
-                  const next = [...cropBlocks];
-                  next[idx] = { ...next[idx], plantingDate: e.target.value };
-                  setCropBlocks(next);
-                }}
-              />
-            </div>
-          ))}
+          <CropBlockFields blocks={cropBlocks} onChange={setCropBlocks} />
           <button
             type="button"
             className="mt-2 text-xs text-emerald-700"
-            onClick={() => setCropBlocks([...cropBlocks, { cropName: '', acreage: '', plantingDate: '' }])}
+            onClick={() => setCropBlocks([...cropBlocks, emptyCropBlock()])}
           >
             + Add crop block
           </button>

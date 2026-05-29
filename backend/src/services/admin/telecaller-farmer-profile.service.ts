@@ -5,10 +5,16 @@ import { pincodeService } from '../core/pincode.service.js';
 import { crmFarmerService } from './crm-farmer.service.js';
 
 export type CropBlockInput = {
+  id?: string;
+  blockName?: string;
   cropName: string;
   acreage?: number;
   plantingDate?: string;
 };
+
+function cropSlug(name: string): string {
+  return name.trim().toLowerCase().replace(/\s+/g, '_');
+}
 
 export type FarmerProfileInput = {
   name?: string;
@@ -79,6 +85,7 @@ export const telecallerFarmerProfileService = {
         }
         return {
           id: b.id,
+          blockName: b.name,
           cropName: b.cropName ?? b.name,
           acreage: b.area,
           plantingDate: b.plantingDate,
@@ -118,12 +125,26 @@ export const telecallerFarmerProfileService = {
     if (input.cropBlocks?.length) {
       for (const block of input.cropBlocks) {
         if (!block.cropName?.trim()) continue;
-        await crmFarmerService.createBlock(farmerId, {
-          name: `${block.cropName.trim()} block`,
-          cropName: block.cropName.trim(),
-          area: block.acreage != null ? String(block.acreage) : undefined,
-          plantingDate: block.plantingDate,
-        });
+        const cropName = block.cropName.trim();
+        const plotName = block.blockName?.trim() || `${cropName} Plot`;
+        const area = block.acreage != null ? String(block.acreage) : undefined;
+        if (block.id) {
+          await crmFarmerService.updateBlock(block.id, {
+            name: plotName,
+            crop_name: cropName,
+            crop_type: cropSlug(cropName),
+            plot_label: plotName,
+            area,
+            planting_date: block.plantingDate ?? null,
+          });
+        } else {
+          await crmFarmerService.createBlock(farmerId, {
+            name: plotName,
+            cropName,
+            area,
+            plantingDate: block.plantingDate,
+          });
+        }
       }
     }
 

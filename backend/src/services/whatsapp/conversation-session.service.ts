@@ -14,6 +14,7 @@ export type ConversationState =
   | 'root_photos_requested'
   | 'nutrient_soil_confirm'
   | 'soil_flow'
+  | 'soil_lab_entry'
   | 'terminology_clarify'
   | 'chimb_followup'
   | 'plot_select'

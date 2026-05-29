@@ -48,37 +48,10 @@ function debitCreditForType(type: RoiEntryType, amount: number) {
   return { debit_inr: amount, credit_inr: null };
 }
 
-function parseEntryDate(text: string): string | null {
-  const t = text.trim().toLowerCase();
-  if (!t || t === 'today' || t === 'innu' || t === 'aaj') return todayIstDate();
-  const dmy = t.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})$/);
-  if (dmy) {
-    const day = Number(dmy[1]);
-    const month = Number(dmy[2]);
-    let year = Number(dmy[3]);
-    if (year < 100) year += 2000;
-    if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
-      return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-    }
-  }
-  if (/^\d{4}-\d{2}-\d{2}$/.test(t)) return t;
-  return null;
-}
-
-function datePrompt(language: AdvisoryLanguage): string {
-  return language === 'ml'
-    ? 'തീയതി അയയ്ക്കുക (ഉദാ: 29-05-2026) അല്ലെങ്കിൽ "today" ടൈപ്പ് ചെയ്യുക.'
-    : 'Send entry date (e.g. 29-05-2026) or type "today".';
-}
-
-function commentsChoicePrompt(language: AdvisoryLanguage): string {
-  return language === 'ml'
-    ? 'കമന്റ് ചേർക്കണോ? Yes / No'
-    : 'Do you want to add comments? Reply Yes or No.';
-}
-
 function commentsTextPrompt(language: AdvisoryLanguage): string {
-  return language === 'ml' ? 'കമന്റ് ടൈപ്പ് ചെയ്യുക (ഒരു വരി):' : 'Type your comment (one line):';
+  return language === 'ml'
+    ? 'കമന്റ് ടൈപ്പ് ചെയ്യുക (ഒരു വരി, നിർബന്ധം):'
+    : 'Type your comment (one line):';
 }
 
 function amountKindLabel(type: RoiEntryType, language: AdvisoryLanguage): string {
@@ -126,6 +99,22 @@ function entryPrompt(type: RoiEntryType, language: AdvisoryLanguage): string {
     },
   };
   return map[type][language] ?? map[type].en;
+}
+
+function parseEntryTypeFromText(text: string): RoiEntryType | null {
+  const t = text.trim().toLowerCase();
+  if (t === 'roi.labour' || t === 'labour' || t === 'labor') return 'labour';
+  if (t === 'roi.purchase' || t === 'purchase') return 'purchase';
+  if (t === 'roi.misc' || t === 'misc') return 'misc';
+  if (t === 'roi.harvest' || t === 'harvest') return 'harvest';
+  return null;
+}
+
+function amountPromptForType(type: RoiEntryType, language: AdvisoryLanguage): string {
+  const kind = amountKindLabel(type, language);
+  return language === 'ml'
+    ? `${kind} — തുക ₹ ൽ അയയ്ക്കുക (ഉദാ: 800)`
+    : `${kind} — enter amount in ₹ (example: 800)`;
 }
 
 export const roiFlowService = {
@@ -396,15 +385,25 @@ export const roiFlowService = {
     const type = buttonId.replace('roi.', '') as RoiEntryType;
     if (!['labour', 'purchase', 'misc', 'harvest'].includes(type)) return false;
 
+    await this.beginEntry(farmerId, type, phone, language, send);
+    return true;
+  },
+
+  async beginEntry(
+    farmerId: string,
+    type: RoiEntryType,
+    phone: string,
+    language: AdvisoryLanguage,
+    send: ScenarioSenders
+  ): Promise<void> {
     await conversationSessionService.patchContext(farmerId, {
       roiPendingEntryType: type,
-      roiPendingEntryDate: undefined,
+      roiPendingEntryDate: todayIstDate(),
       roiPendingAmount: undefined,
       roiAwaitingCommentsChoice: false,
       roiAwaitingCommentsText: false,
     });
-    await send.text(phone, datePrompt(language));
-    return true;
+    await send.text(phone, amountPromptForType(type, language));
   },
 
   async recordEntry(params: {
@@ -520,24 +519,27 @@ export const roiFlowService = {
       return true;
     }
 
+    if (params.sessionState === 'roi_entry' && !ctx.roiPendingEntryType) {
+      const typeFromText = parseEntryTypeFromText(text);
+      if (typeFromText) {
+        await this.beginEntry(
+          params.farmerId,
+          typeFromText,
+          params.phone,
+          params.language,
+          params.send
+        );
+        return true;
+      }
+    }
+
     if (params.sessionState === 'roi_entry' && ctx.roiPendingEntryType) {
       const entryType = ctx.roiPendingEntryType as RoiEntryType;
 
       if (!ctx.roiPendingEntryDate) {
-        const entryDate = parseEntryDate(text);
-        if (!entryDate) {
-          await params.send.text(params.phone, datePrompt(params.language));
-          return true;
-        }
-        await conversationSessionService.patchContext(params.farmerId, { roiPendingEntryDate: entryDate });
-        const kind = amountKindLabel(entryType, params.language);
-        await params.send.text(
-          params.phone,
-          params.language === 'ml'
-            ? `${kind} — തുക ₹ ൽ അയയ്ക്കുക (ഉദാ: 800)`
-            : `${kind} — enter amount in ₹ (example: 800)`
-        );
-        return true;
+        await conversationSessionService.patchContext(params.farmerId, {
+          roiPendingEntryDate: todayIstDate(),
+        });
       }
 
       if (ctx.roiPendingAmount == null) {
@@ -548,29 +550,6 @@ export const roiFlowService = {
         }
         await conversationSessionService.patchContext(params.farmerId, {
           roiPendingAmount: amount,
-          roiAwaitingCommentsChoice: true,
-        });
-        await params.send.text(params.phone, commentsChoicePrompt(params.language));
-        return true;
-      }
-
-      if (ctx.roiAwaitingCommentsChoice && !ctx.roiAwaitingCommentsText) {
-        const yes = /^(yes|y|അതെ|ha|haan)$/i.test(text);
-        const no = /^(no|n|skip|ഇല്ല|illa)$/i.test(text);
-        if (!yes && !no) {
-          await params.send.text(params.phone, commentsChoicePrompt(params.language));
-          return true;
-        }
-        if (no) {
-          await this.finalizePendingEntry(
-            params.farmerId,
-            params.phone,
-            params.language,
-            params.send
-          );
-          return true;
-        }
-        await conversationSessionService.patchContext(params.farmerId, {
           roiAwaitingCommentsChoice: false,
           roiAwaitingCommentsText: true,
         });
@@ -578,8 +557,24 @@ export const roiFlowService = {
         return true;
       }
 
-      if (ctx.roiAwaitingCommentsText) {
-        const comment = text.slice(0, 500);
+      if (
+        ctx.roiPendingAmount != null &&
+        (ctx.roiAwaitingCommentsText || ctx.roiAwaitingCommentsChoice)
+      ) {
+        if (ctx.roiAwaitingCommentsChoice && !ctx.roiAwaitingCommentsText) {
+          await conversationSessionService.patchContext(params.farmerId, {
+            roiAwaitingCommentsChoice: false,
+            roiAwaitingCommentsText: true,
+          });
+          await params.send.text(params.phone, commentsTextPrompt(params.language));
+          return true;
+        }
+
+        const comment = text.trim().slice(0, 500);
+        if (!comment) {
+          await params.send.text(params.phone, commentsTextPrompt(params.language));
+          return true;
+        }
         await this.finalizePendingEntry(
           params.farmerId,
           params.phone,

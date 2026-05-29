@@ -127,6 +127,8 @@ export async function osTelecallerRoutes(app: FastifyInstance): Promise<void> {
         cropBlocks: z
           .array(
             z.object({
+              id: z.string().uuid().optional(),
+              blockName: z.string().optional(),
               cropName: z.string(),
               acreage: z.number().optional(),
               plantingDate: z.string().optional(),
@@ -216,10 +218,11 @@ export async function osTelecallerRoutes(app: FastifyInstance): Promise<void> {
     const { id } = request.params as { id: string };
     const q = request.query as { page?: string; limit?: string };
     const detail = await telecallerAdminService.getLeadDetail(id);
-    const result = await crmFarmerService.listInteractions(
+    const result = await crmFarmerService.listHumanCrmInteractions(
       detail.lead.farmerId as string,
+      id,
       q.page ? Number(q.page) : 1,
-      q.limit ? Number(q.limit) : 20
+      q.limit ? Number(q.limit) : 40
     );
     return reply.send({ ok: true, ...result });
   });
@@ -390,6 +393,7 @@ export async function osTelecallerRoutes(app: FastifyInstance): Promise<void> {
         cropBlocks: z
           .array(
             z.object({
+              blockName: z.string().optional(),
               cropName: z.string(),
               acreage: z.number().optional(),
               plantingDate: z.string().optional(),
@@ -471,9 +475,47 @@ export async function osTelecallerRoutes(app: FastifyInstance): Promise<void> {
   app.patch(`${api}/leads/:leadId/blocks/:blockId`, async (request, reply) => {
     await assertModuleAccess(request, 'telecaller_crm', 'write');
     const { blockId } = request.params as { leadId: string; blockId: string };
-    const body = request.body as Record<string, unknown>;
-    const block = await crmFarmerService.updateBlock(blockId, body);
+    const body = z
+      .object({
+        name: z.string().optional(),
+        area: z.string().optional(),
+        cropName: z.string().optional(),
+        plantingDate: z.string().optional(),
+      })
+      .parse(request.body);
+    const patch: Record<string, unknown> = {};
+    if (body.name != null) {
+      patch.name = body.name;
+      patch.plot_label = body.name;
+    }
+    if (body.area != null) patch.area = body.area;
+    if (body.cropName != null) {
+      patch.crop_name = body.cropName;
+      patch.crop_type = body.cropName.trim().toLowerCase().replace(/\s+/g, '_');
+    }
+    if (body.plantingDate != null) patch.planting_date = body.plantingDate;
+    const block = await crmFarmerService.updateBlock(blockId, patch);
     return reply.send({ ok: true, block });
+  });
+
+  app.post(`${api}/leads/:id/soil-reports`, async (request, reply) => {
+    const admin = await assertModuleAccess(request, 'telecaller_crm', 'write');
+    const { id } = request.params as { id: string };
+    const body = z
+      .object({
+        blockId: z.string().uuid().optional(),
+        metrics: z.record(z.unknown()).optional(),
+        pdfUrl: z.string().optional(),
+      })
+      .parse(request.body);
+    const detail = await telecallerAdminService.getLeadDetail(id);
+    const report = await crmFarmerService.createSoilReport(detail.lead.farmerId as string, {
+      blockId: body.blockId,
+      metrics: body.metrics,
+      pdfUrl: body.pdfUrl,
+      uploadedBy: admin.email,
+    });
+    return reply.status(201).send({ ok: true, report });
   });
 
   app.delete(`${api}/leads/:leadId/blocks/:blockId`, async (request, reply) => {

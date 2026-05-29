@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '../../lib/api';
 import { Field, Modal, inputClass } from '../Modal';
-import { MasterSelect } from './MasterSelect';
+import { CRM_INTERACTION_TYPES } from './crmInteractionTypes';
 
 const base = '/morbeez-staff/api/v1/os/telecaller';
 
@@ -168,8 +168,7 @@ function AddInteractionModal({
   onClose: () => void;
   onSaved: () => void;
 }) {
-  const [interactionTypeId, setInteractionTypeId] = useState('');
-  const [interactionTypeName, setInteractionTypeName] = useState('');
+  const [interactionType, setInteractionType] = useState(CRM_INTERACTION_TYPES[0]);
   const [blockId, setBlockId] = useState('');
   const [notes, setNotes] = useState('');
   const [followUp, setFollowUp] = useState('');
@@ -182,13 +181,13 @@ function AddInteractionModal({
       saving={saving}
       onSave={() =>
         run(async () => {
-          const typeLabel = interactionTypeName.trim() || 'Note';
           await api(`${base}/leads/${leadId}/interactions`, {
             method: 'POST',
             body: JSON.stringify({
-              interactionType: typeLabel,
+              interactionType: interactionType.trim(),
               blockId: blockId || undefined,
               notes: notes.trim(),
+              summary: notes.trim() || interactionType.trim(),
               nextActionAt: followUp || undefined,
               status: 'completed',
             }),
@@ -198,15 +197,19 @@ function AddInteractionModal({
     >
       {error ? <p className="mb-3 text-sm text-red-600">{error}</p> : null}
       <div className="space-y-3">
-        <MasterSelect
-          masterType="interaction_type"
-          label="Interaction type"
-          value={interactionTypeId}
-          onChange={(id, n) => {
-            setInteractionTypeId(id);
-            setInteractionTypeName(n);
-          }}
-        />
+        <Field label="Interaction type">
+          <select
+            className={inputClass}
+            value={interactionType}
+            onChange={(e) => setInteractionType(e.target.value)}
+          >
+            {CRM_INTERACTION_TYPES.map((t) => (
+              <option key={t} value={t}>
+                {t}
+              </option>
+            ))}
+          </select>
+        </Field>
         <Field label="Block">
           <select className={inputClass} value={blockId} onChange={(e) => setBlockId(e.target.value)}>
             <option value="">— None —</option>

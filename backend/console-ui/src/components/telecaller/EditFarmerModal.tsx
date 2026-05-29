@@ -1,6 +1,13 @@
 import { useEffect, useState } from 'react';
 import { api } from '../../lib/api';
 import { Field, Modal, inputClass } from '../Modal';
+import {
+  CropBlockFields,
+  blockFromApi,
+  emptyCropBlock,
+  toApiCropBlock,
+  type CropBlockFormValue,
+} from './CropBlockFields';
 
 const base = '/morbeez-staff/api/v1/os/telecaller';
 const LANGS = [
@@ -10,8 +17,6 @@ const LANGS = [
   { id: 'kn', label: 'Kannada' },
   { id: 'hi', label: 'Hindi' },
 ];
-
-type CropBlock = { cropName: string; acreage: string; plantingDate: string };
 
 type Props = {
   leadId: string;
@@ -37,8 +42,7 @@ export function EditFarmerModal({ leadId, onClose, onSaved }: Props) {
   const [assignedCropAdvisor, setAssignedCropAdvisor] = useState('');
   const [roiEnabled, setRoiEnabled] = useState(false);
   const [farmerNotes, setFarmerNotes] = useState('');
-  const [cropBlocks, setCropBlocks] = useState<CropBlock[]>([]);
-  const [newCrops, setNewCrops] = useState<CropBlock[]>([{ cropName: '', acreage: '', plantingDate: '' }]);
+  const [cropBlocks, setCropBlocks] = useState<CropBlockFormValue[]>([emptyCropBlock()]);
 
   useEffect(() => {
     void (async () => {
@@ -61,7 +65,13 @@ export function EditFarmerModal({ leadId, onClose, onSaved }: Props) {
             roiEnabled: boolean;
             farmerNotes: string | null;
           };
-          cropBlocks: Array<{ cropName: string; acreage: string; plantingDate: string | null; daysAfterPlanting: number | null }>;
+          cropBlocks: Array<{
+            id: string;
+            blockName?: string;
+            cropName: string;
+            acreage: string;
+            plantingDate: string | null;
+          }>;
         }>(`${base}/leads/${leadId}/farmer-profile`);
         const p = res.profile;
         setName(p.name ?? '');
@@ -78,13 +88,16 @@ export function EditFarmerModal({ leadId, onClose, onSaved }: Props) {
         setAssignedCropAdvisor(p.assignedCropAdvisor ?? '');
         setRoiEnabled(p.roiEnabled);
         setFarmerNotes(p.farmerNotes ?? '');
-        setCropBlocks(
-          (res.cropBlocks ?? []).map((b) => ({
+        const rows = (res.cropBlocks ?? []).map((b) =>
+          blockFromApi({
+            id: b.id,
+            blockName: b.blockName,
             cropName: b.cropName,
-            acreage: String(b.acreage ?? ''),
-            plantingDate: b.plantingDate ?? '',
-          }))
+            acreage: b.acreage,
+            plantingDate: b.plantingDate,
+          })
         );
+        setCropBlocks(rows.length ? rows : [emptyCropBlock()]);
       } catch (e) {
         setError(e instanceof Error ? e.message : 'Could not load profile');
       } finally {
@@ -110,13 +123,7 @@ export function EditFarmerModal({ leadId, onClose, onSaved }: Props) {
     setSaving(true);
     setError('');
     try {
-      const blocks = newCrops
-        .filter((c) => c.cropName.trim())
-        .map((c) => ({
-          cropName: c.cropName.trim(),
-          acreage: c.acreage.trim() ? Number(c.acreage) : undefined,
-          plantingDate: c.plantingDate || undefined,
-        }));
+      const blocks = cropBlocks.map(toApiCropBlock).filter((b): b is NonNullable<typeof b> => Boolean(b));
       await api(`${base}/leads/${leadId}/farmer-profile`, {
         method: 'PATCH',
         body: JSON.stringify({
@@ -194,7 +201,7 @@ export function EditFarmerModal({ leadId, onClose, onSaved }: Props) {
           </section>
 
           <section>
-            <h4 className="mb-2 text-xs font-semibold uppercase text-slate-500">Farm details</h4>
+            <h4 className="mb-2 text-xs font-semibold uppercase text-slate-500">Farm & crops</h4>
             <div className="grid gap-3 sm:grid-cols-2">
               <Field label="Village">
                 <input className={inputClass} value={village} onChange={(e) => setVillage(e.target.value)} />
@@ -203,54 +210,12 @@ export function EditFarmerModal({ leadId, onClose, onSaved }: Props) {
                 <input className={inputClass} value={totalAcreage} onChange={(e) => setTotalAcreage(e.target.value)} />
               </Field>
             </div>
-            {cropBlocks.length > 0 ? (
-              <ul className="mt-2 text-xs text-slate-600">
-                {cropBlocks.map((b, i) => (
-                  <li key={`${b.cropName}-${i}`}>
-                    {b.cropName} — {b.acreage || '—'} acre — planted {b.plantingDate || '—'}
-                  </li>
-                ))}
-              </ul>
-            ) : null}
-            <p className="mt-2 text-xs text-slate-500">Add new crop blocks</p>
-            {newCrops.map((c, idx) => (
-              <div key={idx} className="mt-2 grid gap-2 rounded border border-slate-100 p-2 sm:grid-cols-3">
-                <input
-                  className={inputClass}
-                  placeholder="Crop name"
-                  value={c.cropName}
-                  onChange={(e) => {
-                    const next = [...newCrops];
-                    next[idx] = { ...next[idx], cropName: e.target.value };
-                    setNewCrops(next);
-                  }}
-                />
-                <input
-                  className={inputClass}
-                  placeholder="Acreage"
-                  value={c.acreage}
-                  onChange={(e) => {
-                    const next = [...newCrops];
-                    next[idx] = { ...next[idx], acreage: e.target.value };
-                    setNewCrops(next);
-                  }}
-                />
-                <input
-                  type="date"
-                  className={inputClass}
-                  value={c.plantingDate}
-                  onChange={(e) => {
-                    const next = [...newCrops];
-                    next[idx] = { ...next[idx], plantingDate: e.target.value };
-                    setNewCrops(next);
-                  }}
-                />
-              </div>
-            ))}
+            <p className="mt-3 text-xs text-slate-500">Each row: block name, crop, acre, planted date</p>
+            <CropBlockFields blocks={cropBlocks} onChange={setCropBlocks} />
             <button
               type="button"
               className="mt-2 text-xs text-emerald-700"
-              onClick={() => setNewCrops([...newCrops, { cropName: '', acreage: '', plantingDate: '' }])}
+              onClick={() => setCropBlocks([...cropBlocks, emptyCropBlock()])}
             >
               + Add crop block
             </button>

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import { api } from '../../lib/api';
 import { CrmModals, type CrmModalType } from './CrmModals';
+import { BlockWorkspacePanel } from './BlockWorkspacePanel';
 import { EditFarmerModal } from './EditFarmerModal';
 import { LeadExportMenu } from './LeadExportMenu';
 import { RoiTrackerTab } from './RoiTrackerTab';
@@ -117,9 +118,7 @@ export function LeadDetailPanel({ leadId, canWrite }: Props) {
   const [detail, setDetail] = useState<LeadDetail | null>(null);
   const [blocks, setBlocks] = useState<BlockRow[]>([]);
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
-  const [blockWs, setBlockWs] = useState<{
-    blockInfo?: { daysAfterPlanting?: number; crop?: string; growthStage?: string };
-  } | null>(null);
+  const [blockWsKey, setBlockWsKey] = useState(0);
   const [interactions, setInteractions] = useState<Array<Record<string, unknown>>>([]);
   const [recommendations, setRecommendations] = useState<Array<Record<string, unknown>>>([]);
   const [findings, setFindings] = useState<Array<Record<string, unknown>>>([]);
@@ -176,14 +175,8 @@ export function LeadDetailPanel({ leadId, canWrite }: Props) {
         const b = await api<{ ok: boolean; blocks: BlockRow[] }>(`${base}/leads/${leadId}/blocks`);
         const list = b.blocks ?? [];
         setBlocks(list);
-        const firstId = list[0]?.id ?? null;
-        setSelectedBlockId(firstId);
-        if (firstId) {
-          const ws = await api<{ ok: boolean; blockInfo?: { daysAfterPlanting?: number; crop?: string; growthStage?: string } }>(
-            `${base}/leads/${leadId}/blocks/${firstId}/workspace`
-          );
-          setBlockWs(ws);
-        }
+        setSelectedBlockId(list[0]?.id ?? null);
+        setBlockWsKey((k) => k + 1);
       } else if (tab === 'interactions') {
         const ix = await api<{ ok: boolean; interactions: Array<Record<string, unknown>> }>(
           `${base}/leads/${leadId}/interactions`
@@ -269,16 +262,15 @@ export function LeadDetailPanel({ leadId, canWrite }: Props) {
     }
   }
 
-  async function selectBlock(blockId: string) {
+  function selectBlock(blockId: string) {
     setSelectedBlockId(blockId);
-    try {
-      const ws = await api<{ ok: boolean; blockInfo?: { daysAfterPlanting?: number; crop?: string; growthStage?: string } }>(
-        `${base}/leads/${leadId}/blocks/${blockId}/workspace`
-      );
-      setBlockWs(ws);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not load block');
-    }
+    setBlockWsKey((k) => k + 1);
+  }
+
+  function refreshBlocks() {
+    setBlockWsKey((k) => k + 1);
+    void loadBlocks();
+    setDataVersion((v) => v + 1);
   }
 
   async function sendWhatsApp(e: FormEvent) {
@@ -739,29 +731,29 @@ export function LeadDetailPanel({ leadId, canWrite }: Props) {
                 <p className="text-sm text-slate-500">No farm blocks yet.</p>
               ) : null}
             </ul>
-            {blockWs?.blockInfo ? (
-              <div className="rounded-xl border border-slate-200 bg-white p-4 text-sm shadow-sm lg:col-span-2">
-                <h3 className="font-medium">Block workspace</h3>
-                <dl className="mt-3 grid gap-2 sm:grid-cols-2">
-                  <Row label="Crop" value={blockWs.blockInfo.crop ?? '—'} />
-                  <Row
-                    label="DAP"
-                    value={
-                      blockWs.blockInfo.daysAfterPlanting != null
-                        ? `${blockWs.blockInfo.daysAfterPlanting} days`
-                        : '—'
-                    }
-                  />
-                  <Row label="Growth stage" value={blockWs.blockInfo.growthStage ?? '—'} />
-                </dl>
+            {selectedBlockId ? (
+              <div className="lg:col-span-2">
+                <BlockWorkspacePanel
+                  key={`${selectedBlockId}-${blockWsKey}`}
+                  leadId={leadId}
+                  blockId={selectedBlockId}
+                  canWrite={canWrite}
+                  onSaved={refreshBlocks}
+                />
               </div>
-            ) : null}
+            ) : (
+              <p className="text-sm text-slate-500 lg:col-span-2">Select a block to view workspace.</p>
+            )}
           </div>
           </>
         ) : null}
 
         {tab === 'interactions' ? (
           <>
+            <p className="mb-3 text-xs text-slate-500">
+              Human touchpoints only — calls, visits, follow-ups, and recommendations. Use the WhatsApp tab for chat
+              history.
+            </p>
             {canWrite ? (
               <div className="mb-3">
                 <ActionBtn onClick={() => setModal('interaction')}>+ Log interaction</ActionBtn>
@@ -773,7 +765,7 @@ export function LeadDetailPanel({ leadId, canWrite }: Props) {
                   <tr>
                     <th className="px-4 py-3">Type</th>
                     <th className="px-4 py-3">Summary</th>
-                    <th className="px-4 py-3">Status</th>
+                    <th className="px-4 py-3">By</th>
                     <th className="px-4 py-3">When</th>
                     {canWrite ? <th className="px-4 py-3" /> : null}
                   </tr>
@@ -781,11 +773,20 @@ export function LeadDetailPanel({ leadId, canWrite }: Props) {
                 <tbody>
                   {interactions.map((r) => (
                     <tr key={String(r.id)} className="border-t border-slate-100">
-                      <td className="px-4 py-3">{String(r.interactionType ?? r.type ?? '—')}</td>
-                      <td className="px-4 py-3">{String(r.summary ?? r.notes ?? '—').slice(0, 80)}</td>
-                      <td className="px-4 py-3">{String(r.status ?? '—')}</td>
-                      <td className="px-4 py-3">{String(r.createdLabel ?? r.created_at ?? '—')}</td>
-                      {canWrite ? (
+                      <td className="px-4 py-3 font-medium text-slate-800">
+                        {String(r.interactionType ?? r.typeLabel ?? r.type ?? '—')}
+                      </td>
+                      <td className="px-4 py-3 max-w-md">{String(r.summary ?? r.notes ?? '—').slice(0, 120)}</td>
+                      <td className="px-4 py-3 text-slate-600">
+                        {String(r.by ?? r.doneBy ?? '—')}
+                        {r.role ? (
+                          <span className="block text-xs text-slate-400">{String(r.role)}</span>
+                        ) : null}
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap text-slate-600">
+                        {String(r.createdLabel ?? r.atLabel ?? '—')}
+                      </td>
+                      {canWrite && r.canArchive !== false ? (
                         <td className="px-4 py-3">
                           <button
                             type="button"
@@ -800,6 +801,8 @@ export function LeadDetailPanel({ leadId, canWrite }: Props) {
                             Archive
                           </button>
                         </td>
+                      ) : canWrite ? (
+                        <td className="px-4 py-3" />
                       ) : null}
                     </tr>
                   ))}
@@ -807,7 +810,7 @@ export function LeadDetailPanel({ leadId, canWrite }: Props) {
               </table>
               {interactions.length === 0 ? (
                 <p className="px-4 py-6 text-center text-sm text-slate-500">
-                  No cultivation interactions logged.
+                  No telecaller or agronomist interactions yet. Log a call, visit, or follow-up above.
                 </p>
               ) : null}
             </div>

@@ -150,6 +150,7 @@ async function resolveDiagnosisContext(params: {
   compactHistory: string;
 }> {
   const initialActivePlotId = await multiPlotService.getActivePlotId(params.farmerId);
+  const sessionCtx = await conversationSessionService.getContext(params.farmerId);
   const hintedCrop = inferCropHint(params.symptomsText);
   let resolvedActivePlotId = initialActivePlotId;
 
@@ -162,10 +163,18 @@ async function resolveDiagnosisContext(params: {
     }
   }
 
+  if (!resolvedActivePlotId && sessionCtx.activeCropType) {
+    const matched = await multiPlotService.setActivePlotByCropSlug(
+      params.farmerId,
+      sessionCtx.activeCropType
+    );
+    if (matched) resolvedActivePlotId = matched.id;
+  }
+
   const ctx = await fetchCompactFarmerContext(params.farmerId, { activePlotId: resolvedActivePlotId });
   return {
     activePlotId: resolvedActivePlotId,
-    cropType: hintedCrop ?? ctx.cropType,
+    cropType: hintedCrop ?? sessionCtx.activeCropType ?? ctx.cropType,
     cropStage: ctx.cropStage,
     compactHistory: formatCompactHistory(ctx),
   };
@@ -793,8 +802,13 @@ export const whatsappInboundPipeline = {
       return;
     }
 
+    const activePlotId = await multiPlotService.getActivePlotId(captured.farmerId);
+    const sessionCtx = await conversationSessionService.getContext(captured.farmerId);
     const hasCaptionCrop = Boolean(inferCropHint(msg.text || undefined));
-    if (plots.length <= 1 && !hasCaptionCrop && senders) {
+    const farmerAlreadySelectedCrop =
+      Boolean(activePlotId) || Boolean(sessionCtx.activeCropType) || hasCaptionCrop;
+
+    if (plots.length <= 1 && !farmerAlreadySelectedCrop && senders) {
       const detected = await cropDetectionService.detectFromImage({
         imageBase64: media.imageBase64,
         imageMimeType: media.imageMimeType ?? 'image/jpeg',
