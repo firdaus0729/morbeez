@@ -24,6 +24,7 @@ export type ConversationState =
   | 'roi_set_pin'
   | 'roi_edit_pin'
   | 'roi_edit_amount'
+  | 'farmer_feedback_capture'
   | 'human_takeover';
 
 export interface ConversationSession {

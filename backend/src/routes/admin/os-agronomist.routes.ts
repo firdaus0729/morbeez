@@ -8,6 +8,7 @@ import { supabase } from '../../lib/supabase.js';
 import { throwIfSupabaseError } from '../../lib/supabase-errors.js';
 import { recommendationFollowUpService } from '../../services/core/recommendation-follow-up.service.js';
 import { crmFarmerService } from '../../services/admin/crm-farmer.service.js';
+import { farmerExperienceLearningService } from '../../services/core/farmer-experience-learning.service.js';
 
 const draftSchema = z.object({
   findingId: z.string().uuid(),
@@ -255,5 +256,34 @@ export async function osAgronomistRoutes(app: FastifyInstance): Promise<void> {
       applications: applications ?? [],
       events: followUpRecs,
     });
+  });
+
+  app.get(`${api}/farmer-feedback`, async (request, reply) => {
+    await assertModuleAccess(request, 'agronomist', 'read');
+    const items = await farmerExperienceLearningService.listPendingReview(50);
+    return reply.send({ ok: true, items });
+  });
+
+  app.get(`${api}/farmer-feedback/:id`, async (request, reply) => {
+    await assertModuleAccess(request, 'agronomist', 'read');
+    const { id } = request.params as { id: string };
+    const detail = await farmerExperienceLearningService.getDetail(id);
+    return reply.send({ ok: true, ...detail });
+  });
+
+  app.post(`${api}/farmer-feedback/:id/review`, async (request, reply) => {
+    const admin = await assertModuleAccess(request, 'agronomist', 'write');
+    const { id } = request.params as { id: string };
+    const body = z
+      .object({
+        decision: z.enum(['approved', 'rejected', 'partial']),
+        agronomistFinalDiagnosis: z.string().max(500).optional(),
+        agronomistNotes: z.string().max(2000).optional(),
+        confidenceAdjustment: z.number().min(0).max(1).optional(),
+        updatedRecommendation: z.string().max(4000).optional(),
+      })
+      .parse(request.body);
+    const feedback = await farmerExperienceLearningService.review(id, body, admin.email);
+    return reply.send({ ok: true, feedback });
   });
 }

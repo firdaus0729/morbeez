@@ -76,6 +76,9 @@ export const farmerPurgeService = {
     await supabase.from('crm_call_logs').delete().eq('farmer_id', farmerId);
     await supabase.from('crm_internal_notes').delete().eq('farmer_id', farmerId);
     await supabase.from('cultivation_activities').delete().eq('farmer_id', farmerId);
+    await supabase.from('local_practices').delete().eq('farmer_id', farmerId);
+    await supabase.from('farmer_experience_stats').delete().eq('farmer_id', farmerId);
+    await supabase.from('farmer_advisory_feedback').delete().eq('farmer_id', farmerId);
     await supabase.from('ai_learning_samples').delete().eq('farmer_id', farmerId);
     await supabase.from('recommendation_follow_ups').delete().eq('farmer_id', farmerId);
     await supabase.from('recommendation_applications').delete().eq('farmer_id', farmerId);

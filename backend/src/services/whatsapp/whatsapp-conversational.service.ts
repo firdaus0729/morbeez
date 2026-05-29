@@ -1,4 +1,5 @@
 import { env } from '../../config/env.js';
+import { openaiTokenLimitBody } from '../ai/providers/openai-chat-params.js';
 import { logger } from '../../lib/logger.js';
 import type { AdvisoryLanguage } from '../ai/types.js';
 
@@ -62,7 +63,7 @@ Write a helpful WhatsApp reply.`;
         },
         body: JSON.stringify({
           model: env.OPENAI_TEXT_MODEL,
-          max_tokens: 400,
+          ...openaiTokenLimitBody(env.OPENAI_TEXT_MODEL, 400),
           temperature: 0.6,
           messages: [
             { role: 'system', content: SYSTEM_PROMPT },

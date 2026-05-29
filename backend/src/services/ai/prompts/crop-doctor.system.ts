@@ -45,6 +45,7 @@ export function buildUserPrompt(params: {
   voiceTranscript?: string;
   plantIdSummary?: string;
   farmerHistory?: string;
+  verifiedRegionalHints?: string;
   language: string;
 }): string {
   return [
@@ -55,6 +56,9 @@ export function buildUserPrompt(params: {
     params.voiceTranscript ? `Voice note transcript: ${params.voiceTranscript}` : null,
     params.plantIdSummary ? `Plant.id supplemental analysis:\n${params.plantIdSummary}` : null,
     params.farmerHistory ? `Previous farmer issues:\n${params.farmerHistory}` : null,
+    params.verifiedRegionalHints
+      ? `Agronomist-verified regional learnings (weight these; do not contradict without reason):\n${params.verifiedRegionalHints}`
+      : null,
     'Analyze the crop image if provided. Merge Plant.id signals when available (Plant.id may miss thrips — trust visible streaking/lesions on leaves).',
     params.symptomsText || params.voiceTranscript
       ? null

@@ -1,4 +1,5 @@
 import { env } from '../../../config/env.js';
+import { openaiTokenLimitBody } from '../../ai/providers/openai-chat-params.js';
 import { logger } from '../../../lib/logger.js';
 import { supabase } from '../../../lib/supabase.js';
 import { t } from './whatsapp-flow-copy.js';
@@ -102,7 +103,7 @@ ${priceFacts(params.cropType, params.date, params.rows)}`;
       },
       body: JSON.stringify({
         model: env.OPENAI_TEXT_MODEL,
-        max_tokens: 320,
+        ...openaiTokenLimitBody(env.OPENAI_TEXT_MODEL, 320),
         temperature: 0.55,
         messages: [
           { role: 'system', content: system },

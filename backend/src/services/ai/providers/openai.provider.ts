@@ -3,6 +3,7 @@ import { AppError } from '../../../lib/errors.js';
 import { logger } from '../../../lib/logger.js';
 import type { StructuredAdvisory } from '../types.js';
 import type { TranscriptionInput, TranscriptionProvider, VisionInput, VisionProvider } from './base.provider.js';
+import { openaiTokenLimitBody } from './openai-chat-params.js';
 
 const OPENAI_BASE = 'https://api.openai.com/v1';
 
@@ -39,7 +40,7 @@ export const openaiVisionProvider: VisionProvider = {
     const model = env.OPENAI_VISION_MODEL;
     const body = {
       model,
-      max_tokens: 2048,
+      ...openaiTokenLimitBody(model, 2048),
       response_format: { type: 'json_object' },
       messages: [
         { role: 'system', content: input.systemPrompt },
@@ -117,7 +118,7 @@ export async function openaiTextAdvisory(
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       model: env.OPENAI_TEXT_MODEL,
-      max_tokens: 2048,
+      ...openaiTokenLimitBody(env.OPENAI_TEXT_MODEL, 2048),
       response_format: { type: 'json_object' },
       messages: [
         { role: 'system', content: systemPrompt },

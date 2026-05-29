@@ -42,6 +42,7 @@ import {
 import { pincodeService } from '../../core/pincode.service.js';
 import { recommendationFollowUpService } from '../../core/recommendation-follow-up.service.js';
 import { returnUserGreetingService } from './return-user-greeting.service.js';
+import { farmerFeedbackFlowService } from './farmer-feedback-flow.service.js';
 
 const CROP_MEDIA = new Set(['image', 'image_message', 'document']);
 const MENU_IDS = new Set([
@@ -364,6 +365,34 @@ export const whatsappScenarioRouter = {
       return { handled: true };
     }
 
+    if (session.state === 'farmer_feedback_capture') {
+      const capturedFb = await farmerFeedbackFlowService.tryHandleCapture({
+        farmerId: captured.farmerId,
+        phone: msg.phone,
+        lang,
+        text,
+        send,
+      });
+      if (capturedFb) return { handled: true };
+    }
+
+    if (
+      text &&
+      (text === 'feedback.disagree' || farmerFeedbackFlowService.isDisagreementIntent(text))
+    ) {
+      const canStart = await farmerFeedbackFlowService.canStartDisagreement(captured.farmerId);
+      if (canStart?.sessionId) {
+        await farmerFeedbackFlowService.startFlow({
+          farmerId: captured.farmerId,
+          phone: msg.phone,
+          lang,
+          send,
+          initialText: text === 'feedback.disagree' ? undefined : text,
+        });
+        return { handled: true };
+      }
+    }
+
     // Recommendation follow-up buttons (application + Day-5 outcome)
     if (text?.startsWith('rec.')) {
       const recId = await recommendationFollowUpService.resolvePendingRecommendationId(
@@ -613,12 +642,7 @@ export const whatsappScenarioRouter = {
           .eq('id', primary.id)
           .eq('farmer_id', captured.farmerId);
         await onboardingFlowService.markComplete(captured.farmerId);
-        await send.text(
-          msg.phone,
-          lang === 'ml'
-            ? 'നന്ദി! ഓൺബോർഡിംഗ് പൂർത്തിയായി.\n\nഇപ്പോൾ രോഗനിർണയത്തിനായി ചിത്രം അയയ്ക്കുക, അല്ലെങ്കിൽ *menu* ടൈപ്പ് ചെയ്യുക.'
-            : 'Thank you! Onboarding is complete.\n\nYou can send a crop photo for diagnosis, or type *menu* for options.'
-        );
+        await this.showMainMenu(msg.phone, lang, send);
         return { handled: true };
       }
 
@@ -1560,5 +1584,18 @@ export const whatsappScenarioRouter = {
     await recommendationFollowUpService
       .bootstrapFromDiagnosisSession(params.sessionId, params.farmerId)
       .catch((err) => logger.error({ err }, 'Recommendation follow-up bootstrap failed'));
+
+    if (params.send.buttons) {
+      const disagreeLabel =
+        params.lang === 'ml' ? 'AI തെറ്റാണ്' : params.lang === 'hi' ? 'AI गलत है' : 'AI is wrong';
+      await params.send.buttons({
+        phone: params.phone,
+        body:
+          params.lang === 'ml'
+            ? 'ഈ നിർണയം ശരിയല്ലെങ്കിൽ, നിങ്ങളുടെ അനുഭവം പങ്കിടുക:'
+            : 'If this diagnosis is not right, share your field experience:',
+        buttons: [{ id: 'feedback.disagree', title: disagreeLabel.slice(0, 20) }],
+      });
+    }
   },
 };

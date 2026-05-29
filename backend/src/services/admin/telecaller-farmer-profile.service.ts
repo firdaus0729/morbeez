@@ -30,6 +30,7 @@ export type FarmerProfileInput = {
   assignedCropAdvisor?: string;
   roiEnabled?: boolean;
   farmerNotes?: string;
+  cropExperienceYears?: number;
   cropBlocks?: CropBlockInput[];
 };
 
@@ -52,6 +53,8 @@ function mapProfileRow(farmer: Record<string, unknown>, pincode?: { pincode: str
     assignedCropAdvisor: farmer.assigned_crop_advisor ? String(farmer.assigned_crop_advisor) : null,
     roiEnabled: Boolean(farmer.roi_enabled),
     farmerNotes: farmer.farmer_notes ? String(farmer.farmer_notes) : null,
+    cropExperienceYears:
+      farmer.crop_experience_years != null ? Number(farmer.crop_experience_years) : null,
     metadata: meta,
   };
 }
@@ -114,6 +117,9 @@ export const telecallerFarmerProfileService = {
       );
     }
     if (input.farmerNotes != null) updates.farmer_notes = input.farmerNotes.trim() || null;
+    if (input.cropExperienceYears != null) {
+      updates.crop_experience_years = Math.min(60, Math.max(0, Math.floor(input.cropExperienceYears)));
+    }
 
     const { error } = await supabase.from('farmers').update(updates).eq('id', farmerId);
     throwIfSupabaseError(error, 'Could not update farmer');

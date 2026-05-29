@@ -1,4 +1,5 @@
 import { env } from '../../../config/env.js';
+import { openaiTokenLimitBody } from '../../ai/providers/openai-chat-params.js';
 import { logger } from '../../../lib/logger.js';
 import type { AgricultureInputCategory } from './input-classifier.service.js';
 
@@ -93,7 +94,7 @@ export const imageInputClassifierService = {
         },
         body: JSON.stringify({
           model: env.OPENAI_VISION_MODEL,
-          max_tokens: 280,
+          ...openaiTokenLimitBody(env.OPENAI_VISION_MODEL, 280),
           temperature: 0.1,
           response_format: { type: 'json_object' },
           messages: [

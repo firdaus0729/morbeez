@@ -10,6 +10,7 @@ import { openaiVisionProvider, openaiTextAdvisory } from './providers/openai.pro
 import { plantIdProvider, formatPlantIdSummary } from './providers/plantid.provider.js';
 import { recommendationService } from './recommendation.service.js';
 import { escalationService } from './escalation.service.js';
+import { farmerExperienceLearningService } from '../core/farmer-experience-learning.service.js';
 import type { DiagnoseInput, DiagnoseResult, StructuredAdvisory } from './types.js';
 import { env } from '../../config/env.js';
 import { aiReuseService, buildSymptomKey } from './ai-reuse.service.js';
@@ -142,6 +143,9 @@ export const cropDoctorService = {
     }
 
     const plantIdSummary = plantIdResult ? formatPlantIdSummary(plantIdResult) : undefined;
+    const verifiedRegionalHints = await farmerExperienceLearningService
+      .getVerifiedRegionalHints(input.farmerId, input.cropType)
+      .catch(() => null);
     const fullUserPrompt = buildUserPrompt({
       cropType: input.cropType,
       cropStage: input.cropStage,
@@ -149,6 +153,7 @@ export const cropDoctorService = {
       voiceTranscript: input.voiceTranscript,
       plantIdSummary,
       farmerHistory,
+      verifiedRegionalHints: verifiedRegionalHints ?? undefined,
       language: input.language,
     });
 

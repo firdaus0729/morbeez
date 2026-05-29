@@ -42,6 +42,7 @@ export function EditFarmerModal({ leadId, onClose, onSaved }: Props) {
   const [assignedCropAdvisor, setAssignedCropAdvisor] = useState('');
   const [roiEnabled, setRoiEnabled] = useState(false);
   const [farmerNotes, setFarmerNotes] = useState('');
+  const [cropExperienceYears, setCropExperienceYears] = useState('');
   const [cropBlocks, setCropBlocks] = useState<CropBlockFormValue[]>([emptyCropBlock()]);
 
   useEffect(() => {
@@ -64,6 +65,7 @@ export function EditFarmerModal({ leadId, onClose, onSaved }: Props) {
             assignedCropAdvisor: string | null;
             roiEnabled: boolean;
             farmerNotes: string | null;
+            cropExperienceYears: number | null;
           };
           cropBlocks: Array<{
             id: string;
@@ -88,6 +90,9 @@ export function EditFarmerModal({ leadId, onClose, onSaved }: Props) {
         setAssignedCropAdvisor(p.assignedCropAdvisor ?? '');
         setRoiEnabled(p.roiEnabled);
         setFarmerNotes(p.farmerNotes ?? '');
+        setCropExperienceYears(
+          p.cropExperienceYears != null ? String(p.cropExperienceYears) : ''
+        );
         const rows = (res.cropBlocks ?? []).map((b) =>
           blockFromApi({
             id: b.id,
@@ -139,6 +144,9 @@ export function EditFarmerModal({ leadId, onClose, onSaved }: Props) {
           assignedCropAdvisor: assignedCropAdvisor.trim() || undefined,
           roiEnabled,
           farmerNotes: farmerNotes.trim() || undefined,
+          cropExperienceYears: cropExperienceYears.trim()
+            ? Math.min(60, Math.max(0, Math.floor(Number(cropExperienceYears))))
+            : undefined,
           cropBlocks: blocks.length ? blocks : undefined,
         }),
       });
@@ -208,6 +216,17 @@ export function EditFarmerModal({ leadId, onClose, onSaved }: Props) {
               </Field>
               <Field label="Total acreage">
                 <input className={inputClass} value={totalAcreage} onChange={(e) => setTotalAcreage(e.target.value)} />
+              </Field>
+              <Field label="Years growing this crop">
+                <input
+                  className={inputClass}
+                  type="number"
+                  min={0}
+                  max={60}
+                  value={cropExperienceYears}
+                  onChange={(e) => setCropExperienceYears(e.target.value)}
+                  placeholder="e.g. 8"
+                />
               </Field>
             </div>
             <p className="mt-3 text-xs text-slate-500">Each row: block name, crop, acre, planted date</p>

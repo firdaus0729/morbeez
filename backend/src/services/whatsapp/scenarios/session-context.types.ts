@@ -53,4 +53,7 @@ export interface SessionContext {
   soilLabStep?: 'macro' | 'micro' | 'soil_type';
   soilLabDraft?: Record<string, unknown>;
   soilLabBlockId?: string;
+  /** Farmer Experience Learning — correction after AI diagnosis */
+  farmerFeedbackId?: string;
+  farmerFeedbackStep?: 'diagnosis' | 'experience_years' | 'experience' | 'product' | 'outcome';
 }

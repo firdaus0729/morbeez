@@ -124,6 +124,7 @@ export async function osTelecallerRoutes(app: FastifyInstance): Promise<void> {
         assignedCropAdvisor: z.string().optional(),
         roiEnabled: z.boolean().optional(),
         farmerNotes: z.string().optional(),
+        cropExperienceYears: z.number().int().min(0).max(60).optional(),
         cropBlocks: z
           .array(
             z.object({
@@ -390,6 +391,7 @@ export async function osTelecallerRoutes(app: FastifyInstance): Promise<void> {
         assignedCropAdvisor: z.string().optional(),
         roiEnabled: z.boolean().optional(),
         farmerNotes: z.string().optional(),
+        cropExperienceYears: z.number().int().min(0).max(60).optional(),
         cropBlocks: z
           .array(
             z.object({

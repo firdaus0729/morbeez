@@ -4,6 +4,7 @@ import { useSyncConsoleSearch } from '../hooks/useSyncConsoleSearch';
 import { defaultsForPage } from '../lib/console-page-search';
 import { matchesSearch } from '../lib/search-filter';
 import { Alert, HubTabs, Loading, ReadOnlyBanner } from '../components/ui';
+import { FarmerFeedbackPanel } from '../components/agronomist/FarmerFeedbackPanel';
 
 const base = '/morbeez-staff/api/v1/os/agronomist';
 
@@ -55,7 +56,7 @@ type Submission = {
 };
 
 export function AgronomistHubPage({ canWrite }: { canWrite: boolean }) {
-  const [tab, setTab] = useState<'queue' | 'submissions'>('queue');
+  const [tab, setTab] = useState<'queue' | 'submissions' | 'farmer_feedback'>('queue');
   const [search, setSearch] = useState('');
   const [queue, setQueue] = useState<QueueItem[]>([]);
   const searchDefaults = defaultsForPage('agronomist');
@@ -114,7 +115,7 @@ export function AgronomistHubPage({ canWrite }: { canWrite: boolean }) {
 
   useEffect(() => {
     if (tab === 'queue') loadQueue();
-    else loadSubmissions();
+    else if (tab === 'submissions') loadSubmissions();
   }, [tab, loadQueue, loadSubmissions]);
 
   function selectItem(item: QueueItem) {
@@ -284,6 +285,7 @@ export function AgronomistHubPage({ canWrite }: { canWrite: boolean }) {
       <HubTabs
         tabs={[
           { id: 'queue' as const, label: 'Review queue' },
+          { id: 'farmer_feedback' as const, label: 'Farmer feedback' },
           { id: 'submissions' as const, label: 'My submissions' },
         ]}
         active={tab}
@@ -415,6 +417,8 @@ export function AgronomistHubPage({ canWrite }: { canWrite: boolean }) {
           </div>
         </div>
       ) : null}
+
+      {tab === 'farmer_feedback' ? <FarmerFeedbackPanel canWrite={canWrite} /> : null}
 
       {tab === 'submissions' && !loading ? (
         <div className="mt-6 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">

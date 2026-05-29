@@ -18,6 +18,7 @@ North star: WhatsApp is the farmer relationship + sales CX engine; staff console
 | **3** | Message fatigue, seasonal broadcast priority, farmer health score for telecaller prioritization | **Done** |
 | **4** | ROI tracker + ledger (WhatsApp flows, audit) | **Done** |
 | **5** | Self-learning loop: advisor correction → `ai_reuse` eligibility, terminology closure | **Done** |
+| **6** | Farmer Experience Learning: disagreement capture → agronomist validation → verified reuse | **Done** |
 
 ## Phase 2 — Files
 
@@ -50,6 +51,20 @@ North star: WhatsApp is the farmer relationship + sales CX engine; staff console
 - `backend/src/services/core/learning-loop.service.ts`
 - Terminology resolve → `agronomy_terms` (staff Operations → terminology tasks)
 - Follow-up outcome **improved/partial** → `advisory_reuse_cases` via `learningLoopService`
+
+## Phase 6 — Farmer Experience Learning (FEX)
+
+- `supabase/migrations/20260630000000_farmer_experience_learning.sql` — `farmer_advisory_feedback`
+- `supabase/migrations/20260630100000_farmer_experience_learning_v2.sql` — `local_practices`, `farmer_experience_stats`, `crop_experience_years`
+- `backend/src/services/core/farmer-feedback-intent.service.ts` — disagreement detection
+- `backend/src/services/core/farmer-experience-learning.service.ts` — review + promote to reuse
+- `backend/src/services/core/farmer-experience-weight.service.ts` — trust score / weighting (§7)
+- `backend/src/services/core/local-practices.service.ts` — verified practice library (§8–9)
+- `backend/src/services/whatsapp/scenarios/farmer-feedback-flow.service.ts` — WhatsApp capture (+ years of experience)
+- Agronomist Hub → **Farmer feedback** tab; API under `/os/agronomist/farmer-feedback`
+- After diagnosis: optional **AI is wrong** button; text like "this is thrips" starts capture
+- Approved feedback → `advisory_reuse_cases` + `local_practices` + Crop Doctor regional hints
+- Telecaller **Edit farmer** → years growing crop (`crop_experience_years` on `farmers`)
 
 ## Verify on WhatsApp
 
