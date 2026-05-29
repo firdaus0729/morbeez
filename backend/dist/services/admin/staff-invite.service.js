@@ -4,6 +4,7 @@ import { STAFF_PORTAL_PATH } from '../../lib/staff-portal.js';
 import { logger } from '../../lib/logger.js';
 import { ValidationError } from '../../lib/errors.js';
 import { hashPassword } from '../../lib/password.js';
+import { validateStaffPassword } from '../../lib/staff-password-policy.js';
 import { supabase } from '../../lib/supabase.js';
 import { throwIfSupabaseError } from '../../lib/supabase-errors.js';
 import { employeeAccessService } from './employee-access.service.js';
@@ -21,19 +22,6 @@ export function getConsolePublicUrl() {
 }
 export function buildInviteUrl(token) {
     return `${getConsolePublicUrl()}/accept-invite?token=${encodeURIComponent(token)}`;
-}
-export function assertSharedPasswordConfigured() {
-    const shared = env.CONSOLE_SHARED_PASSWORD;
-    if (!shared || shared.length < 8) {
-        throw new ValidationError('Console organization password is not configured (set CONSOLE_SHARED_PASSWORD, min 8 characters)');
-    }
-    return shared;
-}
-export function assertSharedPasswordMatches(password) {
-    const expected = assertSharedPasswordConfigured();
-    if (password !== expected) {
-        throw new ValidationError('Organization password is incorrect');
-    }
 }
 export const staffInviteService = {
     async ensurePendingAdminUser(employeeProfileId) {
@@ -181,7 +169,7 @@ export const staffInviteService = {
         };
     },
     async completeInvite(input) {
-        assertSharedPasswordMatches(input.password);
+        validateStaffPassword(input.password, input.confirmPassword);
         const tokenHash = sha256(input.token);
         const { data, error } = await supabase
             .from('employee_access_tokens')
@@ -210,8 +198,7 @@ export const staffInviteService = {
         if (!profile?.admin_user_id) {
             throw new ValidationError('Could not resolve console account for this employee');
         }
-        const sharedPassword = assertSharedPasswordConfigured();
-        const passwordHash = hashPassword(sharedPassword);
+        const passwordHash = hashPassword(input.password);
         const now = new Date().toISOString();
         const { error: updateAdminErr } = await supabase
             .from('admin_users')

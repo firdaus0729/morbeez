@@ -4,6 +4,7 @@ export declare const employeeAccessService: {
         purpose: "setup_password" | "reset_password" | "email_invite";
         createdBy?: string;
         channels: string[];
+        expiresInHours?: number;
     }): Promise<{
         token: string;
         expiresAt: string;
@@ -11,6 +12,7 @@ export declare const employeeAccessService: {
     consumeToken(input: {
         token: string;
         password: string;
+        confirmPassword: string;
     }): Promise<{
         ok: boolean;
     }>;

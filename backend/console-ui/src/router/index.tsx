@@ -5,6 +5,8 @@ import { ProtectedPage } from './ProtectedPage';
 import { paths } from '../lib/routes';
 import { LoginPage } from '../pages/LoginPage';
 import { AcceptInvitePage } from '../pages/AcceptInvitePage';
+import { ForgotPasswordPage } from '../pages/ForgotPasswordPage';
+import { ResetPasswordPage } from '../pages/ResetPasswordPage';
 import { DashboardPage } from '../pages/DashboardPage';
 import { TelecallerCrmPage } from '../pages/TelecallerCrmPage';
 import { OperationsCenterPage } from '../pages/OperationsCenterPage';
@@ -61,6 +63,8 @@ function CommerceRoute() {
 export const appRouter = createBrowserRouter(
   [
     { path: paths.acceptInvite, element: <AcceptInvitePage /> },
+    { path: paths.forgotPassword, element: <ForgotPasswordPage /> },
+    { path: paths.resetPassword, element: <ResetPasswordPage /> },
     {
       element: <RequireGuest />,
       children: [{ path: paths.login, element: <LoginPage /> }],

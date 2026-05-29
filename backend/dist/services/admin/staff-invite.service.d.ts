@@ -1,7 +1,5 @@
 export declare function getConsolePublicUrl(): string;
 export declare function buildInviteUrl(token: string): string;
-export declare function assertSharedPasswordConfigured(): string;
-export declare function assertSharedPasswordMatches(password: string): void;
 export declare const staffInviteService: {
     ensurePendingAdminUser(employeeProfileId: string): Promise<string>;
     createInvite(input: {
@@ -25,6 +23,7 @@ export declare const staffInviteService: {
     completeInvite(input: {
         token: string;
         password: string;
+        confirmPassword: string;
     }): Promise<{
         ok: true;
         email: any;

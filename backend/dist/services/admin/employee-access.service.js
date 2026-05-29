@@ -3,7 +3,7 @@ import { supabase } from '../../lib/supabase.js';
 import { throwIfSupabaseError } from '../../lib/supabase-errors.js';
 import { ValidationError } from '../../lib/errors.js';
 import { hashPassword } from '../../lib/password.js';
-import { env } from '../../config/env.js';
+import { validateStaffPassword } from '../../lib/staff-password-policy.js';
 function sha256(input) {
     return createHash('sha256').update(input).digest('hex');
 }
@@ -11,7 +11,8 @@ export const employeeAccessService = {
     async createSetupToken(input) {
         const rawToken = randomBytes(24).toString('hex');
         const tokenHash = sha256(rawToken);
-        const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+        const hours = input.expiresInHours ?? 24;
+        const expiresAt = new Date(Date.now() + hours * 60 * 60 * 1000).toISOString();
         const { error } = await supabase.from('employee_access_tokens').insert({
             employee_profile_id: input.employeeProfileId,
             token_hash: tokenHash,
@@ -24,9 +25,7 @@ export const employeeAccessService = {
         return { token: rawToken, expiresAt };
     },
     async consumeToken(input) {
-        if (!input.password || input.password.length < 8) {
-            throw new ValidationError('Password must be at least 8 characters');
-        }
+        validateStaffPassword(input.password, input.confirmPassword);
         const tokenHash = sha256(input.token);
         const { data, error } = await supabase
             .from('employee_access_tokens')
@@ -50,14 +49,7 @@ export const employeeAccessService = {
         if (!profile)
             throw new ValidationError('Employee profile not found');
         const now = new Date().toISOString();
-        let passwordToStore = input.password;
-        if (env.CONSOLE_SHARED_PASSWORD) {
-            if (input.password !== env.CONSOLE_SHARED_PASSWORD) {
-                throw new ValidationError('Organization password is incorrect');
-            }
-            passwordToStore = env.CONSOLE_SHARED_PASSWORD;
-        }
-        const passwordHash = hashPassword(passwordToStore);
+        const passwordHash = hashPassword(input.password);
         if (profile.admin_user_id) {
             const { error: updateAdminErr } = await supabase
                 .from('admin_users')

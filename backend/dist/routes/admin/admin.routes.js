@@ -35,8 +35,8 @@ import { hashPassword, verifyPassword } from '../../lib/password.js';
 import { logAdminMutation } from '../../lib/admin-mutation-audit.js';
 import { assertSuperAdminDeactivationAllowed } from '../../lib/admin-guards.js';
 import { employeeProfileService } from '../../services/admin/employee-profile.service.js';
-import { employeeAccessService } from '../../services/admin/employee-access.service.js';
 import { staffInviteService } from '../../services/admin/staff-invite.service.js';
+import { staffPasswordService } from '../../services/admin/staff-password.service.js';
 import { employeeReassignmentService } from '../../services/admin/employee-reassignment.service.js';
 import { attendanceCalculatorService } from '../../services/admin/attendance-calculator.service.js';
 import { incentiveCalculatorService } from '../../services/admin/incentive-calculator.service.js';
@@ -206,6 +206,7 @@ export async function adminRoutes(app) {
             .object({
             token: z.string().min(16),
             password: z.string().min(8).max(128),
+            confirmPassword: z.string().min(8).max(128),
         })
             .parse(request.body);
         const result = await staffInviteService.completeInvite(body);
@@ -216,10 +217,32 @@ export async function adminRoutes(app) {
             .object({
             token: z.string().min(16),
             password: z.string().min(8).max(128),
+            confirmPassword: z.string().min(8).max(128),
         })
             .parse(request.body);
         await staffInviteService.completeInvite(body);
         return reply.send({ ok: true });
+    });
+    app.post(`${api}/auth/forgot-password`, async (request, reply) => {
+        const body = z.object({ email: z.string().email().max(255) }).parse(request.body);
+        const result = await staffPasswordService.requestPasswordReset(body.email);
+        return reply.send(result);
+    });
+    app.get(`${api}/auth/reset-password`, async (request, reply) => {
+        const query = z.object({ token: z.string().min(16) }).parse(request.query ?? {});
+        const reset = await staffPasswordService.previewResetToken(query.token);
+        return reply.send({ ok: true, reset });
+    });
+    app.post(`${api}/auth/complete-reset-password`, async (request, reply) => {
+        const body = z
+            .object({
+            token: z.string().min(16),
+            password: z.string().min(8).max(128),
+            confirmPassword: z.string().min(8).max(128),
+        })
+            .parse(request.body);
+        const result = await staffPasswordService.completePasswordReset(body);
+        return reply.send({ ok: true, email: result.email });
     });
     app.get(`${api}/stats`, async (request, reply) => {
         requireAdmin(request);
@@ -725,20 +748,13 @@ export async function adminRoutes(app) {
     });
     app.post(`${api}/employees/:id/reset-password-link`, async (request, reply) => {
         const actor = requireAdmin(request);
-        requireAdminRole(request, 'super_admin', 'admin', 'manager');
+        assertStaffManagement(request);
         const { id } = request.params;
-        const body = z
-            .object({
-            channels: z.array(z.enum(['personal_mobile', 'company_whatsapp', 'email'])).min(1),
-        })
-            .parse(request.body ?? {});
-        const token = await employeeAccessService.createSetupToken({
+        const reset = await staffPasswordService.createEmployeeResetLink({
             employeeProfileId: id,
-            purpose: 'reset_password',
             createdBy: actor.id,
-            channels: body.channels,
         });
-        return reply.send({ ok: true, reset: token });
+        return reply.send({ ok: true, reset });
     });
     app.post(`${api}/employees/:id/deactivate`, async (request, reply) => {
         const actor = requireAdmin(request);

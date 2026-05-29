@@ -246,12 +246,16 @@ export function EmployeesPage({ canWrite = false }: { canWrite?: boolean }) {
     await loadWorkspace();
   }
 
-  async function sendResetLink(id: string) {
-    await api(`/morbeez-staff/api/v1/employees/${id}/reset-password-link`, {
+  async function sendResetLink(id: string): Promise<string | null> {
+    const d = await api<{
+      ok: boolean;
+      reset: { resetUrl: string };
+    }>(`/morbeez-staff/api/v1/employees/${id}/reset-password-link`, {
       method: 'POST',
       body: JSON.stringify({ channels: ['email'] }),
     });
     await loadWorkspace();
+    return d.reset?.resetUrl ?? null;
   }
 
   if (employeeId && detailLoading && !detail) {
@@ -798,8 +802,25 @@ export function EmployeesPage({ canWrite = false }: { canWrite?: boolean }) {
                               type="button"
                               className="block w-full rounded px-2 py-1.5 text-left text-sm hover:bg-slate-50"
                               onClick={async () => {
-                                await sendResetLink(e.id);
-                                alert('Password reset link sent.');
+                                try {
+                                  const url = await sendResetLink(e.id);
+                                  if (url) {
+                                    try {
+                                      await navigator.clipboard.writeText(url);
+                                    } catch {
+                                      /* ignore */
+                                    }
+                                    alert(
+                                      `Password reset link created (copied to clipboard when possible):\n\n${url}`
+                                    );
+                                  }
+                                } catch (err) {
+                                  alert(
+                                    err instanceof Error
+                                      ? err.message
+                                      : 'Could not create reset link'
+                                  );
+                                }
                               }}
                             >
                               Password Reset Mail Sent

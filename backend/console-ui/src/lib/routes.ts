@@ -3,6 +3,8 @@
 export const paths = {
   login: 'login',
   acceptInvite: 'accept-invite',
+  forgotPassword: 'forgot-password',
+  resetPassword: 'reset-password',
   dashboard: 'dashboard',
   telecaller: 'telecaller',
   operations: 'operations',

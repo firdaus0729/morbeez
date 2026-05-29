@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { login } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import { LogoMark } from '../components/LogoMark';
@@ -49,8 +49,8 @@ export function LoginPage() {
 
         <h1 className="text-2xl font-bold text-slate-900">Staff sign in</h1>
         <p className="mt-2 text-sm text-slate-600">
-          Operations console for products, orders & farmer intelligence. Use your organization
-          console password after completing your email invite.
+          Operations console for products, orders & farmer intelligence. Sign in with the personal
+          password you set when you joined.
         </p>
 
         {error ? (
@@ -80,6 +80,14 @@ export function LoginPage() {
               onChange={(e) => setPassword(e.target.value)}
             />
           </Field>
+          <p className="text-right text-sm">
+            <Link
+              to={toPath(paths.forgotPassword)}
+              className="font-semibold text-brand-700 hover:underline"
+            >
+              Forgot password?
+            </Link>
+          </p>
           <Btn type="submit" variant="primary" className="w-full" disabled={loading}>
             {loading ? 'Signing in…' : 'Sign in'}
           </Btn>

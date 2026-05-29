@@ -56,7 +56,7 @@ declare const envSchema: z.ZodObject<{
     ADMIN_UI_ORIGIN: z.ZodOptional<z.ZodString>;
     /** Public URL of the staff portal SPA (no trailing slash), e.g. https://api.example.com/morbeez-staff */
     CONSOLE_PUBLIC_URL: z.ZodOptional<z.ZodString>;
-    /** Shared password all staff use after completing email invite (min 8 chars) */
+    /** @deprecated No longer used — staff set individual passwords */
     CONSOLE_SHARED_PASSWORD: z.ZodOptional<z.ZodString>;
     RATE_LIMIT_MAX: z.ZodDefault<z.ZodNumber>;
     RATE_LIMIT_WINDOW_MS: z.ZodDefault<z.ZodNumber>;

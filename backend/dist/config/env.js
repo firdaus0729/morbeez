@@ -59,7 +59,7 @@ const envSchema = z.object({
     ADMIN_UI_ORIGIN: z.string().optional(),
     /** Public URL of the staff portal SPA (no trailing slash), e.g. https://api.example.com/morbeez-staff */
     CONSOLE_PUBLIC_URL: z.string().url().optional(),
-    /** Shared password all staff use after completing email invite (min 8 chars) */
+    /** @deprecated No longer used — staff set individual passwords */
     CONSOLE_SHARED_PASSWORD: z.string().min(8).max(128).optional(),
     RATE_LIMIT_MAX: z.coerce.number().default(100),
     RATE_LIMIT_WINDOW_MS: z.coerce.number().default(60_000),

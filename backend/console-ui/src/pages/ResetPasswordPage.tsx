@@ -1,13 +1,12 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { completeInvite, fetchInvitePreview } from '../lib/api';
+import { completePasswordReset, fetchResetPasswordPreview } from '../lib/api';
 import { validatePasswordPair } from '../lib/password-form';
-import { roleLabel } from '../lib/format';
 import { paths, toPath } from '../lib/routes';
 import { LogoMark } from '../components/LogoMark';
 import { Alert, Btn, Field, Input } from '../components/ui';
 
-export function AcceptInvitePage() {
+export function ResetPasswordPage() {
   const [searchParams] = useSearchParams();
   const token = searchParams.get('token') ?? '';
   const navigate = useNavigate();
@@ -15,8 +14,6 @@ export function AcceptInvitePage() {
   const [loading, setLoading] = useState(true);
   const [previewError, setPreviewError] = useState('');
   const [email, setEmail] = useState('');
-  const [fullName, setFullName] = useState('');
-  const [role, setRole] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [submitError, setSubmitError] = useState('');
@@ -25,7 +22,7 @@ export function AcceptInvitePage() {
 
   useEffect(() => {
     if (!token) {
-      setPreviewError('Missing invitation token. Open the full link from your email.');
+      setPreviewError('Missing reset token. Use the full link from your email.');
       setLoading(false);
       return;
     }
@@ -33,12 +30,10 @@ export function AcceptInvitePage() {
       setLoading(true);
       setPreviewError('');
       try {
-        const invite = await fetchInvitePreview(token);
-        setEmail(invite.email ?? '');
-        setFullName(invite.fullName ?? '');
-        setRole(invite.role ?? '');
+        const reset = await fetchResetPasswordPreview(token);
+        setEmail(reset.email ?? '');
       } catch (e) {
-        setPreviewError(e instanceof Error ? e.message : 'Could not load invitation');
+        setPreviewError(e instanceof Error ? e.message : 'Could not load reset link');
       } finally {
         setLoading(false);
       }
@@ -56,11 +51,11 @@ export function AcceptInvitePage() {
     setSubmitError('');
     setSubmitting(true);
     try {
-      await completeInvite(token, password, confirmPassword);
+      await completePasswordReset(token, password, confirmPassword);
       setDone(true);
       setTimeout(() => navigate(toPath(paths.login), { replace: true }), 2000);
     } catch (err) {
-      setSubmitError(err instanceof Error ? err.message : 'Activation failed');
+      setSubmitError(err instanceof Error ? err.message : 'Could not reset password');
     } finally {
       setSubmitting(false);
     }
@@ -79,15 +74,12 @@ export function AcceptInvitePage() {
           </div>
         </div>
 
-        <h1 className="text-2xl font-bold text-slate-900">Activate your account</h1>
+        <h1 className="text-2xl font-bold text-slate-900">Set a new password</h1>
         <p className="mt-2 text-sm text-slate-600">
-          You received this link on your work email. Create your personal password to access the
-          staff console.
+          Choose a personal password for your account. You will use this each time you sign in.
         </p>
 
-        {loading ? (
-          <p className="mt-6 text-sm text-slate-500">Loading invitation…</p>
-        ) : null}
+        {loading ? <p className="mt-6 text-sm text-slate-500">Loading…</p> : null}
 
         {previewError ? (
           <div className="mt-5">
@@ -95,24 +87,15 @@ export function AcceptInvitePage() {
           </div>
         ) : null}
 
-        {!loading && !previewError ? (
-          <div className="mt-5 rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
-            <div>
-              <span className="font-semibold text-slate-900">Name:</span> {fullName || '—'}
-            </div>
-            <div className="mt-1">
-              <span className="font-semibold text-slate-900">Email:</span> {email || '—'}
-            </div>
-            <div className="mt-1">
-              <span className="font-semibold text-slate-900">Role:</span>{' '}
-              {role ? roleLabel(role) : '—'}
-            </div>
-          </div>
+        {!loading && !previewError && email ? (
+          <p className="mt-5 text-sm text-slate-700">
+            Resetting password for <strong>{email}</strong>
+          </p>
         ) : null}
 
         {done ? (
           <div className="mt-5">
-            <Alert tone="success">Account activated. Redirecting to sign in…</Alert>
+            <Alert tone="success">Password updated. Redirecting to sign in…</Alert>
           </div>
         ) : null}
 
@@ -124,7 +107,7 @@ export function AcceptInvitePage() {
 
         {!loading && !previewError && !done ? (
           <form onSubmit={handleSubmit} className="mt-6 space-y-4">
-            <Field label="Your password">
+            <Field label="New password">
               <Input
                 type="password"
                 name="password"
@@ -147,15 +130,14 @@ export function AcceptInvitePage() {
               />
             </Field>
             <Btn type="submit" className="w-full" disabled={submitting}>
-              {submitting ? 'Activating…' : 'Activate account'}
+              {submitting ? 'Saving…' : 'Update password'}
             </Btn>
           </form>
         ) : null}
 
         <p className="mt-6 text-center text-sm text-slate-500">
-          Already activated?{' '}
           <Link to={toPath(paths.login)} className="font-semibold text-brand-700 hover:underline">
-            Sign in
+            Back to sign in
           </Link>
         </p>
       </div>

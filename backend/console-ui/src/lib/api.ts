@@ -78,15 +78,53 @@ export type InvitePreview = {
 export async function fetchInvitePreview(token: string): Promise<InvitePreview> {
   const params = new URLSearchParams({ token });
   const data = await api<{ ok: boolean; invite: InvitePreview }>(
-    `/morbeez-staff/api/v1/auth/invite?${params}`
+    `${STAFF_API_V1}/auth/invite?${params}`
   );
   return data.invite;
 }
 
-export async function completeInvite(token: string, password: string): Promise<void> {
-  await api('/morbeez-staff/api/v1/auth/complete-invite', {
+export async function completeInvite(
+  token: string,
+  password: string,
+  confirmPassword: string
+): Promise<void> {
+  await api(`${STAFF_API_V1}/auth/complete-invite`, {
     method: 'POST',
-    body: JSON.stringify({ token, password }),
+    body: JSON.stringify({ token, password, confirmPassword }),
+  });
+}
+
+export async function requestForgotPassword(email: string): Promise<{ message: string }> {
+  const data = await api<{ ok: boolean; message: string }>(`${STAFF_API_V1}/auth/forgot-password`, {
+    method: 'POST',
+    body: JSON.stringify({ email }),
+  });
+  return { message: data.message };
+}
+
+export type ResetPasswordPreview = {
+  email: string | null;
+  fullName: string | null;
+  expiresAt: string;
+  source: string;
+};
+
+export async function fetchResetPasswordPreview(token: string): Promise<ResetPasswordPreview> {
+  const params = new URLSearchParams({ token });
+  const data = await api<{ ok: boolean; reset: ResetPasswordPreview }>(
+    `${STAFF_API_V1}/auth/reset-password?${params}`
+  );
+  return data.reset;
+}
+
+export async function completePasswordReset(
+  token: string,
+  password: string,
+  confirmPassword: string
+): Promise<void> {
+  await api(`${STAFF_API_V1}/auth/complete-reset-password`, {
+    method: 'POST',
+    body: JSON.stringify({ token, password, confirmPassword }),
   });
 }
 
@@ -95,7 +133,7 @@ export async function login(email: string, password: string) {
     ok: boolean;
     token: string;
     admin: SessionAdmin & { fullName?: string };
-  }>('/morbeez-staff/api/v1/auth/login', {
+  }>(`${STAFF_API_V1}/auth/login`, {
     method: 'POST',
     body: JSON.stringify({ email, password }),
   });
@@ -109,7 +147,7 @@ export async function fetchSession(): Promise<SessionPayload> {
     admin: SessionAdmin & { fullName?: string };
     modules: ApiModule[];
     canApproveRecommendations: boolean;
-  }>('/morbeez-staff/api/v1/auth/me');
+  }>(`${STAFF_API_V1}/auth/me`);
   return {
     admin: data.admin,
     modules: data.modules ?? [],
