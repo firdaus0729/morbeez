@@ -130,7 +130,7 @@ export function LeadDetailPanel({ leadId, canWrite }: Props) {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
 
-  const base = '/console/api/v1/os/telecaller';
+  const base = '/morbeez-staff/api/v1/os/telecaller';
 
   const loadBlocks = useCallback(async () => {
     try {

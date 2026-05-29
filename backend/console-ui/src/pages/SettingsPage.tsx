@@ -32,7 +32,7 @@ export function SettingsPage({ canRead, canWrite }: { canRead: boolean; canWrite
   const [editing, setEditing] = useState<Staff | null>(null);
 
   async function reload() {
-    const d = await api<{ ok: boolean; staff: Staff[] }>('/console/api/v1/os/settings/staff');
+    const d = await api<{ ok: boolean; staff: Staff[] }>('/morbeez-staff/api/v1/os/settings/staff');
     setStaff(d.staff ?? []);
   }
 
@@ -41,7 +41,7 @@ export function SettingsPage({ canRead, canWrite }: { canRead: boolean; canWrite
       setLoading(false);
       return;
     }
-    api<{ ok: boolean; staff: Staff[] }>('/console/api/v1/os/settings/staff')
+    api<{ ok: boolean; staff: Staff[] }>('/morbeez-staff/api/v1/os/settings/staff')
       .then((d) => setStaff(d.staff ?? []))
       .catch((e) => setError(e instanceof Error ? e.message : 'Failed to load'))
       .finally(() => setLoading(false));
@@ -106,7 +106,7 @@ export function SettingsPage({ canRead, canWrite }: { canRead: boolean; canWrite
                               variant="danger"
                               onClick={async () => {
                                 if (!confirm(`Deactivate ${s.email}?`)) return;
-                                await api(`/console/api/v1/os/settings/staff/${s.id}`, {
+                                await api(`/morbeez-staff/api/v1/os/settings/staff/${s.id}`, {
                                   method: 'DELETE',
                                 });
                                 await reload();
@@ -165,7 +165,7 @@ function EditStaffModal({
     setSaving(true);
     setError('');
     try {
-      await api(`/console/api/v1/os/settings/staff/${row.id}`, {
+      await api(`/morbeez-staff/api/v1/os/settings/staff/${row.id}`, {
         method: 'PATCH',
         body: JSON.stringify({ fullName, role, active }),
       });

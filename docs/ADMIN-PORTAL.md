@@ -1,15 +1,15 @@
 # Morbeez Operations Console
 
-Enterprise-style **agriculture commerce control center** — products, farmers, orders, and extended product intelligence (agri + AI + SEO). Served as a static SPA from the Fastify API at `/console/`.
+Enterprise-style **agriculture commerce control center** — products, farmers, orders, and extended product intelligence (agri + AI + SEO). Served as a static SPA from the Fastify API at `/morbeez-staff/`.
 
-> **Do not use `/admin` in the URL.** Shopify redirects paths containing “admin” to Shopify Admin. Use **`/console`**.
+> **Do not use `/admin` in the URL.** Shopify redirects paths containing “admin” to Shopify Admin. Use **`/morbeez-staff`**.
 
 ## URLs
 
 | Environment | Console |
 |-------------|---------|
-| Production | **https://morbeez-api.onrender.com/console/** |
-| Local | `http://localhost:10000/console/` |
+| Production | **https://morbeez-api.onrender.com/morbeez-staff/** |
+| Local | `http://localhost:10000/morbeez-staff/` |
 
 ## Modules
 
@@ -57,7 +57,7 @@ npm run admin:create-user -- --email admin@morbeez.in --password "YourSecurePass
 cd backend && npm run dev
 ```
 
-Open **http://localhost:10000/console/**
+Open **http://localhost:10000/morbeez-staff/**
 
 ## Product import / intelligence columns
 
@@ -77,15 +77,15 @@ Future: CSV import script → `product_intelligence` + Shopify Admin API.
 
 | Method | Path |
 |--------|------|
-| POST | `/console/api/v1/auth/login` |
-| GET | `/console/api/v1/auth/me` |
-| GET | `/console/api/v1/dashboard` |
-| GET | `/console/api/v1/stats` |
-| GET/POST/PUT | `/console/api/v1/products` … |
-| GET/PUT | `/console/api/v1/products/:id/intelligence` |
-| GET | `/console/api/v1/orders` |
-| GET/PATCH | `/console/api/v1/farmers` … |
-| GET | `/console/api/v1/staff` (admin only) |
+| POST | `/morbeez-staff/api/v1/auth/login` |
+| GET | `/morbeez-staff/api/v1/auth/me` |
+| GET | `/morbeez-staff/api/v1/dashboard` |
+| GET | `/morbeez-staff/api/v1/stats` |
+| GET/POST/PUT | `/morbeez-staff/api/v1/products` … |
+| GET/PUT | `/morbeez-staff/api/v1/products/:id/intelligence` |
+| GET | `/morbeez-staff/api/v1/orders` |
+| GET/PATCH | `/morbeez-staff/api/v1/farmers` … |
+| GET | `/morbeez-staff/api/v1/staff` (admin only) |
 
 ## Roles
 

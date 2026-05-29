@@ -40,7 +40,7 @@ const outcomeSchema = z.object({
     notes: z.string().max(2000).optional(),
 });
 export async function osFoundationRoutes(app) {
-    const api = '/console/api/v1/os';
+    const api = '/morbeez-staff/api/v1/os';
     app.get(`${api}/session`, async (request, reply) => {
         const admin = requireAdmin(request);
         const modules = await getModulesForRole(admin.role);

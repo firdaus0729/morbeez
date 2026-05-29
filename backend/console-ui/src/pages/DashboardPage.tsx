@@ -109,7 +109,7 @@ export function DashboardPage() {
   const chartRef = useRef<Chart | null>(null);
 
   useEffect(() => {
-    api<{ ok: boolean } & Dashboard>('/console/api/v1/dashboard')
+    api<{ ok: boolean } & Dashboard>('/morbeez-staff/api/v1/dashboard')
       .then((d) => setData(d))
       .catch((e) => setError(e instanceof Error ? e.message : 'Failed to load'))
       .finally(() => setLoading(false));

@@ -148,7 +148,7 @@ export function EmployeesPage({ canWrite = false }: { canWrite?: boolean }) {
     setLoading(true);
     setError('');
     try {
-      const d = await api<{ ok: boolean } & Workspace>('/console/api/v1/staff/workspace');
+      const d = await api<{ ok: boolean } & Workspace>('/morbeez-staff/api/v1/staff/workspace');
       setWorkspace(d);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load employees');
@@ -170,7 +170,7 @@ export function EmployeesPage({ canWrite = false }: { canWrite?: boolean }) {
       setDetailLoading(true);
       setError('');
       try {
-        const d = await api<{ ok: boolean } & Detail>(`/console/api/v1/staff/${employeeId}`);
+        const d = await api<{ ok: boolean } & Detail>(`/morbeez-staff/api/v1/staff/${employeeId}`);
         setDetail(d);
       } catch (e) {
         setError(e instanceof Error ? e.message : 'Failed to load employee');
@@ -207,7 +207,7 @@ export function EmployeesPage({ canWrite = false }: { canWrite?: boolean }) {
     compensation?: Record<string, unknown>;
     attendanceRules?: Record<string, unknown>;
   }): Promise<string> {
-    const d = await api<{ ok: boolean; employee: { id: string } }>('/console/api/v1/employees', {
+    const d = await api<{ ok: boolean; employee: { id: string } }>('/morbeez-staff/api/v1/employees', {
       method: 'POST',
       body: JSON.stringify(input),
     });
@@ -220,7 +220,7 @@ export function EmployeesPage({ canWrite = false }: { canWrite?: boolean }) {
     const d = await api<{
       ok: boolean;
       invite: { inviteUrl: string; email: string | null };
-    }>(`/console/api/v1/employees/${employeeProfileId}/send-setup-link`, {
+    }>(`/morbeez-staff/api/v1/employees/${employeeProfileId}/send-setup-link`, {
       method: 'POST',
       body: JSON.stringify({ channels: ['email'] }),
     });
@@ -231,7 +231,7 @@ export function EmployeesPage({ canWrite = false }: { canWrite?: boolean }) {
     id: string,
     input: { fullName?: string; role?: string; active?: boolean }
   ) {
-    await api(`/console/api/v1/staff/${id}`, {
+    await api(`/morbeez-staff/api/v1/staff/${id}`, {
       method: 'PATCH',
       body: JSON.stringify(input),
     });
@@ -239,7 +239,7 @@ export function EmployeesPage({ canWrite = false }: { canWrite?: boolean }) {
   }
 
   async function deactivateEmployee(id: string, confirmPassword: string) {
-    await api(`/console/api/v1/employees/${id}/deactivate`, {
+    await api(`/morbeez-staff/api/v1/employees/${id}/deactivate`, {
       method: 'POST',
       body: JSON.stringify({ confirmPassword }),
     });
@@ -247,7 +247,7 @@ export function EmployeesPage({ canWrite = false }: { canWrite?: boolean }) {
   }
 
   async function sendResetLink(id: string) {
-    await api(`/console/api/v1/employees/${id}/reset-password-link`, {
+    await api(`/morbeez-staff/api/v1/employees/${id}/reset-password-link`, {
       method: 'POST',
       body: JSON.stringify({ channels: ['email'] }),
     });

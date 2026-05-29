@@ -5,7 +5,7 @@ import { defaultsForPage } from '../lib/console-page-search';
 import { matchesSearch } from '../lib/search-filter';
 import { Alert, HubTabs, Loading, ReadOnlyBanner } from '../components/ui';
 
-const base = '/console/api/v1/os/agronomist';
+const base = '/morbeez-staff/api/v1/os/agronomist';
 
 type QueueItem = {
   finding: {

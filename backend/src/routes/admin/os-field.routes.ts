@@ -10,7 +10,7 @@ const photoSchema = z.object({
 });
 
 export async function osFieldRoutes(app: FastifyInstance): Promise<void> {
-  const api = '/console/api/v1/os/field';
+  const api = '/morbeez-staff/api/v1/os/field';
 
   app.get(`${api}/farmers/search`, async (request, reply) => {
     await assertModuleAccess(request, 'agronomist', 'read');

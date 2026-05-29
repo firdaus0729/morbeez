@@ -26,7 +26,7 @@ const draftSchema = z.object({
 });
 
 export async function osAgronomistRoutes(app: FastifyInstance): Promise<void> {
-  const api = '/console/api/v1/os/agronomist';
+  const api = '/morbeez-staff/api/v1/os/agronomist';
 
   app.get(`${api}/queue`, async (request, reply) => {
     await assertModuleAccess(request, 'agronomist', 'read');

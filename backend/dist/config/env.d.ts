@@ -54,7 +54,7 @@ declare const envSchema: z.ZodObject<{
     FARMER_JWT_SECRET: z.ZodString;
     ADMIN_JWT_SECRET: z.ZodString;
     ADMIN_UI_ORIGIN: z.ZodOptional<z.ZodString>;
-    /** Public URL of the staff console SPA (no trailing slash), e.g. https://api.example.com/console */
+    /** Public URL of the staff portal SPA (no trailing slash), e.g. https://api.example.com/morbeez-staff */
     CONSOLE_PUBLIC_URL: z.ZodOptional<z.ZodString>;
     /** Shared password all staff use after completing email invite (min 8 chars) */
     CONSOLE_SHARED_PASSWORD: z.ZodOptional<z.ZodString>;

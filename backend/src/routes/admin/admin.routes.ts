@@ -203,7 +203,7 @@ async function assertCanDeactivateSuperAdmin(userId: string): Promise<void> {
 }
 
 export async function adminRoutes(app: FastifyInstance): Promise<void> {
-  const api = '/console/api/v1';
+  const api = '/morbeez-staff/api/v1';
 
   app.post(`${api}/auth/login`, async (request, reply) => {
     const body = loginSchema.parse(request.body);

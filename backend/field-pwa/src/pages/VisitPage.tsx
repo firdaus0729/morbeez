@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { api } from '../lib/api';
 import type { Block, Farmer, Question } from '../App';
 
-const fieldApi = '/console/api/v1/os/field';
+const fieldApi = '/morbeez-staff/api/v1/os/field';
 
 type Props = {
   farmer: Farmer;

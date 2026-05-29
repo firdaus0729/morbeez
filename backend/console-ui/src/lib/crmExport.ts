@@ -1,6 +1,6 @@
 import { api } from './api';
 
-const base = '/console/api/v1/os/telecaller';
+const base = '/morbeez-staff/api/v1/os/telecaller';
 
 export type ExportType = 'lead' | 'recommendations' | 'interactions' | 'findings';
 

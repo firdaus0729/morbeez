@@ -16,7 +16,7 @@ export function useCrmMasters(masterType: string, parentId?: string | null) {
       const params = new URLSearchParams({ type: masterType });
       if (parentId) params.set('parentId', parentId);
       const data = await api<{ ok: boolean; items: MasterItem[] }>(
-        `/console/api/v1/os/telecaller/masters?${params}`
+        `/morbeez-staff/api/v1/os/telecaller/masters?${params}`
       );
       const list = data.items ?? [];
       cache.set(key, list);
@@ -35,7 +35,7 @@ export function useCrmMasters(masterType: string, parentId?: string | null) {
   const createMaster = useCallback(
     async (name: string) => {
       const data = await api<{ ok: boolean; item: MasterItem }>(
-        '/console/api/v1/os/telecaller/masters',
+        '/morbeez-staff/api/v1/os/telecaller/masters',
         {
           method: 'POST',
           body: JSON.stringify({

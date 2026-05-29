@@ -36,7 +36,7 @@ export function ProductGapsPage() {
   useEffect(() => {
     setLoading(true);
     setError('');
-    api<{ ok: boolean; gaps: Gap[] }>('/console/api/v1/os/product-gaps')
+    api<{ ok: boolean; gaps: Gap[] }>('/morbeez-staff/api/v1/os/product-gaps')
       .then((d) => setGaps(d.gaps ?? []))
       .catch((e) => setError(e instanceof Error ? e.message : 'Failed to load'))
       .finally(() => setLoading(false));

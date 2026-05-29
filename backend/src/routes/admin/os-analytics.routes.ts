@@ -8,7 +8,7 @@ function parseDays(q: { days?: string }): number {
 }
 
 export async function osAnalyticsRoutes(app: FastifyInstance): Promise<void> {
-  const api = '/console/api/v1/os/analytics';
+  const api = '/morbeez-staff/api/v1/os/analytics';
 
   app.get(`${api}/summary`, async (request, reply) => {
     await assertModuleAccess(request, 'analytics', 'read');

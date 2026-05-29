@@ -1,6 +1,6 @@
 # Morbeez Console RBAC
 
-Seven staff roles control access to `/console` via `role_module_permissions` and JWT session modules.
+Seven staff roles control access to `/morbeez-staff` via `role_module_permissions` and JWT session modules.
 
 ## Roles
 

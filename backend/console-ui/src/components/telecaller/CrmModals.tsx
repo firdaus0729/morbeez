@@ -3,7 +3,7 @@ import { api } from '../../lib/api';
 import { Field, Modal, inputClass } from '../Modal';
 import { MasterSelect } from './MasterSelect';
 
-const base = '/console/api/v1/os/telecaller';
+const base = '/morbeez-staff/api/v1/os/telecaller';
 
 export type CrmModalType =
   | 'block'

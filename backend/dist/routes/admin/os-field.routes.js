@@ -7,7 +7,7 @@ const photoSchema = z.object({
     dataBase64: z.string().min(10).max(7_000_000),
 });
 export async function osFieldRoutes(app) {
-    const api = '/console/api/v1/os/field';
+    const api = '/morbeez-staff/api/v1/os/field';
     app.get(`${api}/farmers/search`, async (request, reply) => {
         await assertModuleAccess(request, 'agronomist', 'read');
         const q = request.query;

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { api } from '../../lib/api';
 import { Field, Modal, inputClass } from '../Modal';
 
-const base = '/console/api/v1/os/operations';
+const base = '/morbeez-staff/api/v1/os/operations';
 
 const LANGS = ['en', 'ml', 'ta', 'kn', 'hi'] as const;
 const CATEGORIES = ['general', 'telecaller', 'advisory', 'orders', 'broadcast'] as const;

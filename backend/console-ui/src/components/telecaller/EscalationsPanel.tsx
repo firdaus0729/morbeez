@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { api } from '../../lib/api';
 import { inputClass } from '../Modal';
 
-const base = '/console/api/v1/os/telecaller';
+const base = '/morbeez-staff/api/v1/os/telecaller';
 
 const STATUS_OPTIONS = [
   { value: 'pending', label: 'Pending' },

@@ -51,7 +51,7 @@ export function ApprovalsPage({ canApprove }: { canApprove: boolean }) {
     setError('');
     try {
       const data = await api<{ ok: boolean; recommendations: Rec[] }>(
-        '/console/api/v1/os/recommendations/pending'
+        '/morbeez-staff/api/v1/os/recommendations/pending'
       );
       setRows(data.recommendations ?? []);
     } catch (e) {
@@ -73,7 +73,7 @@ export function ApprovalsPage({ canApprove }: { canApprove: boolean }) {
         const d = await api<{
           ok: boolean;
           whatsapp?: { sent: boolean; reason?: string };
-        }>(`/console/api/v1/os/recommendations/${id}/approve`, {
+        }>(`/morbeez-staff/api/v1/os/recommendations/${id}/approve`, {
           method: 'POST',
           body: JSON.stringify({ sendWhatsApp }),
         });
@@ -83,7 +83,7 @@ export function ApprovalsPage({ canApprove }: { canApprove: boolean }) {
         else if (d.whatsapp?.reason === 'whatsapp_not_configured')
           setLastWhatsApp('Approved — WhatsApp not configured.');
       } else {
-        await api(`/console/api/v1/os/recommendations/${id}/reject`, {
+        await api(`/morbeez-staff/api/v1/os/recommendations/${id}/reject`, {
           method: 'POST',
           body: '{}',
         });

@@ -49,7 +49,7 @@ const outcomeSchema = z.object({
 });
 
 export async function osFoundationRoutes(app: FastifyInstance): Promise<void> {
-  const api = '/console/api/v1/os';
+  const api = '/morbeez-staff/api/v1/os';
 
   app.get(`${api}/session`, async (request, reply) => {
     const admin = requireAdmin(request);

@@ -4,7 +4,7 @@ import { LoginPage } from './pages/LoginPage';
 import { HomePage } from './pages/HomePage';
 import { VisitPage } from './pages/VisitPage';
 
-const fieldApi = '/console/api/v1/os/field';
+const fieldApi = '/morbeez-staff/api/v1/os/field';
 
 export type Farmer = {
   id: string;

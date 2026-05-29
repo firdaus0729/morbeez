@@ -66,7 +66,7 @@ export function TelecallerCrmPage({ canWrite }: { canWrite: boolean }) {
   const [unreadNotifications, setUnreadNotifications] = useState(0);
   const [showNotifications, setShowNotifications] = useState(false);
 
-  const base = '/console/api/v1/os/telecaller';
+  const base = '/morbeez-staff/api/v1/os/telecaller';
 
   const pushNotification = useCallback((message: string) => {
     const at = new Date().toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' });
@@ -462,7 +462,7 @@ function NewLeadModal({
     setError('');
     try {
       const res = await api<{ ok: boolean; lead: { id: string } }>(
-        '/console/api/v1/os/telecaller/leads',
+        '/morbeez-staff/api/v1/os/telecaller/leads',
         {
           method: 'POST',
           body: JSON.stringify({

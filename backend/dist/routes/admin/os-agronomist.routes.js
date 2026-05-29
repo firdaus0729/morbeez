@@ -23,7 +23,7 @@ const draftSchema = z.object({
     language: z.enum(['en', 'ml', 'ta', 'kn', 'hi']).optional(),
 });
 export async function osAgronomistRoutes(app) {
-    const api = '/console/api/v1/os/agronomist';
+    const api = '/morbeez-staff/api/v1/os/agronomist';
     app.get(`${api}/queue`, async (request, reply) => {
         await assertModuleAccess(request, 'agronomist', 'read');
         const q = request.query;

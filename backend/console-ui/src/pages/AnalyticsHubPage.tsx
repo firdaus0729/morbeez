@@ -3,7 +3,7 @@ import { api } from '../lib/api';
 import { Alert, HubTabs, PageShell, Panel, Select } from '../components/ui';
 import { StatIcon } from '../components/NavIcon';
 
-const base = '/console/api/v1/os/analytics';
+const base = '/morbeez-staff/api/v1/os/analytics';
 
 type Tab = 'geography' | 'retention' | 'broadcasts' | 'recommendations' | 'ai_accuracy';
 

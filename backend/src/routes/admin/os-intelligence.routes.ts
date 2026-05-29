@@ -4,7 +4,7 @@ import { assertModuleAccess } from '../../lib/rbac.js';
 import { agIntelligenceService } from '../../services/admin/ag-intelligence.service.js';
 
 export async function osIntelligenceRoutes(app: FastifyInstance): Promise<void> {
-  const api = '/console/api/v1/os/intelligence';
+  const api = '/morbeez-staff/api/v1/os/intelligence';
 
   app.get(`${api}/weather-rules`, async (request, reply) => {
     await assertModuleAccess(request, 'intelligence', 'read');

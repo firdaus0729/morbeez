@@ -1,6 +1,6 @@
 import { paths, toPath } from './routes';
 
-/** Default landing path after login (relative to /console basename). */
+/** Default landing path after login (relative to /morbeez-staff basename). */
 export function getRoleHomePath(role: string | undefined | null): string {
   switch (role) {
     case 'operations':

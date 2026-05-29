@@ -20,7 +20,7 @@ export function PincodeLookupPage({ embedded }: { embedded?: boolean } = {}) {
     setResult(null);
     try {
       const data = await api<{ ok: boolean; pincode: Pincode | null }>(
-        `/console/api/v1/os/pincodes/lookup/${code.replace(/\D/g, '').slice(0, 6)}`
+        `/morbeez-staff/api/v1/os/pincodes/lookup/${code.replace(/\D/g, '').slice(0, 6)}`
       );
       setResult(data.pincode);
       if (!data.pincode) setError('Pincode not in master — import via Supabase');

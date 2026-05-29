@@ -6,7 +6,7 @@ import { throwIfSupabaseError } from '../../lib/supabase-errors.js';
 import { logAdminMutation } from '../../lib/admin-mutation-audit.js';
 import { assertSuperAdminDeactivationAllowed } from '../../lib/admin-guards.js';
 export async function osSettingsRoutes(app) {
-    const api = '/console/api/v1/os/settings';
+    const api = '/morbeez-staff/api/v1/os/settings';
     app.get(`${api}/staff`, async (request, reply) => {
         await assertModuleAccess(request, 'settings', 'read');
         const { data, error } = await supabase

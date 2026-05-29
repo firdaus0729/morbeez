@@ -17,7 +17,7 @@ const broadcastKindEnum = z.enum([
 ]);
 
 export async function osOperationsRoutes(app: FastifyInstance): Promise<void> {
-  const api = '/console/api/v1/os/operations';
+  const api = '/morbeez-staff/api/v1/os/operations';
 
   app.get(`${api}/messaging-config`, async (request, reply) => {
     await assertModuleAccess(request, 'operations', 'read');

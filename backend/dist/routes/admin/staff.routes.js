@@ -2,7 +2,7 @@ import { assertModuleAccess } from '../../lib/rbac.js';
 import { staffAdminService } from '../../services/admin/staff-admin.service.js';
 import { AppError } from '../../lib/errors.js';
 export async function staffRoutes(app) {
-    const api = '/console/api/v1/staff';
+    const api = '/morbeez-staff/api/v1/staff';
     app.get(`${api}/workspace`, async (request, reply) => {
         await assertModuleAccess(request, 'settings', 'read');
         const workspace = await staffAdminService.getWorkspace();

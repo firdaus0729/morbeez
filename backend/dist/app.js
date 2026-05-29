@@ -23,6 +23,7 @@ import { shopifyOAuthRoutes } from './routes/auth/shopify-oauth.routes.js';
 import { checkoutRoutes } from './routes/api/checkout.routes.js';
 import { adminRoutes } from './routes/admin/admin.routes.js';
 import { registerEventHandlers } from './events/registerHandlers.js';
+import { LEGACY_CONSOLE_PATH, STAFF_API_V1, STAFF_PORTAL_PATH, STAFF_PORTAL_PREFIX, } from './lib/staff-portal.js';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const reactConsoleStaticRoot = path.join(__dirname, '../console-ui/dist');
 const fieldPwaStaticRoot = path.join(__dirname, '../field-pwa/dist');
@@ -61,31 +62,44 @@ export async function buildApp() {
     await app.register(authRoutes);
     await app.register(checkoutRoutes);
     await app.register(adminRoutes);
-    const consolePrefix = '/console/';
+    const staffPrefix = STAFF_PORTAL_PREFIX;
     const consoleIndexPath = path.join(reactConsoleStaticRoot, 'index.html');
     const consoleBuilt = fs.existsSync(consoleIndexPath);
     if (consoleBuilt) {
         await app.register(fastifyStatic, {
             root: reactConsoleStaticRoot,
-            prefix: consolePrefix,
+            prefix: staffPrefix,
             decorateReply: true,
         });
     }
     else {
         logger.warn({ path: reactConsoleStaticRoot }, CONSOLE_BUILD_HINT);
     }
-    app.get('/console', async (_request, reply) => {
+    app.get(STAFF_PORTAL_PATH, async (_request, reply) => {
         if (!consoleBuilt) {
             return reply.code(503).type('text/html').send(buildMissingConsoleHtml());
         }
-        return reply.redirect(consolePrefix);
+        return reply.redirect(staffPrefix);
     });
     if (!consoleBuilt) {
-        app.get('/console/', async (_request, reply) => reply.code(503).type('text/html').send(buildMissingConsoleHtml()));
+        app.get(STAFF_PORTAL_PREFIX, async (_request, reply) => reply.code(503).type('text/html').send(buildMissingConsoleHtml()));
     }
-    /* Shopify store owners often hit /admin — send them to Morbeez staff console */
-    app.get('/admin', async (_request, reply) => reply.redirect('/console/'));
-    app.get('/admin/', async (_request, reply) => reply.redirect('/console/'));
+    /* Legacy /console bookmarks → morbeez-staff */
+    app.get(LEGACY_CONSOLE_PATH, async (_request, reply) => {
+        if (!consoleBuilt) {
+            return reply.code(503).type('text/html').send(buildMissingConsoleHtml());
+        }
+        return reply.redirect(staffPrefix);
+    });
+    app.get(`${LEGACY_CONSOLE_PATH}/`, async (_request, reply) => {
+        if (!consoleBuilt) {
+            return reply.code(503).type('text/html').send(buildMissingConsoleHtml());
+        }
+        return reply.redirect(staffPrefix);
+    });
+    /* Shopify store owners often hit /admin — send them to Morbeez staff portal */
+    app.get('/admin', async (_request, reply) => reply.redirect(staffPrefix));
+    app.get('/admin/', async (_request, reply) => reply.redirect(staffPrefix));
     const fieldIndexPath = path.join(fieldPwaStaticRoot, 'index.html');
     const fieldBuilt = fs.existsSync(fieldIndexPath);
     const fieldPrefix = '/field/';
@@ -103,10 +117,10 @@ export async function buildApp() {
     await app.register(shopifyProxyRoutes);
     app.setNotFoundHandler(async (request, reply) => {
         const url = (request.url.split('?')[0] ?? '').replace(/\/+$/, '') || '/';
-        if (url.startsWith('/console/api/')) {
+        if (url.startsWith(`${STAFF_API_V1}/`) || url === STAFF_API_V1) {
             return reply.code(404).send({ error: 'NOT_FOUND', message: 'API route not found' });
         }
-        if (url.startsWith('/console')) {
+        if (url.startsWith(STAFF_PORTAL_PATH) || url.startsWith(LEGACY_CONSOLE_PATH)) {
             if (!consoleBuilt) {
                 return reply.code(503).type('text/html').send(buildMissingConsoleHtml());
             }

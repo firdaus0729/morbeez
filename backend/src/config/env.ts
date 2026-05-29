@@ -65,7 +65,7 @@ const envSchema = z.object({
   FARMER_JWT_SECRET: z.string().min(32),
   ADMIN_JWT_SECRET: z.string().min(32),
   ADMIN_UI_ORIGIN: z.string().optional(),
-  /** Public URL of the staff console SPA (no trailing slash), e.g. https://api.example.com/console */
+  /** Public URL of the staff portal SPA (no trailing slash), e.g. https://api.example.com/morbeez-staff */
   CONSOLE_PUBLIC_URL: z.string().url().optional(),
   /** Shared password all staff use after completing email invite (min 8 chars) */
   CONSOLE_SHARED_PASSWORD: z.string().min(8).max(128).optional(),

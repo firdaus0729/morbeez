@@ -44,22 +44,22 @@ export function CommerceHubPage({ canWrite = false }: { canWrite?: boolean }) {
     try {
       if (tab === 'orders') {
         const d = await api<{ ok: boolean; orders: Array<Record<string, unknown>> }>(
-          `/console/api/v1/orders?limit=40${q}`
+          `/morbeez-staff/api/v1/orders?limit=40${q}`
         );
         setOrders(d.orders ?? []);
       } else if (tab === 'farmers') {
         const d = await api<{ ok: boolean; farmers: Array<Record<string, unknown>> }>(
-          `/console/api/v1/farmers?limit=40${q}`
+          `/morbeez-staff/api/v1/farmers?limit=40${q}`
         );
         setFarmers(d.farmers ?? []);
       } else if (tab === 'products') {
         const d = await api<{ ok: boolean; products: Array<Record<string, unknown>> }>(
-          `/console/api/v1/products?limit=40${q}`
+          `/morbeez-staff/api/v1/products?limit=40${q}`
         );
         setProducts(d.products ?? []);
       } else {
         const d = await api<{ ok: boolean; rows: Array<Record<string, unknown>> }>(
-          `/console/api/v1/inventory?limit=40${q}`
+          `/morbeez-staff/api/v1/inventory?limit=40${q}`
         );
         setInventory(d.rows ?? []);
       }
@@ -72,7 +72,7 @@ export function CommerceHubPage({ canWrite = false }: { canWrite?: boolean }) {
 
   async function archiveOrder(id: string, source?: string) {
     if (!confirm('Archive/cancel this order?')) return;
-    await api(`/console/api/v1/orders/${id}?source=${encodeURIComponent(source ?? 'shopify')}`, {
+    await api(`/morbeez-staff/api/v1/orders/${id}?source=${encodeURIComponent(source ?? 'shopify')}`, {
       method: 'DELETE',
     });
     await load();
@@ -80,13 +80,13 @@ export function CommerceHubPage({ canWrite = false }: { canWrite?: boolean }) {
 
   async function archiveFarmer(id: string) {
     if (!confirm('Archive this farmer?')) return;
-    await api(`/console/api/v1/farmers/${id}`, { method: 'DELETE' });
+    await api(`/morbeez-staff/api/v1/farmers/${id}`, { method: 'DELETE' });
     await load();
   }
 
   async function archiveProduct(id: string) {
     if (!confirm('Archive this product?')) return;
-    await api(`/console/api/v1/products/${id}`, { method: 'DELETE' });
+    await api(`/morbeez-staff/api/v1/products/${id}`, { method: 'DELETE' });
     await load();
   }
 

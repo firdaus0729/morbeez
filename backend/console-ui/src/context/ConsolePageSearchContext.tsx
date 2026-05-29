@@ -141,7 +141,7 @@ export function ConsolePageSearchProvider({
       api<{
         ok: boolean;
         results: { farmers: GlobalSearchHit[]; leads: GlobalSearchHit[]; orders: GlobalSearchHit[] };
-      }>(`/console/api/v1/search?q=${encodeURIComponent(term)}`, { signal: ac.signal })
+      }>(`/morbeez-staff/api/v1/search?q=${encodeURIComponent(term)}`, { signal: ac.signal })
         .then((d) => setGlobalResults(mergeHits(d.results ?? { farmers: [], leads: [], orders: [] })))
         .catch((e) => {
           if (e instanceof Error && e.name === 'AbortError') return;

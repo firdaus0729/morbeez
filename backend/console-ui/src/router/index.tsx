@@ -174,7 +174,7 @@ export const appRouter = createBrowserRouter(
     },
     { path: '*', element: <Navigate to={`/${paths.dashboard}`} replace /> },
   ],
-  { basename: '/console' }
+  { basename: '/morbeez-staff' }
 );
 
 export function AppRouter() {

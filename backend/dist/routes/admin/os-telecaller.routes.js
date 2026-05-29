@@ -15,7 +15,7 @@ const leadStageEnum = z.enum([
     'repeat_customer',
 ]);
 export async function osTelecallerRoutes(app) {
-    const api = '/console/api/v1/os/telecaller';
+    const api = '/morbeez-staff/api/v1/os/telecaller';
     app.get(`${api}/overview`, async (request, reply) => {
         const admin = await assertModuleAccess(request, 'telecaller_crm', 'read');
         const overview = await telecallerAdminService.getOverview(admin.email);

@@ -5,7 +5,7 @@ function parseDays(q) {
     return Math.min(Math.max(n, 7), 90);
 }
 export async function osAnalyticsRoutes(app) {
-    const api = '/console/api/v1/os/analytics';
+    const api = '/morbeez-staff/api/v1/os/analytics';
     app.get(`${api}/summary`, async (request, reply) => {
         await assertModuleAccess(request, 'analytics', 'read');
         const days = parseDays(request.query);

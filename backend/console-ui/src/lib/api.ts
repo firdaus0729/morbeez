@@ -1,3 +1,5 @@
+import { STAFF_API_V1 } from './staff-portal';
+
 const TOKEN_KEY = 'morbeez_admin_token';
 
 export function getToken(): string | null {
@@ -76,13 +78,13 @@ export type InvitePreview = {
 export async function fetchInvitePreview(token: string): Promise<InvitePreview> {
   const params = new URLSearchParams({ token });
   const data = await api<{ ok: boolean; invite: InvitePreview }>(
-    `/console/api/v1/auth/invite?${params}`
+    `/morbeez-staff/api/v1/auth/invite?${params}`
   );
   return data.invite;
 }
 
 export async function completeInvite(token: string, password: string): Promise<void> {
-  await api('/console/api/v1/auth/complete-invite', {
+  await api('/morbeez-staff/api/v1/auth/complete-invite', {
     method: 'POST',
     body: JSON.stringify({ token, password }),
   });
@@ -93,7 +95,7 @@ export async function login(email: string, password: string) {
     ok: boolean;
     token: string;
     admin: SessionAdmin & { fullName?: string };
-  }>('/console/api/v1/auth/login', {
+  }>('/morbeez-staff/api/v1/auth/login', {
     method: 'POST',
     body: JSON.stringify({ email, password }),
   });
@@ -107,7 +109,7 @@ export async function fetchSession(): Promise<SessionPayload> {
     admin: SessionAdmin & { fullName?: string };
     modules: ApiModule[];
     canApproveRecommendations: boolean;
-  }>('/console/api/v1/auth/me');
+  }>('/morbeez-staff/api/v1/auth/me');
   return {
     admin: data.admin,
     modules: data.modules ?? [],

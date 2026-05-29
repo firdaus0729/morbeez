@@ -1,5 +1,6 @@
 import { createHash, randomBytes } from 'node:crypto';
 import { env } from '../../config/env.js';
+import { STAFF_PORTAL_PATH } from '../../lib/staff-portal.js';
 import { logger } from '../../lib/logger.js';
 import { ValidationError } from '../../lib/errors.js';
 import { hashPassword } from '../../lib/password.js';
@@ -16,8 +17,8 @@ export function getConsolePublicUrl(): string {
     return env.CONSOLE_PUBLIC_URL.replace(/\/$/, '');
   }
   const api = env.API_BASE_URL?.replace(/\/$/, '');
-  if (api) return `${api}/console`;
-  return 'http://localhost:3000/console';
+  if (api) return `${api}${STAFF_PORTAL_PATH}`;
+  return `http://localhost:3000${STAFF_PORTAL_PATH}`;
 }
 
 export function buildInviteUrl(token: string): string {

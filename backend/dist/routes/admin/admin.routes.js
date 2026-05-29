@@ -178,7 +178,7 @@ async function assertCanDeactivateSuperAdmin(userId) {
     });
 }
 export async function adminRoutes(app) {
-    const api = '/console/api/v1';
+    const api = '/morbeez-staff/api/v1';
     app.post(`${api}/auth/login`, async (request, reply) => {
         const body = loginSchema.parse(request.body);
         const result = await adminAuthService.login(body);

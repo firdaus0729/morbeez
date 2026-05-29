@@ -33,7 +33,7 @@ export async function api<T = unknown>(path: string, options: RequestInit = {}):
 }
 
 export async function login(email: string, password: string) {
-  const data = await api<{ ok: boolean; token: string }>('/console/api/v1/auth/login', {
+  const data = await api<{ ok: boolean; token: string }>('/morbeez-staff/api/v1/auth/login', {
     method: 'POST',
     body: JSON.stringify({ email, password }),
   });
@@ -46,7 +46,7 @@ export async function fetchFieldSession() {
     ok: boolean;
     admin: { email: string; role: string };
     modules: Array<{ moduleKey: string; canRead: boolean; canWrite: boolean }>;
-  }>('/console/api/v1/os/session');
+  }>('/morbeez-staff/api/v1/os/session');
 }
 
 export function canFieldWrite(

@@ -184,7 +184,7 @@ export function OperationsCenterPage({ canWrite }: { canWrite: boolean }) {
     pricePerKg: '',
   });
 
-  const base = '/console/api/v1/os/operations';
+  const base = '/morbeez-staff/api/v1/os/operations';
 
   const visibleRules = useMemo(
     () =>

@@ -7,7 +7,7 @@ import { PincodeLookupPage } from './PincodeLookupPage';
 import { Field, Modal, inputClass } from '../components/Modal';
 import { Alert, HubTabs, PageShell, ReadOnlyBanner } from '../components/ui';
 
-const base = '/console/api/v1/os/intelligence';
+const base = '/morbeez-staff/api/v1/os/intelligence';
 const CROPS = ['ginger', 'banana', 'cardamom', 'pepper', 'tomato', 'chilli', 'brinjal', 'all'];
 
 type Tab =
