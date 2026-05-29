@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react';
 import { api } from '../lib/api';
-import { useConsolePageSearch } from '../context/ConsolePageSearchContext';
+import { useSyncConsoleSearchMode } from '../hooks/useSyncConsoleSearch';
 import { defaultsForPage } from '../lib/console-page-search';
 import { matchesSearch } from '../lib/search-filter';
 import {
@@ -106,22 +106,13 @@ export function OperationsCenterPage({ canWrite }: { canWrite: boolean }) {
   const [tab, setTab] = useState<Tab>('broadcasts');
   const [search, setSearch] = useState('');
   const [error, setError] = useState('');
-  const pageSearch = useConsolePageSearch();
   const searchDefaults = defaultsForPage('operations');
-
-  useEffect(() => {
-    if (tab === 'messaging') {
-      pageSearch.register({ mode: 'none' });
-      return () => pageSearch.clearRegistration();
-    }
-    pageSearch.register({
-      mode: 'local',
-      value: search,
-      onChange: setSearch,
-      placeholder: searchDefaults.placeholder ?? 'Search broadcasts, prices…',
-    });
-    return () => pageSearch.clearRegistration();
-  }, [tab, search, searchDefaults.placeholder, pageSearch]);
+  useSyncConsoleSearchMode(
+    tab === 'messaging' ? 'none' : 'local',
+    search,
+    setSearch,
+    searchDefaults.placeholder ?? 'Search broadcasts, prices…'
+  );
   const [loading, setLoading] = useState(true);
 
   const [config, setConfig] = useState<MessagingConfig | null>(null);

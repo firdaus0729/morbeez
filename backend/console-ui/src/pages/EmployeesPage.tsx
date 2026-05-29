@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { useConsolePageSearch } from '../context/ConsolePageSearchContext';
+import { useSyncConsoleSearchMode } from '../hooks/useSyncConsoleSearch';
 import { api } from '../lib/api';
 import { assignableRolesForActor } from '../lib/role-home';
 import { defaultsForPage } from '../lib/console-page-search';
@@ -127,22 +127,13 @@ export function EmployeesPage({ canWrite = false }: { canWrite?: boolean }) {
   const [detailTab, setDetailTab] = useState('overview');
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
-  const pageSearch = useConsolePageSearch();
   const employeeSearchDefaults = defaultsForPage('employees');
-
-  useEffect(() => {
-    if (employeeId) {
-      pageSearch.register({ mode: 'none' });
-      return () => pageSearch.clearRegistration();
-    }
-    pageSearch.register({
-      mode: 'local',
-      value: search,
-      onChange: setSearch,
-      placeholder: employeeSearchDefaults.placeholder ?? 'Search employees…',
-    });
-    return () => pageSearch.clearRegistration();
-  }, [employeeId, search, employeeSearchDefaults.placeholder, pageSearch]);
+  useSyncConsoleSearchMode(
+    employeeId ? 'none' : 'local',
+    search,
+    setSearch,
+    employeeSearchDefaults.placeholder ?? 'Search employees…'
+  );
   const [loading, setLoading] = useState(true);
   const [detailLoading, setDetailLoading] = useState(false);
   const [error, setError] = useState('');

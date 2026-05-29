@@ -7,7 +7,7 @@ import { paths, toPath } from '../lib/routes';
 import { LogoMark } from './LogoMark';
 import { SidebarNav } from './SidebarNav';
 import { ConsoleTopbar } from './ConsoleTopbar';
-import { ConsoleOutlet } from './ConsoleOutlet';
+import { RoutedPageOutlet } from './RoutedPageOutlet';
 import { ConsolePageSearchProvider } from '../context/ConsolePageSearchContext';
 import { TelecallerHeaderProvider } from '../context/TelecallerHeaderContext';
 import { TelecallerWorkspaceHeader } from './telecaller/TelecallerWorkspaceHeader';
@@ -97,17 +97,17 @@ export function AppLayout() {
         {isTelecallerCrm ? (
           <TelecallerHeaderProvider>
             <TelecallerWorkspaceHeader onOpenMenu={() => setSidebarOpen(true)} onLogout={handleLogout} />
-            <ConsoleOutlet />
+            <RoutedPageOutlet />
           </TelecallerHeaderProvider>
         ) : (
-          <ConsolePageSearchProvider pageKey={meta.pageKey}>
+          <ConsolePageSearchProvider key={meta.pageKey} pageKey={meta.pageKey}>
             <ConsoleTopbar
               pathname={location.pathname}
               dateText={dateText}
               onOpenMenu={() => setSidebarOpen(true)}
               onLogout={handleLogout}
             />
-            <ConsoleOutlet />
+            <RoutedPageOutlet />
           </ConsolePageSearchProvider>
         )}
       </div>

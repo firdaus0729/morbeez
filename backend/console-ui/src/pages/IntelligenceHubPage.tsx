@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { api } from '../lib/api';
-import { useConsolePageSearch } from '../context/ConsolePageSearchContext';
+import { useSyncConsoleSearchMode } from '../hooks/useSyncConsoleSearch';
 import { defaultsForPage } from '../lib/console-page-search';
 import { matchesSearch } from '../lib/search-filter';
 import { PincodeLookupPage } from './PincodeLookupPage';
@@ -31,22 +31,13 @@ export function IntelligenceHubPage({ canWrite }: { canWrite: boolean }) {
   const [tab, setTab] = useState<Tab>('weather');
   const [search, setSearch] = useState('');
   const [cropFilter, setCropFilter] = useState('');
-  const pageSearch = useConsolePageSearch();
   const searchDefaults = defaultsForPage('intelligence');
-
-  useEffect(() => {
-    if (tab === 'pincode') {
-      pageSearch.register({ mode: 'none' });
-      return () => pageSearch.clearRegistration();
-    }
-    pageSearch.register({
-      mode: 'local',
-      value: search,
-      onChange: setSearch,
-      placeholder: searchDefaults.placeholder ?? 'Search rules, templates, tasks…',
-    });
-    return () => pageSearch.clearRegistration();
-  }, [tab, search, searchDefaults.placeholder, pageSearch]);
+  useSyncConsoleSearchMode(
+    tab === 'pincode' ? 'none' : 'local',
+    search,
+    setSearch,
+    searchDefaults.placeholder ?? 'Search rules, templates, tasks…'
+  );
 
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
