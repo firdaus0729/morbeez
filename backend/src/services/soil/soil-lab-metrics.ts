@@ -1,8 +1,19 @@
 /** Standard soil lab panel — stored in crm_soil_reports.metrics */
 
 export type SoilMetricValue = { value: string; unit: string };
+export const SOIL_TYPE_OPTIONS = [
+  'Sandy',
+  'Loamy',
+  'Clay',
+  'Laterite/Red Soil',
+  'Black Soil',
+] as const;
+
+export type SoilTypeOption = (typeof SOIL_TYPE_OPTIONS)[number];
+
 export type SoilLabMetrics = {
   version: 2;
+  soilType?: string;
   macro: Record<string, SoilMetricValue>;
   micro: Record<string, SoilMetricValue>;
 };
@@ -50,6 +61,9 @@ export function normalizeSoilMetrics(raw: unknown): SoilLabMetrics {
   const o = raw as Record<string, unknown>;
 
   if (o.version === 2 && o.macro && o.micro) {
+    if (typeof o.soilType === 'string' && o.soilType.trim()) {
+      base.soilType = o.soilType.trim();
+    }
     const macro = o.macro as Record<string, SoilMetricValue>;
     const micro = o.micro as Record<string, SoilMetricValue>;
     for (const f of SOIL_MACRO_FIELDS) {
@@ -82,9 +96,12 @@ export function normalizeSoilMetrics(raw: unknown): SoilLabMetrics {
 
 export function buildMetricsFromForm(
   macro: Record<string, string>,
-  micro: Record<string, string>
+  micro: Record<string, string>,
+  soilType?: string
 ): SoilLabMetrics {
   const metrics = emptySoilLabMetrics();
+  const st = soilType?.trim();
+  if (st) metrics.soilType = st;
   for (const f of SOIL_MACRO_FIELDS) {
     const v = macro[f.key]?.trim();
     if (v) metrics.macro[f.key] = { value: v, unit: f.unit };
@@ -99,12 +116,13 @@ export function buildMetricsFromForm(
 export function metricsToForm(metrics: SoilLabMetrics): {
   macro: Record<string, string>;
   micro: Record<string, string>;
+  soilType: string;
 } {
   const macro: Record<string, string> = {};
   const micro: Record<string, string> = {};
   for (const f of SOIL_MACRO_FIELDS) macro[f.key] = metrics.macro[f.key]?.value ?? '';
   for (const f of SOIL_MICRO_FIELDS) micro[f.key] = metrics.micro[f.key]?.value ?? '';
-  return { macro, micro };
+  return { macro, micro, soilType: metrics.soilType ?? '' };
 }
 
 /** Parse comma-separated numbers for WhatsApp (macro: 9 values, micro: 5). */
@@ -140,6 +158,7 @@ export function formatMetricLine(_f: SoilFieldDef, m: SoilMetricValue | undefine
 
 export function formatSoilSummary(metrics: SoilLabMetrics, maxLines = 6): string {
   const lines: string[] = [];
+  if (metrics.soilType) lines.push(`Soil type: ${metrics.soilType}`);
   for (const field of SOIL_MACRO_FIELDS) {
     const v = metrics.macro[field.key];
     if (v?.value) lines.push(`${field.label}: ${formatMetricLine(field, v)}`);
@@ -178,6 +197,39 @@ export function microPrompt(lang: string): string {
   );
 }
 
+export function soilTypePrompt(lang: string): string {
+  if (lang === 'ml') {
+    return 'മണ്ണിന്റെ തരം — ഒരു നമ്പർ അയയ്ക്കുക:\n1 Sandy\n2 Loamy\n3 Clay\n4 Laterite/Red Soil\n5 Black Soil';
+  }
+  return (
+    'Soil type — reply with number or name:\n' +
+    '1 Sandy\n2 Loamy\n3 Clay\n4 Laterite/Red Soil\n5 Black Soil'
+  );
+}
+
+export function parseSoilType(text: string): string | null {
+  const t = text.trim().toLowerCase();
+  if (!t) return null;
+  const byNum: Record<string, SoilTypeOption> = {
+    '1': 'Sandy',
+    '2': 'Loamy',
+    '3': 'Clay',
+    '4': 'Laterite/Red Soil',
+    '5': 'Black Soil',
+  };
+  if (byNum[t]) return byNum[t];
+  for (const opt of SOIL_TYPE_OPTIONS) {
+    if (t === opt.toLowerCase() || opt.toLowerCase().includes(t)) return opt;
+  }
+  if (t.includes('sandy')) return 'Sandy';
+  if (t.includes('loam')) return 'Loamy';
+  if (t.includes('clay')) return 'Clay';
+  if (t.includes('laterite') || t.includes('red')) return 'Laterite/Red Soil';
+  if (t.includes('black')) return 'Black Soil';
+  return null;
+}
+
 export function hasAnyMetricValue(metrics: SoilLabMetrics): boolean {
+  if (metrics.soilType?.trim()) return true;
   return [...Object.values(metrics.macro), ...Object.values(metrics.micro)].some((m) => m.value?.trim());
 }

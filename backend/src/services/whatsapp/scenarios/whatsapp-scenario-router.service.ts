@@ -1360,36 +1360,60 @@ export const whatsappScenarioRouter = {
       return true;
     }
 
-    const draft = soilFlowService.draftFromContext(ctx as Record<string, unknown>);
-    const complete = soilFlowService.parseMicroInput(draft, text);
-    if (!complete || !soilFlowService.metricsHasValues(complete)) {
-      await send.text(msg.phone, soilFlowService.invalidValuesReply(lang, 'micro'));
+    if (step === 'micro') {
+      const draft = soilFlowService.draftFromContext(ctx as Record<string, unknown>);
+      const withMicro = soilFlowService.parseMicroInput(draft, text);
+      if (!withMicro) {
+        await send.text(msg.phone, soilFlowService.invalidValuesReply(lang, 'micro'));
+        return true;
+      }
+      await conversationSessionService.patchContext(captured.farmerId, {
+        soilLabStep: 'soil_type',
+        soilLabDraft: soilFlowService.draftToContext(withMicro),
+      });
+      await send.text(msg.phone, soilFlowService.soilTypeEntryPrompt(lang));
       return true;
     }
 
-    const summary = await soilFlowService.saveLabMetrics(captured.farmerId, complete, {
-      blockId: ctx.soilLabBlockId,
-      uploadedBy: 'whatsapp',
-    });
-    await nutrientSoilGateService.markSoilReportReceived(captured.farmerId);
-    await conversationSessionService.patchContext(captured.farmerId, {
-      soilLabStep: undefined,
-      soilLabDraft: undefined,
-      soilLabBlockId: undefined,
-    });
-    await conversationSessionService.setState(captured.farmerId, 'main_menu');
-    await send.text(msg.phone, soilFlowService.savedLabReply(lang, summary));
+    if (step === 'soil_type') {
+      const soilType = soilFlowService.parseSoilTypeInput(text);
+      if (!soilType) {
+        await send.text(msg.phone, soilFlowService.soilTypeEntryPrompt(lang));
+        return true;
+      }
+      const draft = soilFlowService.draftFromContext(ctx as Record<string, unknown>);
+      draft.soilType = soilType;
+      if (!soilFlowService.metricsHasValues(draft)) {
+        await send.text(msg.phone, soilFlowService.invalidValuesReply(lang, 'micro'));
+        return true;
+      }
 
-    const delivered = await nutrientSoilGateService.deliverPending({
-      farmerId: captured.farmerId,
-      phone: msg.phone,
-      language: lang,
-      sendText: (phone, body) => send.text(phone, body),
-    });
-    if (delivered?.delivered && delivered.summary) {
-      await send.text(msg.phone, delivered.summary);
+      const summary = await soilFlowService.saveLabMetrics(captured.farmerId, draft, {
+        blockId: ctx.soilLabBlockId,
+        uploadedBy: 'whatsapp',
+      });
+      await nutrientSoilGateService.markSoilReportReceived(captured.farmerId);
+      await conversationSessionService.patchContext(captured.farmerId, {
+        soilLabStep: undefined,
+        soilLabDraft: undefined,
+        soilLabBlockId: undefined,
+      });
+      await conversationSessionService.setState(captured.farmerId, 'main_menu');
+      await send.text(msg.phone, soilFlowService.savedLabReply(lang, summary));
+
+      const delivered = await nutrientSoilGateService.deliverPending({
+        farmerId: captured.farmerId,
+        phone: msg.phone,
+        language: lang,
+        sendText: (phone, body) => send.text(phone, body),
+      });
+      if (delivered?.delivered && delivered.summary) {
+        await send.text(msg.phone, delivered.summary);
+      }
+      return true;
     }
-    return true;
+
+    return false;
   },
 
   async handleWaterVolume(

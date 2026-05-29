@@ -50,7 +50,7 @@ export interface SessionContext {
     productTitles?: string[];
   };
   /** WhatsApp manual soil lab entry (macro → micro) */
-  soilLabStep?: 'macro' | 'micro';
+  soilLabStep?: 'macro' | 'micro' | 'soil_type';
   soilLabDraft?: Record<string, unknown>;
   soilLabBlockId?: string;
 }

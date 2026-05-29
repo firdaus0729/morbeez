@@ -35,8 +35,18 @@ type NoteRow = {
   note?: string;
   content?: string;
   created_at?: string;
+  author?: string;
   created_by?: string;
 };
+
+function noteDisplayText(row: NoteRow, blockLabel: string): string {
+  const raw = String(row.note ?? row.content ?? '');
+  return raw.replace(blockNoteTag(blockLabel), '').trim() || '—';
+}
+
+function noteAuthor(row: NoteRow): string {
+  return String(row.author ?? row.created_by ?? 'staff');
+}
 
 type PanelMode = 'view' | 'edit' | 'soil' | 'notes';
 
@@ -64,6 +74,7 @@ export function BlockWorkspacePanel({ leadId, blockId, canWrite, onSaved }: Prop
   const [editBlock, setEditBlock] = useState<CropBlockFormValue>(emptyCropBlock());
   const [soilMacro, setSoilMacro] = useState(emptySoilForm().macro);
   const [soilMicro, setSoilMicro] = useState(emptySoilForm().micro);
+  const [soilType, setSoilType] = useState('');
   const [blockNotes, setBlockNotes] = useState<NoteRow[]>([]);
   const [noteText, setNoteText] = useState('');
   const menuRef = useRef<HTMLDivElement>(null);
@@ -144,6 +155,7 @@ export function BlockWorkspacePanel({ leadId, blockId, canWrite, onSaved }: Prop
       const empty = emptySoilForm();
       setSoilMacro(empty.macro);
       setSoilMicro(empty.micro);
+      setSoilType(empty.soilType);
     }
     if (mode === 'notes') {
       void loadNotes(blockNoteTag(blockLabel));
@@ -196,12 +208,16 @@ export function BlockWorkspacePanel({ leadId, blockId, canWrite, onSaved }: Prop
   }
 
   async function saveSoilTest() {
-    const metrics = formToMetricsPayload(soilMacro, soilMicro);
+    if (!soilType.trim()) {
+      setError('Select soil type');
+      return;
+    }
+    const metrics = formToMetricsPayload(soilMacro, soilMicro, soilType);
     const hasValue =
       Object.values(metrics.macro).some((m) => m.value) ||
       Object.values(metrics.micro).some((m) => m.value);
     if (!hasValue) {
-      setError('Enter at least one soil test value');
+      setError('Enter at least one nutrient value');
       return;
     }
     setSavingSoil(true);
@@ -234,6 +250,7 @@ export function BlockWorkspacePanel({ leadId, blockId, canWrite, onSaved }: Prop
       });
       setNoteText('');
       await loadNotes(blockNoteTag(blockLabel));
+      setPanelMode('view');
       onSaved();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not save note');
@@ -323,8 +340,10 @@ export function BlockWorkspacePanel({ leadId, blockId, canWrite, onSaved }: Prop
           <SoilTestForm
             macro={soilMacro}
             micro={soilMicro}
+            soilType={soilType}
             onMacroChange={setSoilMacro}
             onMicroChange={setSoilMicro}
+            onSoilTypeChange={setSoilType}
             disabled={savingSoil}
           />
           <div className="mt-3 flex justify-end gap-2">
@@ -350,11 +369,9 @@ export function BlockWorkspacePanel({ leadId, blockId, canWrite, onSaved }: Prop
             {blockNotes.map((n) => (
               <li key={n.id} className="rounded border border-slate-100 bg-white px-2 py-1.5 text-xs">
                 <div className="text-slate-400">
-                  {String(n.created_at ?? '—')} · {String(n.created_by ?? 'staff')}
+                  {formatNoteWhen(n.created_at)} · {noteAuthor(n)}
                 </div>
-                <div className="text-slate-800">
-                  {String(n.note ?? n.content ?? '—').replace(blockNoteTag(blockLabel), '').trim() || '—'}
-                </div>
+                <div className="text-slate-800">{noteDisplayText(n, blockLabel)}</div>
               </li>
             ))}
             {blockNotes.length === 0 ? (
@@ -378,6 +395,37 @@ export function BlockWorkspacePanel({ leadId, blockId, canWrite, onSaved }: Prop
               </Btn>
             </div>
           </form>
+        </section>
+      ) : null}
+
+      {panelMode === 'view' ? (
+        <section className="mt-4 border-t border-slate-100 pt-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h4 className="text-xs font-semibold uppercase text-slate-500">Notes</h4>
+            {canWrite ? (
+              <button
+                type="button"
+                className="text-xs text-emerald-700 hover:underline"
+                onClick={() => openMode('notes')}
+              >
+                Add note
+              </button>
+            ) : null}
+          </div>
+          {blockNotes.length === 0 ? (
+            <p className="mt-2 text-xs text-slate-500">No notes for this block yet.</p>
+          ) : (
+            <ul className="mt-2 space-y-2">
+              {blockNotes.map((n) => (
+                <li key={n.id} className="rounded border border-slate-100 bg-slate-50 px-3 py-2 text-xs">
+                  <div className="text-slate-400">
+                    {formatNoteWhen(n.created_at)} · {noteAuthor(n)}
+                  </div>
+                  <div className="mt-0.5 text-slate-800">{noteDisplayText(n, blockLabel)}</div>
+                </li>
+              ))}
+            </ul>
+          )}
         </section>
       ) : null}
 
@@ -439,4 +487,11 @@ function Row({ label, value }: { label: string; value: string }) {
       <dd className="font-medium text-slate-800">{value}</dd>
     </div>
   );
+}
+
+function formatNoteWhen(createdAt?: string): string {
+  if (!createdAt) return '—';
+  const d = new Date(createdAt);
+  if (Number.isNaN(d.getTime())) return String(createdAt);
+  return d.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
 }

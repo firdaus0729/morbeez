@@ -10,6 +10,8 @@ import {
   microPrompt,
   normalizeSoilMetrics,
   parseCommaValues,
+  parseSoilType,
+  soilTypePrompt,
   type SoilLabMetrics,
 } from '../../soil/soil-lab-metrics.js';
 import { createTelecallerTask } from '../pipeline/telecaller-tasks.service.js';
@@ -109,6 +111,14 @@ export const soilFlowService = {
 
   microEntryPrompt(lang: AdvisoryLanguage): string {
     return microPrompt(lang);
+  },
+
+  soilTypeEntryPrompt(lang: AdvisoryLanguage): string {
+    return soilTypePrompt(lang);
+  },
+
+  parseSoilTypeInput(text: string): string | null {
+    return parseSoilType(text);
   },
 
   async saveLabMetrics(

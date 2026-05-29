@@ -597,6 +597,13 @@ export const telecallerAdminService = {
     const { data } = await supabase.from('leads').select('farmer_id, notes').eq('id', leadId).single();
     if (!data) throw new NotFoundError('Lead not found');
 
+    const { error: noteError } = await supabase.from('telecaller_notes').insert({
+      farmer_id: data.farmer_id,
+      author: agentEmail,
+      note,
+    });
+    throwIfSupabaseError(noteError, 'Could not save note');
+
     const merged = [data.notes, note].filter(Boolean).join('\n');
     await supabase
       .from('leads')
