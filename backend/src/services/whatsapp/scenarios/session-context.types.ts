@@ -28,7 +28,7 @@ export interface SessionContext {
   /** Crop selection fallback after image when AI cannot infer crop */
   pendingCropSelection?: boolean;
   /** Minimal onboarding after language selection */
-  onboardingStep?: 'acreage' | 'crop' | 'custom_crop' | 'planting_date';
+  onboardingStep?: 'pincode' | 'acreage' | 'crop' | 'custom_crop' | 'planting_date';
   onboardingAcreageBucket?: '0_1' | '2_5' | '5_plus';
   /** Set true after acre → plot → planting date flow completes */
   onboardingComplete?: boolean;

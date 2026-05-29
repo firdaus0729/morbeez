@@ -37,7 +37,7 @@ import {
 import { cropSelectionService } from '../scenarios/crop-selection.service.js';
 import { farmerPurgeService } from '../../farmer/farmer-purge.service.js';
 import { orderWhatsappService } from '../orders/order-whatsapp.service.js';
-import { onboardingFlowService } from '../scenarios/onboarding-flow.service.js';
+import { onboardingFlowService, pincodePrompt } from '../scenarios/onboarding-flow.service.js';
 import { sendReplyButtonMenu } from '../whatsapp-interactive-menu.service.js';
 import { diagnosisFlowService } from '../scenarios/diagnosis-flow.service.js';
 import { multiPlotService } from '../scenarios/multi-plot.service.js';
@@ -427,8 +427,8 @@ export const whatsappInboundPipeline = {
       session.preferred_language &&
       msg.text &&
       isGreeting(msg.text) &&
-      ctxEarly.onboardingStep === 'acreage' &&
-      !ctxEarly.onboardingAcreageBucket
+      (ctxEarly.onboardingStep === 'pincode' ||
+        (ctxEarly.onboardingStep === 'acreage' && !ctxEarly.onboardingAcreageBucket))
     ) {
       const now = new Date().toISOString();
       await supabase
@@ -590,13 +590,10 @@ export const whatsappInboundPipeline = {
           language: activeLang,
           send,
         });
+      } else if (ctxOnboard.onboardingStep === 'pincode') {
+        await send.text(msg.phone, pincodePrompt(activeLang));
       } else if (ctxOnboard.onboardingStep === 'acreage') {
-        await whatsappScenarioRouter.startMinimalOnboarding(
-          msg.phone,
-          captured.farmerId,
-          activeLang,
-          send
-        );
+        await whatsappScenarioRouter.sendAcreageOnboardingStep(msg.phone, activeLang, send);
       }
       await eventBus.publish(
         'whatsapp.message.received',

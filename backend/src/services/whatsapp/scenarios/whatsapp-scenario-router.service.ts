@@ -31,7 +31,15 @@ import { createTelecallerTask } from '../pipeline/telecaller-tasks.service.js';
 import { cropSelectionService } from './crop-selection.service.js';
 import { farmerPurgeService } from '../../farmer/farmer-purge.service.js';
 import { blockService } from '../../core/block.service.js';
-import { onboardingFlowService, plantingDatePrompt } from './onboarding-flow.service.js';
+import {
+  invalidPincodeReply,
+  onboardingFlowService,
+  parsePincodeInput,
+  pincodePrompt,
+  pincodeSavedReply,
+  plantingDatePrompt,
+} from './onboarding-flow.service.js';
+import { pincodeService } from '../../core/pincode.service.js';
 import { recommendationFollowUpService } from '../../core/recommendation-follow-up.service.js';
 import { returnUserGreetingService } from './return-user-greeting.service.js';
 
@@ -204,10 +212,18 @@ export const whatsappScenarioRouter = {
     await blockService.ensureDefaultBlock(farmerId);
     await conversationSessionService.patchContext(farmerId, {
       onboardingComplete: false,
-      onboardingStep: 'acreage',
+      onboardingStep: 'pincode',
       onboardingAcreageBucket: undefined,
     });
+    await conversationSessionService.setState(farmerId, 'onboarding_minimal');
+    await send.text(phone, pincodePrompt(lang));
+  },
 
+  async sendAcreageOnboardingStep(
+    phone: string,
+    lang: AdvisoryLanguage,
+    send: ScenarioSenders
+  ): Promise<void> {
     const copy =
       lang === 'ml'
         ? 'എത്ര ഏക്കർ കൃഷിയുണ്ട്?'
@@ -217,7 +233,6 @@ export const whatsappScenarioRouter = {
       { id: 'acreage.2_5', title: '2-5 acre' },
       { id: 'acreage.5_plus', title: '5+ acre' },
     ];
-    await conversationSessionService.setState(farmerId, 'onboarding_minimal');
     if (send.list) {
       await send.list({
         phone,
@@ -473,6 +488,25 @@ export const whatsappScenarioRouter = {
 
       if (CROP_MEDIA.has(msg.msgType) && ctx.onboardingStep !== 'planting_date') {
         await send.text(msg.phone, onboardingFlowService.currentStepPrompt(ctx.onboardingStep, lang));
+        return { handled: true };
+      }
+
+      if (ctx.onboardingStep === 'pincode') {
+        const pc = text ? parsePincodeInput(text) : null;
+        if (!pc) {
+          await send.text(msg.phone, invalidPincodeReply(lang));
+          return { handled: true };
+        }
+        const row = await pincodeService.assignFarmerPincode(captured.farmerId, pc);
+        if (!row) {
+          await send.text(msg.phone, invalidPincodeReply(lang));
+          return { handled: true };
+        }
+        await conversationSessionService.patchContext(captured.farmerId, {
+          onboardingStep: 'acreage',
+        });
+        await send.text(msg.phone, pincodeSavedReply(lang, row.district, row.state));
+        await this.sendAcreageOnboardingStep(msg.phone, lang, send);
         return { handled: true };
       }
 

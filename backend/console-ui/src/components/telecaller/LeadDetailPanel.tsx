@@ -54,6 +54,7 @@ type LeadDetail = {
     notes: string | null;
   };
   farmer: {
+    pincode?: string | null;
     language: string;
     territory: string;
     crop: string;
@@ -576,6 +577,7 @@ export function LeadDetailPanel({ leadId, canWrite }: Props) {
                 <dl>
                   <Row label="Full Name" value={l.farmerName} />
                   <Row label="Territory" value={f.territory || '—'} />
+                  <Row label="Pincode" value={f.pincode ?? l.pincode ?? '—'} />
                   <Row label="Language" value={f.language || '—'} />
                   <Row label="Phone" value={l.phone ?? '—'} />
                   <Row label="Irrigation" value={f.irrigation || '—'} />
