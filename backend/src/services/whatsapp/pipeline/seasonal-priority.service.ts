@@ -1,0 +1,60 @@
+export type SeasonPhase = 'monsoon' | 'planting' | 'disease_peak' | 'normal';
+
+export type SeasonalPriority = {
+  phase: SeasonPhase;
+  broadcastPriorityBoost: number;
+  preferWeatherAlerts: boolean;
+  preferDapAlerts: boolean;
+};
+
+/** Kerala-centric seasonal heuristics (IST calendar). */
+export const seasonalPriorityService = {
+  currentPhase(date = new Date()): SeasonPhase {
+    const month = Number(
+      new Intl.DateTimeFormat('en-IN', { timeZone: 'Asia/Kolkata', month: 'numeric' }).format(date)
+    );
+    if (month >= 6 && month <= 9) return 'monsoon';
+    if (month === 5 || month === 10) return 'planting';
+    if (month === 7 || month === 8) return 'disease_peak';
+    return 'normal';
+  },
+
+  resolve(date = new Date()): SeasonalPriority {
+    const phase = this.currentPhase(date);
+    switch (phase) {
+      case 'monsoon':
+        return {
+          phase,
+          broadcastPriorityBoost: 15,
+          preferWeatherAlerts: true,
+          preferDapAlerts: true,
+        };
+      case 'planting':
+        return {
+          phase,
+          broadcastPriorityBoost: 10,
+          preferWeatherAlerts: true,
+          preferDapAlerts: true,
+        };
+      case 'disease_peak':
+        return {
+          phase,
+          broadcastPriorityBoost: 12,
+          preferWeatherAlerts: true,
+          preferDapAlerts: false,
+        };
+      default:
+        return {
+          phase: 'normal',
+          broadcastPriorityBoost: 0,
+          preferWeatherAlerts: false,
+          preferDapAlerts: true,
+        };
+    }
+  },
+
+  adjustBroadcastPriority(basePriority: number, date = new Date()): number {
+    const seasonal = this.resolve(date);
+    return Math.min(100, basePriority + seasonal.broadcastPriorityBoost);
+  },
+};

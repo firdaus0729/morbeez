@@ -5,6 +5,7 @@ import { assertModuleAccess } from '../../lib/rbac.js';
 import { supabase } from '../../lib/supabase.js';
 import { throwIfSupabaseError } from '../../lib/supabase-errors.js';
 import { whatsappBroadcastAdminService } from '../../services/admin/whatsapp-broadcast-admin.service.js';
+import { runRoiDailyPromptsNow } from '../../services/whatsapp/roi/roi-daily-prompt.worker.js';
 import { whatsappOsAdminService } from '../../services/admin/whatsapp-os-admin.service.js';
 import { operationsMessagingService } from '../../services/admin/operations-messaging.service.js';
 
@@ -63,6 +64,18 @@ export async function osOperationsRoutes(app: FastifyInstance): Promise<void> {
       })
       .parse(request.body ?? {});
     const result = await whatsappBroadcastAdminService.runBroadcasts(body);
+    return reply.send({ ok: true, result });
+  });
+
+  app.post(`${api}/roi/daily-prompts/run`, async (request, reply) => {
+    await assertModuleAccess(request, 'operations', 'write');
+    const body = z
+      .object({
+        farmerId: z.string().uuid().optional(),
+        dryRun: z.boolean().optional(),
+      })
+      .parse(request.body ?? {});
+    const result = await runRoiDailyPromptsNow(body);
     return reply.send({ ok: true, result });
   });
 

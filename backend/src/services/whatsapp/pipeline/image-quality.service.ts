@@ -65,19 +65,23 @@ export async function recordImageHash(farmerId: string, contentHash: string): Pr
 
 export function imageQualityMessage(
   language: string,
-  reason: 'too_small' | 'duplicate' | 'unsupported' | 'low_detail'
+  reason: 'too_small' | 'duplicate' | 'unsupported' | 'low_detail' | 'blurry' | 'too_dark'
 ): string {
   const en: Record<string, string> = {
     too_small: 'Please upload a clearer, closer crop image in good daylight.',
     duplicate: 'We already received this image. Send a new photo from a different angle if possible.',
     unsupported: 'Please send a JPEG or PNG photo of your crop.',
     low_detail: 'Image quality is too low for diagnosis. Please send a sharper close photo in daylight.',
+    blurry: 'Please send one close, sharp photo of the affected leaves.',
+    too_dark: 'Photo is too dark. Please send a clearer photo in daylight.',
   };
   const ml: Record<string, string> = {
     too_small: 'ദയവായി പകൽ നല്ല വെളിച്ചത്തിൽ വിളയുടെ വ്യക്തമായ ക്ലോസ്-അപ്പ് ഫോട്ടോ അയയ്ക്കുക.',
     duplicate: 'ഈ ചിത്രം ഞങ്ങൾക്ക് ലഭിച്ചിട്ടുണ്ട്. സാധ്യമെങ്കിൽ വേറെ കോണിൽ പുതിയ ഫോട്ടോ അയയ്ക്കുക.',
     unsupported: 'JPEG അല്ലെങ്കിൽ PNG ഫോട്ടോ അയയ്ക്കുക.',
     low_detail: 'ചിത്രത്തിന്റെ ഗുണമേന്മ കുറവാണ്. വ്യക്തമായ ക്ലോസ്-അപ്പ് ഫോട്ടോ വീണ്ടും അയയ്ക്കുക.',
+    blurry: 'ദയവായി ബാധിത ഇലയുടെ ഒരു ക്ലിയർ ക്ലോസ് ഫോട്ടോ അയയ്ക്കുക.',
+    too_dark: 'ഫോട്ടോ ഇരുട്ടാണ്. പകൽ വെളിച്ചത്തിൽ വ്യക്തമായ ഫോട്ടോ അയയ്ക്കുക.',
   };
   const table = language === 'ml' ? ml : en;
   return table[reason] ?? en[reason];

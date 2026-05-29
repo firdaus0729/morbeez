@@ -18,6 +18,11 @@ export type ConversationState =
   | 'chimb_followup'
   | 'plot_select'
   | 'crop_select'
+  | 'playbook_pending'
+  | 'roi_entry'
+  | 'roi_set_pin'
+  | 'roi_edit_pin'
+  | 'roi_edit_amount'
   | 'human_takeover';
 
 export interface ConversationSession {

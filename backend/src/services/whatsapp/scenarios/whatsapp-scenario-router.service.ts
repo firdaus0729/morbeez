@@ -6,7 +6,10 @@ import {
   conversationSessionService,
   type ConversationSession,
 } from '../conversation-session.service.js';
-import { mainMenuCopy } from './whatsapp-menu.service.js';
+import { mainMenuCopy, moreMenuCopy, normalizeMenuId } from './whatsapp-menu.service.js';
+import { previousRecommendationsService } from './previous-recommendations.service.js';
+import { roiFlowService } from '../roi/roi-flow.service.js';
+import { ledgerSummaryService } from '../roi/ledger-summary.service.js';
 import { t } from './whatsapp-flow-copy.js';
 import { weatherAlertsService } from './weather-alerts.service.js';
 import { dailyPricesService } from './daily-prices.service.js';
@@ -30,12 +33,17 @@ import { returnUserGreetingService } from './return-user-greeting.service.js';
 
 const CROP_MEDIA = new Set(['image', 'image_message', 'document']);
 const MENU_IDS = new Set([
+  'menu.crop_assessment',
   'menu.diagnosis',
   'menu.track_order',
   'menu.weather',
   'menu.prices',
   'menu.soil',
   'menu.expert',
+  'menu.more',
+  'menu.prev_recommendations',
+  'menu.roi_tracker',
+  'menu.ledger',
 ]);
 const ACREAGE_IDS = new Set(['acreage.0_1', 'acreage.2_5', 'acreage.5_plus']);
 const SOIL_CONFIRM_IDS = new Set(['soil.confirm_yes', 'soil.confirm_no']);
@@ -88,7 +96,10 @@ function resolveMenuAction(text: string): string | null {
   const lower = t.toLowerCase();
   if (/^(weather|കാലാവസ്ഥ|வானிலை|ಹವಾಮಾನ|मौसम)$/i.test(lower)) return 'menu.weather';
   if (/^(market price|prices|price|വില|விலை|ಬೆಲೆ|भाव)$/i.test(lower)) return 'menu.prices';
-  if (/^(diagnosis|രോഗനിർണയം|நோய்|ರೋಗ|रोग)/i.test(lower)) return 'menu.diagnosis';
+  if (/^(crop assessment|diagnosis|രോഗനിർണയം|நோய்|ರೋಗ|रोग)/i.test(lower)) return 'menu.crop_assessment';
+  if (/^more$/i.test(lower)) return 'menu.more';
+  if (/^(roi|ledger|farm ledger)/i.test(lower)) return lower.includes('ledger') ? 'menu.ledger' : 'menu.roi_tracker';
+  if (/^(previous|past).*(recommend|advice|ശുപാർശ)/i.test(lower)) return 'menu.prev_recommendations';
   if (/^(track order|order track|ഓർഡർ|ஆர்டர்|ಆರ್ಡರ್|ऑर्डर)/i.test(lower)) return 'menu.track_order';
   if (/^(call back|callback|കോൾബാക്ക്|கால்பேக்|ಕಾಲ್|कॉलबैक)/i.test(lower)) return 'menu.expert';
   if (/^(soil test|soil|മണ്ണ്|மண்|ಮಣ್ಣು|मिट्टी)/i.test(lower)) return 'menu.soil';
@@ -314,6 +325,19 @@ export const whatsappScenarioRouter = {
 
     // Scenario 44 — always use stored language
     captured.language = lang;
+
+    const roiStates = new Set(['roi_entry', 'roi_set_pin', 'roi_edit_pin', 'roi_edit_amount']);
+    if (roiStates.has(session.state) || roiFlowService.isRoiButton(text)) {
+      const roiHandled = await roiFlowService.tryHandleInbound({
+        farmerId: captured.farmerId,
+        phone: msg.phone,
+        language: lang,
+        text,
+        send,
+        sessionState: session.state,
+      });
+      if (roiHandled) return { handled: true };
+    }
 
     if (text && isFarmerResetCommand(text)) {
       await farmerPurgeService.purgeByPhone(captured.phone);
@@ -792,7 +816,7 @@ export const whatsappScenarioRouter = {
     // Main menu selection (list/button ids or typed labels like "Weather")
     const menuAction = resolveMenuAction(text);
     if (menuAction) {
-      await this.handleMenuSelection(msg, captured, lang, menuAction, send);
+      await this.handleMenuSelection(msg, captured, lang, normalizeMenuId(menuAction), send);
       return { handled: true };
     }
 
@@ -1043,6 +1067,33 @@ export const whatsappScenarioRouter = {
     }
   },
 
+  async showMoreMenu(phone: string, lang: AdvisoryLanguage, send: ScenarioSenders): Promise<void> {
+    const menu = moreMenuCopy(lang);
+    if (send.list) {
+      await send.list({
+        phone,
+        body: menu.body,
+        buttonText: menu.buttonText,
+        sections: [{ title: 'More', rows: menu.rows }],
+      });
+    } else if (send.buttons) {
+      await sendReplyButtonMenu({
+        to: phone,
+        body: menu.body,
+        options: menu.rows.map((r) => ({ id: r.id, title: r.title })),
+        continuationBody: 'More options:',
+        sendButtons: (p) =>
+          send.buttons!({
+            phone: p.to,
+            body: p.body,
+            buttons: p.buttons,
+          }),
+      });
+    } else {
+      await send.text(phone, menu.body);
+    }
+  },
+
   async handleMenuSelection(
     msg: InboundMessage,
     captured: ScenarioCapture,
@@ -1050,7 +1101,35 @@ export const whatsappScenarioRouter = {
     menuId: string,
     send: ScenarioSenders
   ): Promise<void> {
-    switch (menuId) {
+    const action = normalizeMenuId(menuId);
+    switch (action) {
+      case 'menu.more': {
+        await this.showMoreMenu(msg.phone, lang, send);
+        await conversationSessionService.setState(captured.farmerId, 'main_menu');
+        break;
+      }
+      case 'menu.prev_recommendations': {
+        const body = await previousRecommendationsService.formatForFarmer(captured.farmerId, lang);
+        await send.text(msg.phone, body);
+        await conversationSessionService.setState(captured.farmerId, 'main_menu');
+        break;
+      }
+      case 'menu.ledger': {
+        const ledger = await ledgerSummaryService.formatMonthlyLedger(captured.farmerId, lang);
+        await send.text(msg.phone, ledger);
+        await conversationSessionService.setState(captured.farmerId, 'main_menu');
+        break;
+      }
+      case 'menu.roi_tracker': {
+        await roiFlowService.startTracker({
+          farmerId: captured.farmerId,
+          phone: msg.phone,
+          language: lang,
+          send,
+        });
+        break;
+      }
+      case 'menu.crop_assessment':
       case 'menu.diagnosis': {
         await conversationSessionService.patchContext(captured.farmerId, {
           diagnosis: { imageCount: 0 },

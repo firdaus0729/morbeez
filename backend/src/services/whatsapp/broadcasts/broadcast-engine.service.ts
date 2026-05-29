@@ -8,6 +8,7 @@ import {
   type BroadcastKind,
 } from './broadcast-copy.js';
 import { broadcastThrottleService } from './broadcast-throttle.service.js';
+import { seasonalPriorityService } from '../pipeline/seasonal-priority.service.js';
 import { computeDap, dapInTargetRange, todayIsoWeekday } from './dap.service.js';
 import { weatherAlertsService } from '../scenarios/weather-alerts.service.js';
 
@@ -145,7 +146,7 @@ export const broadcastEngineService = {
       farmerId: params.farmer.id,
       broadcastKind: kind,
       cropType: params.rule.crop_type === 'all' ? cropType : params.rule.crop_type,
-      priority: params.rule.priority,
+      priority: seasonalPriorityService.adjustBroadcastPriority(params.rule.priority),
     });
 
     if (!throttle.allowed) {

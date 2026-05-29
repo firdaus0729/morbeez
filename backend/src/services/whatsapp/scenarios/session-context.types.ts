@@ -35,4 +35,11 @@ export interface SessionContext {
   /** Auto recommendation follow-up engine */
   pendingRecommendationRecordId?: string;
   pendingRecommendationFollowUp?: 'application' | 'outcome';
+  /** Assessment playbook router (insect / weed / compatibility, etc.) */
+  lastPlaybookCategory?: string;
+  /** ROI tracker */
+  roiPendingEntryType?: string;
+  roiPendingEditEntryId?: string;
+  roiAwaitingPinSetup?: boolean;
+  roiEditUnlocked?: boolean;
 }

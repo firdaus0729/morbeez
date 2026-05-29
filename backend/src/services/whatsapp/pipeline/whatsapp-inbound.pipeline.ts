@@ -43,6 +43,15 @@ import { contextPackService } from './context-pack.service.js';
 import { policyEngineService } from '../../ai/policy-engine.service.js';
 import { createTelecallerTask } from './telecaller-tasks.service.js';
 import { accuracyMetricsService } from '../../ai/accuracy-metrics.service.js';
+import { inputClassifierService } from './input-classifier.service.js';
+import { imageInputClassifierService } from './image-input-classifier.service.js';
+import {
+  compatibilityLookupService,
+  parseProductPairFromText,
+} from './compatibility-lookup.service.js';
+import { responseComposerService } from './response-composer.service.js';
+import { assessmentPlaybookService } from '../scenarios/assessment-playbook.service.js';
+import { roiFlowService } from '../roi/roi-flow.service.js';
 import type { InboundMessage } from './types.js';
 
 const CROP_MEDIA_TYPES = new Set(['image', 'image_message', 'document']);
@@ -171,6 +180,94 @@ async function fetchRecentConversationHistory(farmerId: string, limit = 8): Prom
     .reverse()
     .map((row) => `${row.direction === 'outbound' ? 'Assistant' : 'Farmer'}: ${String(row.content ?? '')}`)
     .filter((line) => line.trim().length > 0);
+}
+
+async function tryAssessmentPlaybook(params: {
+  farmerId: string;
+  phone: string;
+  language: AdvisoryLanguage;
+  text?: string;
+  hasCropMedia: boolean;
+  imageBase64?: string;
+  imageMimeType?: string;
+  sendText: (phone: string, text: string) => Promise<void>;
+}): Promise<boolean> {
+  const textResult = inputClassifierService.classifyText(params.text, {
+    hasCropMedia: params.hasCropMedia,
+  });
+
+  let visionMerged = textResult;
+  if (params.hasCropMedia && params.imageBase64) {
+    const vision = await imageInputClassifierService.classifyImage({
+      imageBase64: params.imageBase64,
+      imageMimeType: params.imageMimeType ?? 'image/jpeg',
+      caption: params.text,
+    });
+    if (vision) {
+      if (vision.photoQuality === 'blurry' || vision.photoQuality === 'too_dark') {
+        await params.sendText(
+          params.phone,
+          imageQualityMessage(
+            params.language,
+            vision.photoQuality === 'too_dark' ? 'too_dark' : 'blurry'
+          )
+        );
+        return true;
+      }
+      visionMerged = inputClassifierService.mergeWithVision(textResult, {
+        category: imageInputClassifierService.toAgricultureCategory(vision),
+        confidence: vision.confidence,
+        photoQuality: vision.photoQuality,
+      });
+    }
+  }
+
+  const classification = visionMerged;
+
+  if (classification.category === 'compatibility' && params.text) {
+    const pair = parseProductPairFromText(params.text);
+    if (pair) {
+      const lookup = await compatibilityLookupService.lookup(pair.productA, pair.productB);
+      await params.sendText(
+        params.phone,
+        compatibilityLookupService.formatFarmerReply(lookup, params.language, pair)
+      );
+      if (!lookup.found || lookup.compatible === false) {
+        await assessmentPlaybookService.applyEscalation(
+          params.farmerId,
+          'compatibility',
+          params.text.slice(0, 300)
+        );
+      }
+      await conversationSessionService.setState(params.farmerId, 'playbook_pending');
+      return true;
+    }
+  }
+
+  if (!inputClassifierService.shouldUsePlaybook(classification)) {
+    return false;
+  }
+
+  const playbook = assessmentPlaybookService.resolve(classification, params.language, {
+    hasCropMedia: params.hasCropMedia,
+  });
+  if (playbook.action === 'continue_diagnosis') {
+    return false;
+  }
+
+  await params.sendText(params.phone, playbook.message);
+  if (playbook.escalate) {
+    await assessmentPlaybookService.applyEscalation(
+      params.farmerId,
+      classification.category,
+      params.text?.slice(0, 300)
+    );
+  }
+  await conversationSessionService.setState(params.farmerId, 'playbook_pending');
+  await conversationSessionService.patchContext(params.farmerId, {
+    lastPlaybookCategory: classification.category,
+  });
+  return true;
 }
 
 function validationQuestion(issue: string, language: AdvisoryLanguage): string {
@@ -444,6 +541,26 @@ export const whatsappInboundPipeline = {
       return;
     }
 
+    if (onboardingDone) {
+      const eveningRoi = await roiFlowService.tryEveningPromptOnInbound({
+        farmerId: captured.farmerId,
+        phone: msg.phone,
+        language: activeLang,
+        sessionState: session.state,
+        routeHandled: routeResult.handled,
+        text: msg.text,
+        send,
+      });
+      if (eveningRoi) {
+        await eventBus.publish(
+          'whatsapp.message.received',
+          { phone: msg.phone, farmerId: captured.farmerId, text: msg.text, messageType: msg.msgType },
+          'whatsapp'
+        );
+        return;
+      }
+    }
+
     if (!onboardingDone) {
       const ctxOnboard = await conversationSessionService.getContext(captured.farmerId);
       const stepPrompt = onboardingFlowService.currentStepPrompt(ctxOnboard.onboardingStep, activeLang);
@@ -649,6 +766,21 @@ export const whatsappInboundPipeline = {
 
     await recordImageHash(captured.farmerId, quality.contentHash);
 
+    if (
+      await tryAssessmentPlaybook({
+        farmerId: captured.farmerId,
+        phone: captured.phone,
+        language: captured.language,
+        text: msg.text || undefined,
+        hasCropMedia: true,
+        imageBase64: media.imageBase64,
+        imageMimeType: media.imageMimeType ?? 'image/jpeg',
+        sendText,
+      })
+    ) {
+      return;
+    }
+
     const hasCaptionCrop = Boolean(inferCropHint(msg.text || undefined));
     if (plots.length <= 1 && !hasCaptionCrop && senders) {
       const detected = await cropDetectionService.detectFromImage({
@@ -704,6 +836,19 @@ export const whatsappInboundPipeline = {
     }
 
     await classifyCommercialLead(captured.farmerId, msg.text);
+
+    if (
+      await tryAssessmentPlaybook({
+        farmerId: captured.farmerId,
+        phone: captured.phone,
+        language: captured.language,
+        text: msg.text,
+        hasCropMedia: false,
+        sendText,
+      })
+    ) {
+      return;
+    }
 
     const agriDiagnosisIntent =
       /crop|doctor|disease|pest|leaf|yellow|wilt|spot|fungus|symptom|ginger|pepper|വിള|രോഗ|കീട|பயிர|ಬೆಳೆ|फसल/i.test(
@@ -869,26 +1014,48 @@ export const whatsappInboundPipeline = {
         });
         await params.sendText(
           params.phone,
-          `${localizedSummary(result.advisory, params.language)}\n\n${validationQuestion(
-            result.advisory.probableIssue,
-            params.language
-          )}`
+          responseComposerService.compose({
+            body: localizedSummary(result.advisory, params.language),
+            validationQuestion: validationQuestion(result.advisory.probableIssue, params.language),
+            footer: responseComposerService.advisoryDisclaimer(params.language),
+          })
         );
         await conversationSessionService.setState(params.farmerId, 'diagnosis');
         return;
       }
 
-      let reply = localizedSummary(result.advisory, params.language);
+      let body = localizedSummary(result.advisory, params.language);
       if (sessCtx.activePlotLabel) {
-        reply = `📍 ${sessCtx.activePlotLabel}\n\n${reply}`;
+        body = `📍 ${sessCtx.activePlotLabel}\n\n${body}`;
       }
-      reply += '\n\n— Morbeez AI-assisted advisory (not a guaranteed diagnosis).';
       if (result.reused) {
-        reply +=
+        body +=
           params.language === 'ml'
-            ? '\n\n(സമാനമായ മുൻ കേസിൽ നിന്നുള്ള ശുപാർശ — വേഗത്തിലുള്ള മറുപ്)'
-            : '\n\n(Based on a similar successful case in your region — fast reply)';
+            ? '\n\n(സമാനമായ മുൻ കേസിൽ നിന്നുള്ള ശുപാർശ)'
+            : '\n\n(Similar successful case in your region)';
       }
+      if (result.escalated) {
+        body += '\n\nOur agronomist team will review your case shortly.';
+      }
+      if (assessment.safetyNotes.length) {
+        body += `\n\n⚠️ ${assessment.safetyNotes.join(' ')}`;
+      }
+
+      const productBlock = shopifyLinksService.formatRecommendationsForWhatsApp(
+        result.productRecommendations,
+        params.language
+      );
+      if (productBlock) body += `\n\n${productBlock}`;
+
+      const validationQ = assessment.needsValidationQuestion
+        ? validationQuestion(result.advisory.probableIssue, params.language)
+        : responseComposerService.extractValidationQuestion(body);
+
+      const reply = responseComposerService.compose({
+        body,
+        validationQuestion: validationQ,
+        footer: responseComposerService.advisoryDisclaimer(params.language),
+      });
 
       if (sessCtx.pendingSymptomsText) {
         await conversationSessionService.patchContext(params.farmerId, {
@@ -896,23 +1063,7 @@ export const whatsappInboundPipeline = {
         });
       }
 
-      if (result.escalated) {
-        reply += '\n\nOur agronomist team will review your case shortly.';
-      }
-      reply += `\n\nCrop Health Score: ${assessment.cropHealthScore}/100`;
-      reply += `\nDisease Severity: ${assessment.diseaseSeverity}`;
-      reply += `\nWeather Risk: ${assessment.weatherRiskBand}`;
-      if (assessment.safetyNotes.length) {
-        reply += `\n\n⚠️ ${assessment.safetyNotes.join(' ')}`;
-      }
-
-      const productBlock = shopifyLinksService.formatRecommendationsForWhatsApp(
-        result.productRecommendations,
-        params.language
-      );
-      if (productBlock) reply += `\n\n${productBlock}`;
-
-      await this.sendAndLog(params.farmerId, params.phone, reply.slice(0, 4000), params.sendText);
+      await this.sendAndLog(params.farmerId, params.phone, reply, params.sendText);
 
       if (params.channel === 'whatsapp' && params.send) {
         await whatsappScenarioRouter.afterDiagnosis({

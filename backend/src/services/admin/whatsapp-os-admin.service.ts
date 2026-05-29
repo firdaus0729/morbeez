@@ -1,5 +1,6 @@
 import { supabase } from '../../lib/supabase.js';
 import { throwIfSupabaseError } from '../../lib/supabase-errors.js';
+import { learningLoopService } from '../core/learning-loop.service.js';
 
 export const whatsappOsAdminService = {
   async getConversationSession(farmerId: string) {
@@ -136,6 +137,30 @@ export const whatsappOsAdminService = {
       .select('*, farmers(phone, name, district, state, preferred_language)')
       .single();
     throwIfSupabaseError(error, 'Could not update terminology task');
+
+    if (patch.status === 'resolved' && patch.resolutionMeaning?.trim() && data) {
+      const row = data as {
+        id: string;
+        term: string;
+        language?: string | null;
+        crop_type?: string | null;
+        district?: string | null;
+        farmer_id?: string | null;
+      };
+      await learningLoopService
+        .onTerminologyResolved({
+          taskId: row.id,
+          term: row.term,
+          language: row.language ?? 'en',
+          meaning: patch.resolutionMeaning,
+          cropType: row.crop_type,
+          district: row.district,
+          resolvedBy: patch.resolvedBy,
+          farmerId: row.farmer_id,
+        })
+        .catch(() => {});
+    }
+
     return data;
   },
 };

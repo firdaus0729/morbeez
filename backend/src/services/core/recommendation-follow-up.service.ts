@@ -8,6 +8,7 @@ import { createTelecallerTask } from '../whatsapp/pipeline/telecaller-tasks.serv
 import { cultivationLoggingService } from '../whatsapp/cultivation/cultivation-logging.service.js';
 import { accuracyMetricsService } from '../ai/accuracy-metrics.service.js';
 import { aiReuseService } from '../ai/ai-reuse.service.js';
+import { learningLoopService } from './learning-loop.service.js';
 import { followUpCopy } from './recommendation-follow-up-copy.js';
 import type { AdvisoryLanguage } from '../ai/types.js';
 
@@ -480,6 +481,7 @@ export const recommendationFollowUpService = {
 
     if (reply === 'improved' || reply === 'partial') {
       await aiReuseService.markOutcomeForSession(rec.ai_session_id, true).catch(() => {});
+      await learningLoopService.onLearningSampleReady(recommendationRecordId).catch(() => {});
       await clearConversationPending(farmerId);
       return copy.improvedThanks;
     }
