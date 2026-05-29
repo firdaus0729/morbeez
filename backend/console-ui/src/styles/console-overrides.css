@@ -121,6 +121,21 @@
   height: 20px;
 }
 
+/* Route outlet: remount on navigation (location.key) for reliable page switches */
+.console-page-outlet {
+  min-height: 0;
+  animation: console-page-in 0.12s ease-out;
+}
+
+@keyframes console-page-in {
+  from {
+    opacity: 0.92;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
 /* Hub tabs (Operations, Commerce, Intelligence, …) */
 .hub-tabs {
   display: flex;

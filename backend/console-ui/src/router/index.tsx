@@ -1,6 +1,7 @@
 import { createBrowserRouter, Navigate, RouterProvider } from 'react-router-dom';
 import { AppLayout } from '../components/Layout';
-import { RequireAuth, RequireGuest, RequireModule, RoleHomeRedirect } from './guards';
+import { RequireAuth, RequireGuest, RoleHomeRedirect } from './guards';
+import { ProtectedPage } from './ProtectedPage';
 import { paths } from '../lib/routes';
 import { LoginPage } from '../pages/LoginPage';
 import { AcceptInvitePage } from '../pages/AcceptInvitePage';
@@ -71,45 +72,101 @@ export const appRouter = createBrowserRouter(
           element: <AppLayout />,
           children: [
             { index: true, element: <RoleHomeRedirect /> },
-            { path: paths.dashboard, element: <DashboardPage /> },
             {
-              element: <RequireModule module="telecaller_crm" />,
-              children: [{ path: paths.telecaller, element: <TelecallerRoute /> }],
+              path: paths.dashboard,
+              element: (
+                <ProtectedPage module="dashboard">
+                  <DashboardPage />
+                </ProtectedPage>
+              ),
             },
             {
-              element: <RequireModule module="operations" />,
-              children: [{ path: paths.operations, element: <OperationsRoute /> }],
+              path: paths.telecaller,
+              element: (
+                <ProtectedPage module="telecaller_crm">
+                  <TelecallerRoute />
+                </ProtectedPage>
+              ),
             },
             {
-              element: <RequireModule module="intelligence" />,
-              children: [
-                { path: paths.intelligence, element: <IntelligenceRoute /> },
-                { path: paths.productGaps, element: <ProductGapsPage /> },
-              ],
+              path: paths.operations,
+              element: (
+                <ProtectedPage module="operations">
+                  <OperationsRoute />
+                </ProtectedPage>
+              ),
             },
             {
-              element: <RequireModule module="agronomist" />,
-              children: [{ path: paths.agronomist, element: <AgronomistRoute /> }],
+              path: paths.intelligence,
+              element: (
+                <ProtectedPage module="intelligence">
+                  <IntelligenceRoute />
+                </ProtectedPage>
+              ),
             },
             {
-              element: <RequireModule module="approve_recommendations" />,
-              children: [{ path: paths.approvals, element: <ApprovalsRoute /> }],
+              path: paths.productGaps,
+              element: (
+                <ProtectedPage module="intelligence">
+                  <ProductGapsPage />
+                </ProtectedPage>
+              ),
             },
             {
-              element: <RequireModule module="analytics" />,
-              children: [{ path: paths.analytics, element: <AnalyticsHubPage /> }],
+              path: paths.agronomist,
+              element: (
+                <ProtectedPage module="agronomist">
+                  <AgronomistRoute />
+                </ProtectedPage>
+              ),
             },
             {
-              element: <RequireModule module="commerce" />,
-              children: [{ path: paths.commerce, element: <CommerceRoute /> }],
+              path: paths.approvals,
+              element: (
+                <ProtectedPage module="approve_recommendations">
+                  <ApprovalsRoute />
+                </ProtectedPage>
+              ),
             },
             {
-              element: <RequireModule module="settings" />,
-              children: [
-                { path: paths.employees, element: <EmployeesRoute /> },
-                { path: paths.employeeDetail, element: <EmployeesRoute /> },
-                { path: paths.settings, element: <SettingsRoute /> },
-              ],
+              path: paths.analytics,
+              element: (
+                <ProtectedPage module="analytics">
+                  <AnalyticsHubPage />
+                </ProtectedPage>
+              ),
+            },
+            {
+              path: paths.commerce,
+              element: (
+                <ProtectedPage module="commerce">
+                  <CommerceRoute />
+                </ProtectedPage>
+              ),
+            },
+            {
+              path: paths.employees,
+              element: (
+                <ProtectedPage module="settings">
+                  <EmployeesRoute />
+                </ProtectedPage>
+              ),
+            },
+            {
+              path: paths.employeeDetail,
+              element: (
+                <ProtectedPage module="settings">
+                  <EmployeesRoute />
+                </ProtectedPage>
+              ),
+            },
+            {
+              path: paths.settings,
+              element: (
+                <ProtectedPage module="settings">
+                  <SettingsRoute />
+                </ProtectedPage>
+              ),
             },
           ],
         },

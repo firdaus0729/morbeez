@@ -118,8 +118,11 @@ export function ConsolePageSearchProvider({
   }, []);
 
   useEffect(() => {
-    clearRegistration();
-  }, [pageKey, clearRegistration]);
+    setGlobalQuery('');
+    setGlobalResults([]);
+    setGlobalOpen(false);
+    setRegistration(null);
+  }, [pageKey]);
 
   useEffect(() => {
     if (mode !== 'global') return;

@@ -8,6 +8,7 @@ import {
   type NavGroup,
   type NavItem,
 } from '../lib/console-nav';
+import { paths, toPath } from '../lib/routes';
 import type { ApiModule } from '../lib/api';
 import { cn } from '../lib/cn';
 
@@ -62,6 +63,7 @@ export function SidebarNav({ modules, onNavigate }: Props) {
       <li key={item.id}>
         <NavLink
           to={item.path}
+          end={item.path !== toPath(paths.employees)}
           className={({ isActive }) =>
             linkClassName(isActive || isNavItemActive(pathname, item.path), baseClass)
           }
@@ -102,6 +104,7 @@ export function SidebarNav({ modules, onNavigate }: Props) {
                 <li key={child.id}>
                   <NavLink
                     to={child.path}
+                    end
                     className={({ isActive }) =>
                       linkClassName(
                         isActive || isNavItemActive(pathname, child.path),

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { initials, roleLabel } from '../lib/format';
 import { matchRouteMeta } from '../lib/routes';
@@ -7,6 +7,7 @@ import { paths, toPath } from '../lib/routes';
 import { LogoMark } from './LogoMark';
 import { SidebarNav } from './SidebarNav';
 import { ConsoleTopbar } from './ConsoleTopbar';
+import { ConsoleOutlet } from './ConsoleOutlet';
 import { ConsolePageSearchProvider } from '../context/ConsolePageSearchContext';
 import { TelecallerHeaderProvider } from '../context/TelecallerHeaderContext';
 import { TelecallerWorkspaceHeader } from './telecaller/TelecallerWorkspaceHeader';
@@ -96,21 +97,17 @@ export function AppLayout() {
         {isTelecallerCrm ? (
           <TelecallerHeaderProvider>
             <TelecallerWorkspaceHeader onOpenMenu={() => setSidebarOpen(true)} onLogout={handleLogout} />
-            <div className="content console-page-content" id="main-content">
-              <Outlet key={location.pathname} />
-            </div>
+            <ConsoleOutlet />
           </TelecallerHeaderProvider>
         ) : (
-          <ConsolePageSearchProvider key={meta.pageKey} pageKey={meta.pageKey}>
+          <ConsolePageSearchProvider pageKey={meta.pageKey}>
             <ConsoleTopbar
               pathname={location.pathname}
               dateText={dateText}
               onOpenMenu={() => setSidebarOpen(true)}
               onLogout={handleLogout}
             />
-            <div className="content console-page-content" id="main-content">
-              <Outlet key={location.pathname} />
-            </div>
+            <ConsoleOutlet />
           </ConsolePageSearchProvider>
         )}
       </div>
