@@ -16,11 +16,17 @@ export function buildResetPasswordUrl(token: string): string {
   return `${getConsolePublicUrl()}/reset-password?token=${encodeURIComponent(token)}`;
 }
 
-const FORGOT_PASSWORD_RESPONSE = {
-  ok: true as const,
-  message:
-    'If an account exists for this email, you will receive a password reset link shortly.',
-};
+const FORGOT_PASSWORD_MESSAGE =
+  'If an account exists for this email, you will receive a password reset link shortly.';
+
+function forgotPasswordPayload(resetUrl: string | null, expiresAt: string | null = null) {
+  return {
+    ok: true as const,
+    message: FORGOT_PASSWORD_MESSAGE,
+    resetUrl,
+    expiresAt,
+  };
+}
 
 export const staffPasswordService = {
   async setAdminPassword(adminUserId: string, password: string): Promise<void> {
@@ -49,7 +55,7 @@ export const staffPasswordService = {
     throwIfSupabaseError(error, 'Could not look up account');
 
     if (!admin?.id || !admin.active || !admin.email_verified_at) {
-      return FORGOT_PASSWORD_RESPONSE;
+      return forgotPasswordPayload(null);
     }
 
     await supabase
@@ -73,7 +79,7 @@ export const staffPasswordService = {
       'Staff password reset link — send this URL to the employee'
     );
 
-    return FORGOT_PASSWORD_RESPONSE;
+    return forgotPasswordPayload(resetUrl, expiresAt);
   },
 
   /** Admin-initiated reset link for an employee profile. */

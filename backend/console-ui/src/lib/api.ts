@@ -94,12 +94,25 @@ export async function completeInvite(
   });
 }
 
-export async function requestForgotPassword(email: string): Promise<{ message: string }> {
-  const data = await api<{ ok: boolean; message: string }>(`${STAFF_API_V1}/auth/forgot-password`, {
+export async function requestForgotPassword(email: string): Promise<{
+  message: string;
+  resetUrl: string | null;
+  expiresAt: string | null;
+}> {
+  const data = await api<{
+    ok: boolean;
+    message: string;
+    resetUrl?: string | null;
+    expiresAt?: string | null;
+  }>(`${STAFF_API_V1}/auth/forgot-password`, {
     method: 'POST',
     body: JSON.stringify({ email }),
   });
-  return { message: data.message };
+  return {
+    message: data.message,
+    resetUrl: data.resetUrl ?? null,
+    expiresAt: data.expiresAt ?? null,
+  };
 }
 
 export type ResetPasswordPreview = {

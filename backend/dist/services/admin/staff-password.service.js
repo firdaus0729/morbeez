@@ -13,10 +13,15 @@ function sha256(input) {
 export function buildResetPasswordUrl(token) {
     return `${getConsolePublicUrl()}/reset-password?token=${encodeURIComponent(token)}`;
 }
-const FORGOT_PASSWORD_RESPONSE = {
-    ok: true,
-    message: 'If an account exists for this email, you will receive a password reset link shortly.',
-};
+const FORGOT_PASSWORD_MESSAGE = 'If an account exists for this email, you will receive a password reset link shortly.';
+function forgotPasswordPayload(resetUrl, expiresAt = null) {
+    return {
+        ok: true,
+        message: FORGOT_PASSWORD_MESSAGE,
+        resetUrl,
+        expiresAt,
+    };
+}
 export const staffPasswordService = {
     async setAdminPassword(adminUserId, password) {
         validateStaffPassword(password);
@@ -41,7 +46,7 @@ export const staffPasswordService = {
             .maybeSingle();
         throwIfSupabaseError(error, 'Could not look up account');
         if (!admin?.id || !admin.active || !admin.email_verified_at) {
-            return FORGOT_PASSWORD_RESPONSE;
+            return forgotPasswordPayload(null);
         }
         await supabase
             .from('admin_password_reset_tokens')
@@ -58,7 +63,7 @@ export const staffPasswordService = {
         throwIfSupabaseError(insertErr, 'Could not create reset token');
         const resetUrl = buildResetPasswordUrl(rawToken);
         logger.info({ email: admin.email, resetUrl, expiresAt }, 'Staff password reset link — send this URL to the employee');
-        return FORGOT_PASSWORD_RESPONSE;
+        return forgotPasswordPayload(resetUrl, expiresAt);
     },
     /** Admin-initiated reset link for an employee profile. */
     async createEmployeeResetLink(input) {

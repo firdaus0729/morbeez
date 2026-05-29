@@ -5,6 +5,8 @@ export declare const staffPasswordService: {
     requestPasswordReset(email: string): Promise<{
         ok: true;
         message: string;
+        resetUrl: string | null;
+        expiresAt: string | null;
     }>;
     /** Admin-initiated reset link for an employee profile. */
     createEmployeeResetLink(input: {
