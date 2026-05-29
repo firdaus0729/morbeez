@@ -251,7 +251,13 @@ export const telecallerAdminService = {
     const { data, error } = await supabase
       .from('leads')
       .select(
-        '*, farmers(id, phone, name, first_name, last_name, district, state, village, preferred_language, metadata, created_at)'
+        `*, farmers(
+          id, phone, name, first_name, last_name, district, state, village,
+          preferred_language, metadata, created_at, pincode_id,
+          whatsapp_phone, whatsapp_same_as_phone, shipping_address, delivery_pincode,
+          total_acreage, roi_enabled, farmer_notes, assigned_crop_advisor,
+          pincode_master(pincode, district, state)
+        )`
       )
       .eq('id', leadId)
       .single();
@@ -339,20 +345,39 @@ export const telecallerAdminService = {
     const nextTask = (tasksRes.data ?? []).find((t) => t.status === 'pending');
 
     const metadata = (farmer?.metadata as Record<string, unknown>) ?? {};
+    const pm = farmer?.pincode_master as { pincode?: string; district?: string; state?: string } | null;
+    const pincode = pm?.pincode ?? null;
+    const totalAcre =
+      farmer?.total_acreage != null
+        ? String(farmer.total_acreage)
+        : metadata.acreage
+          ? String(metadata.acreage)
+          : '—';
 
     return {
-      lead,
+      lead: { ...lead, pincode },
       farmer: {
         id: farmerId,
         name: lead.farmerName,
         phone: lead.phone,
         email: null,
-        district: lead.district,
-        state: lead.state,
+        district: lead.district ?? pm?.district ?? null,
+        state: lead.state ?? pm?.state ?? null,
+        pincode,
+        village: farmer?.village ? String(farmer.village) : null,
         language: farmer?.preferred_language ?? 'Hindi',
         territory: [lead.district, lead.state].filter(Boolean).join(', ') || '—',
         crop: primaryCrop,
-        acreage: metadata.acreage ? String(metadata.acreage) : '—',
+        acreage: totalAcre,
+        whatsappSame: farmer?.whatsapp_same_as_phone !== false,
+        whatsappPhone: farmer?.whatsapp_phone ? String(farmer.whatsapp_phone) : null,
+        shippingAddress: farmer?.shipping_address ? String(farmer.shipping_address) : null,
+        deliveryPincode: farmer?.delivery_pincode ? String(farmer.delivery_pincode) : null,
+        roiEnabled: Boolean(farmer?.roi_enabled),
+        farmerNotes: farmer?.farmer_notes ? String(farmer.farmer_notes) : null,
+        assignedCropAdvisor: farmer?.assigned_crop_advisor
+          ? String(farmer.assigned_crop_advisor)
+          : null,
         farmSize: metadata.farmSize ? String(metadata.farmSize) : '—',
         irrigation: metadata.irrigation ? String(metadata.irrigation) : '—',
         soilType: metadata.soilType ? String(metadata.soilType) : 'Loamy',
@@ -437,6 +462,18 @@ export const telecallerAdminService = {
       cropType?: string;
       district?: string;
       state?: string;
+      whatsappSame?: boolean;
+      whatsappPhone?: string;
+      language?: string;
+      pincode?: string;
+      village?: string;
+      totalAcreage?: number;
+      shippingAddress?: string;
+      deliveryPincode?: string;
+      assignedCropAdvisor?: string;
+      roiEnabled?: boolean;
+      farmerNotes?: string;
+      cropBlocks?: Array<{ cropName: string; acreage?: number; plantingDate?: string }>;
     },
     agentEmail: string
   ) {
@@ -445,9 +482,26 @@ export const telecallerAdminService = {
       name: input.name,
       intent: 'general',
       source: 'phone',
-      notes: input.notes,
-      cropType: input.cropType,
+      notes: input.notes ?? input.farmerNotes,
+      cropType: input.cropType ?? input.cropBlocks?.[0]?.cropName,
       district: input.district,
+    });
+
+    const { telecallerFarmerProfileService } = await import('./telecaller-farmer-profile.service.js');
+    await telecallerFarmerProfileService.applyProfileOnCreate(result.farmer.id, {
+      name: input.name,
+      whatsappSame: input.whatsappSame,
+      whatsappPhone: input.whatsappPhone,
+      language: input.language,
+      pincode: input.pincode,
+      village: input.village,
+      totalAcreage: input.totalAcreage,
+      shippingAddress: input.shippingAddress,
+      deliveryPincode: input.deliveryPincode,
+      assignedCropAdvisor: input.assignedCropAdvisor,
+      roiEnabled: input.roiEnabled,
+      farmerNotes: input.farmerNotes,
+      cropBlocks: input.cropBlocks,
     });
 
     const { data: existing } = await supabase

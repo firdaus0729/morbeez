@@ -30,7 +30,13 @@ function weatherBand(risk: number): WeatherRiskBand {
 export const policyEngineService = {
   evaluate(
     advisory: StructuredAdvisory,
-    contextPack?: { weatherRiskScore?: number; heavyRainLikely?: boolean; highHeatLikely?: boolean }
+    contextPack?: {
+      weatherRiskScore?: number;
+      heavyRainLikely?: boolean;
+      highHeatLikely?: boolean;
+      /** When farmer sent a crop photo, always deliver AI advisory (do not ask only for clearer photos). */
+      hasImage?: boolean;
+    }
   ): PolicyAssessment {
     const conf = Math.max(0, Math.min(1, advisory.confidence));
     const confidenceBand = toBand(conf);
@@ -54,8 +60,19 @@ export const policyEngineService = {
       safetyNotes.push('High heat likely: avoid strong foliar spray during noon window.');
     }
 
-    const shouldRequestMoreEvidence = confidenceBand === 'low';
-    const needsValidationQuestion = confidenceBand === 'medium';
+    const hasActionableDiagnosis =
+      Boolean(advisory.probableIssue?.trim()) &&
+      !/uncertain|unknown|cannot|unclear/i.test(advisory.probableIssue);
+
+    const shouldRequestMoreEvidence =
+      !contextPack?.hasImage &&
+      confidenceBand === 'low' &&
+      !hasActionableDiagnosis;
+
+    const needsValidationQuestion =
+      contextPack?.hasImage && confidenceBand === 'low'
+        ? true
+        : confidenceBand === 'medium';
     const escalationPriority: 'normal' | 'high' | 'urgent' =
       confidenceBand === 'low' && weatherRiskBand === 'high'
         ? 'urgent'

@@ -197,6 +197,9 @@ export const assessmentPlaybookService = {
     options?: { hasCropMedia?: boolean }
   ): PlaybookResult {
     const cat = classification.category;
+    if (options?.hasCropMedia && cat !== 'compatibility') {
+      return { action: 'continue_diagnosis' };
+    }
     if (cat === 'disease_stress' || cat === 'cultivation') {
       return { action: 'continue_diagnosis' };
     }

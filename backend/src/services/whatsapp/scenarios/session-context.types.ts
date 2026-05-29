@@ -1,4 +1,4 @@
-import type { DosageItem } from '../../ai/types.js';
+import type { DosageItem, StructuredAdvisory } from '../../ai/types.js';
 
 /** JSON stored on conversation_sessions.context */
 export interface DiagnosisPending {
@@ -37,9 +37,16 @@ export interface SessionContext {
   pendingRecommendationFollowUp?: 'application' | 'outcome';
   /** Assessment playbook router (insect / weed / compatibility, etc.) */
   lastPlaybookCategory?: string;
-  /** ROI tracker */
+  /** ROI tracker (farmers add only; telecaller edits in CRM) */
   roiPendingEntryType?: string;
-  roiPendingEditEntryId?: string;
-  roiAwaitingPinSetup?: boolean;
-  roiEditUnlocked?: boolean;
+  roiPendingEntryDate?: string;
+  roiPendingAmount?: number;
+  roiAwaitingCommentsChoice?: boolean;
+  roiAwaitingCommentsText?: boolean;
+  /** Full advisory held until soil report is confirmed or uploaded */
+  pendingNutrientAdvisory?: {
+    sessionId: string;
+    advisory: StructuredAdvisory;
+    productTitles?: string[];
+  };
 }

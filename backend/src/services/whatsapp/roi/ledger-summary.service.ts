@@ -22,7 +22,7 @@ export const ledgerSummaryService = {
   }> {
     let q = supabase
       .from('farmer_roi_entries')
-      .select('entry_type, amount_inr')
+      .select('entry_type, amount_inr, debit_inr, credit_inr')
       .eq('farmer_id', farmerId);
 
     if (fromDate) q = q.gte('entry_date', fromDate);
@@ -32,9 +32,15 @@ export const ledgerSummaryService = {
     let credits = 0;
     let debits = 0;
     for (const row of data ?? []) {
-      const amt = Number(row.amount_inr ?? 0);
-      if (CREDIT_TYPES.has(String(row.entry_type))) credits += amt;
-      else if (DEBIT_TYPES.has(String(row.entry_type))) debits += amt;
+      const debit = row.debit_inr != null ? Number(row.debit_inr) : null;
+      const credit = row.credit_inr != null ? Number(row.credit_inr) : null;
+      if (debit != null) debits += debit;
+      else if (credit != null) credits += credit;
+      else {
+        const amt = Number(row.amount_inr ?? 0);
+        if (CREDIT_TYPES.has(String(row.entry_type))) credits += amt;
+        else if (DEBIT_TYPES.has(String(row.entry_type))) debits += amt;
+      }
     }
     return {
       credits,

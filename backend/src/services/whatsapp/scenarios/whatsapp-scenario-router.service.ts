@@ -14,6 +14,10 @@ import { t } from './whatsapp-flow-copy.js';
 import { weatherAlertsService } from './weather-alerts.service.js';
 import { dailyPricesService } from './daily-prices.service.js';
 import { soilFlowService } from './soil-flow.service.js';
+import {
+  nutrientSoilGateService,
+  suggestsNutrientDeficiency,
+} from './nutrient-soil-gate.service.js';
 import { callbackFlowService } from './callback-flow.service.js';
 import { terminologyService } from './terminology.service.js';
 import { diagnosisFlowService } from './diagnosis-flow.service.js';
@@ -166,8 +170,8 @@ export const whatsappScenarioRouter = {
   ): Promise<void> {
     const body =
       lang === 'ml'
-        ? 'കൂടുതൽ സ്ഥിരീകരണത്തിന് മണ്ണ് പരിശോധന റിപ്പോർട്ട് ഉണ്ടോ?'
-        : 'For further confirmation, do you have a soil test report?';
+        ? 'വളം ശുപാർശയ്ക്ക് മുമ്പ്: മണ്ണ് പരിശോധന റിപ്പോർട്ട് (PDF/ഫോട്ടോ) ഉണ്ടോ?'
+        : 'Before fertilizer advice: do you have a soil test report (PDF or photo)?';
     const options = [
       { id: 'soil.confirm_yes', title: 'Yes' },
       { id: 'soil.confirm_no', title: 'No' },
@@ -591,6 +595,35 @@ export const whatsappScenarioRouter = {
     }
 
     if (session.state === 'nutrient_soil_confirm' || SOIL_CONFIRM_IDS.has(text)) {
+      if (CROP_MEDIA.has(msg.msgType) || msg.msgType === 'document') {
+        await nutrientSoilGateService.markSoilReportReceived(captured.farmerId);
+        await send.text(msg.phone, soilFlowService.reportReceivedReply(lang));
+        const delivered = await nutrientSoilGateService.deliverPending({
+          farmerId: captured.farmerId,
+          phone: msg.phone,
+          language: lang,
+          sendText: send.text,
+          extraFooter:
+            lang === 'ml'
+              ? 'മണ്ണ് റിപ്പോർട്ട് ലഭിച്ചു — ഈ മാർഗ്ഗനിർദേശം അതിനെ അടിസ്ഥാനമാക്കി ക്രമീകരിക്കാം.'
+              : 'Soil report received — we can refine this advice with your lab values.',
+        });
+        if (delivered) {
+          await this.afterDiagnosis({
+            phone: msg.phone,
+            farmerId: captured.farmerId,
+            lang,
+            sessionId: delivered.sessionId,
+            advisory: delivered.advisory,
+            summary: delivered.summary,
+            send,
+            skipNutrientSoilAsk: true,
+          });
+        }
+        await conversationSessionService.setState(captured.farmerId, 'main_menu');
+        return { handled: true };
+      }
+
       const normalized = text.trim().toLowerCase();
       if (
         normalized === 'soil.confirm_yes' ||
@@ -622,6 +655,29 @@ export const whatsappScenarioRouter = {
           msg.phone,
           noReportAddress[lang] ?? noReportAddress.en
         );
+        const noReportFooter =
+          lang === 'ml'
+            ? 'മണ്ണ് റിപ്പോർട്ട് ഇല്ലാതെ: താഴെ പൊതു മാർഗ്ഗനിർദേശം മാത്രം (സ്ഥിരീകരണം ആവശ്യം).'
+            : 'Without a soil report: general guidance only (needs confirmation).';
+        const delivered = await nutrientSoilGateService.deliverPending({
+          farmerId: captured.farmerId,
+          phone: msg.phone,
+          language: lang,
+          sendText: send.text,
+          extraFooter: noReportFooter,
+        });
+        if (delivered) {
+          await this.afterDiagnosis({
+            phone: msg.phone,
+            farmerId: captured.farmerId,
+            lang,
+            sessionId: delivered.sessionId,
+            advisory: delivered.advisory,
+            summary: delivered.summary,
+            send,
+            skipNutrientSoilAsk: true,
+          });
+        }
         await conversationSessionService.setState(captured.farmerId, 'main_menu');
         return { handled: true };
       }
@@ -925,9 +981,32 @@ export const whatsappScenarioRouter = {
       }
     }
 
-    // PDF / document soil report (Scenario 14)
-    if (msg.msgType === 'document' && session.state === 'soil_flow') {
+    // Soil report upload (PDF / photo) while in soil flow
+    if ((msg.msgType === 'document' || CROP_MEDIA.has(msg.msgType)) && session.state === 'soil_flow') {
+      await nutrientSoilGateService.markSoilReportReceived(captured.farmerId);
       await send.text(msg.phone, soilFlowService.reportReceivedReply(lang));
+      const delivered = await nutrientSoilGateService.deliverPending({
+        farmerId: captured.farmerId,
+        phone: msg.phone,
+        language: lang,
+        sendText: send.text,
+        extraFooter:
+          lang === 'ml'
+            ? 'മണ്ണ് റിപ്പോർട്ട് ലഭിച്ചു — ഈ മാർഗ്ഗനിർദേശം അതിനെ അടിസ്ഥാനമാക്കി ക്രമീകരിക്കാം.'
+            : 'Soil report received — we can refine this advice with your lab values.',
+      });
+      if (delivered) {
+        await this.afterDiagnosis({
+          phone: msg.phone,
+          farmerId: captured.farmerId,
+          lang,
+          sessionId: delivered.sessionId,
+          advisory: delivered.advisory,
+          summary: delivered.summary,
+          send,
+          skipNutrientSoilAsk: true,
+        });
+      }
       await conversationSessionService.setState(captured.farmerId, 'main_menu');
       return { handled: true };
     }
@@ -976,14 +1055,7 @@ export const whatsappScenarioRouter = {
         'plot_select',
       ]);
       if (diagnosisStates.has(session.state) || session.state === 'main_menu') {
-        const { imageCount, shouldRunDiagnosis } = await diagnosisFlowService.recordImageReceived(
-          captured.farmerId
-        );
-        if (imageCount === 1) {
-          await send.text(msg.phone, diagnosisFlowService.firstImagePrompt(lang));
-          await conversationSessionService.setState(captured.farmerId, 'diagnosis_awaiting_photos');
-          return { handled: true };
-        }
+        const { shouldRunDiagnosis } = await diagnosisFlowService.recordImageReceived(captured.farmerId);
         if (shouldRunDiagnosis) {
           const welcome = await farmerWelcomeService.buildWelcomeLine(captured.farmerId, lang);
           await send.text(msg.phone, diagnosisFlowService.analyzingPrompt(lang));
@@ -1268,6 +1340,7 @@ export const whatsappScenarioRouter = {
     summary: string;
     send: ScenarioSenders;
     hasProductRecommendations?: boolean;
+    skipNutrientSoilAsk?: boolean;
   }): Promise<void> {
     await diagnosisFlowService.storeDiagnosisResult(
       params.farmerId,
@@ -1300,7 +1373,11 @@ export const whatsappScenarioRouter = {
       return;
     }
 
-    if ((params.advisory.nutrientDeficiency?.length ?? 0) > 0) {
+    if (
+      !params.skipNutrientSoilAsk &&
+      suggestsNutrientDeficiency(params.advisory) &&
+      !(await soilFlowService.hasSoilReport(params.farmerId))
+    ) {
       await this.askSoilReportConfirmation(params.phone, params.farmerId, params.lang, params.send);
       return;
     }

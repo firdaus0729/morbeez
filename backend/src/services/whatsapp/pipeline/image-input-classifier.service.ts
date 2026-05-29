@@ -93,14 +93,14 @@ export const imageInputClassifierService = {
         },
         body: JSON.stringify({
           model: env.OPENAI_VISION_MODEL,
-          max_tokens: 200,
+          max_tokens: 280,
           temperature: 0.1,
           response_format: { type: 'json_object' },
           messages: [
             {
               role: 'system',
               content:
-                'You classify farm WhatsApp images for routing. Return JSON only: {"primary_category":"crop_leaf|disease_symptom|insect|weed|root|soil|fertilizer_bag|pesticide_label|unknown_plant|other","confidence":0-1,"photo_quality":"ok|blurry|too_dark","hints":["short hint"]}. Be conservative; use disease_symptom for leaf spots/wilt, insect for visible pests, weed for non-crop plants.',
+                'You classify farm WhatsApp images for routing. Return JSON only: {"primary_category":"crop_leaf|disease_symptom|insect|weed|root|soil|fertilizer_bag|pesticide_label|unknown_plant|other","confidence":0-1,"photo_quality":"ok|blurry|too_dark","hints":["short hint"]}. Use disease_symptom for leaf spots, wilt, fungal lesions. Use insect for thrips/mite damage patterns (silvery streaks, scraping on leaves) even if pests are not visible. photo_quality=ok unless truly unusable.',
             },
             {
               role: 'user',
@@ -110,7 +110,7 @@ export const imageInputClassifierService = {
                   type: 'image_url',
                   image_url: {
                     url: `data:${params.imageMimeType};base64,${params.imageBase64}`,
-                    detail: 'low',
+                    detail: 'high',
                   },
                 },
               ],

@@ -43,9 +43,15 @@ describe('response composer', () => {
 });
 
 describe('assessment playbook', () => {
-  it('returns insect playbook with validation question', () => {
+  it('runs full crop doctor when insect text includes a photo', () => {
     const classification = inputClassifierService.classifyText('caterpillar chewing leaves');
     const result = assessmentPlaybookService.resolve(classification, 'en', { hasCropMedia: true });
+    assert.equal(result.action, 'continue_diagnosis');
+  });
+
+  it('returns insect playbook for text-only low-context messages', () => {
+    const classification = inputClassifierService.classifyText('caterpillar chewing leaves');
+    const result = assessmentPlaybookService.resolve(classification, 'en', { hasCropMedia: false });
     assert.equal(result.action, 'reply');
     if (result.action === 'reply') {
       assert.match(result.message, /insect|pest/i);

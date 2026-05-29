@@ -7,6 +7,9 @@ import { telecallerAdminService } from '../../services/admin/telecaller-admin.se
 import { crmFarmerService, type MasterType } from '../../services/admin/crm-farmer.service.js';
 import { whatsappOsAdminService } from '../../services/admin/whatsapp-os-admin.service.js';
 import { escalationAdminService } from '../../services/admin/escalation-admin.service.js';
+import { farmerRoiAdminService } from '../../services/admin/farmer-roi-admin.service.js';
+import { telecallerFarmerProfileService } from '../../services/admin/telecaller-farmer-profile.service.js';
+import { pincodeService } from '../../services/core/pincode.service.js';
 
 const leadStageEnum = z.enum([
   'new_lead',
@@ -85,6 +88,96 @@ export async function osTelecallerRoutes(app: FastifyInstance): Promise<void> {
     const { note } = z.object({ note: z.string().min(1) }).parse(request.body);
     const detail = await telecallerAdminService.addNote(id, note, admin.email);
     return reply.send({ ok: true, ...detail });
+  });
+
+  app.get(`${api}/pincodes/:pincode`, async (request, reply) => {
+    await assertModuleAccess(request, 'telecaller_crm', 'read');
+    const { pincode } = request.params as { pincode: string };
+    const row = await pincodeService.lookupByPincode(pincode);
+    if (!row) return reply.code(404).send({ ok: false, error: 'Pincode not found' });
+    return reply.send({ ok: true, pincode: row });
+  });
+
+  app.get(`${api}/leads/:id/farmer-profile`, async (request, reply) => {
+    await assertModuleAccess(request, 'telecaller_crm', 'read');
+    const { id } = request.params as { id: string };
+    const detail = await telecallerAdminService.getLeadDetail(id);
+    const profile = await telecallerFarmerProfileService.getProfile(detail.lead.farmerId as string);
+    return reply.send({ ok: true, ...profile });
+  });
+
+  app.patch(`${api}/leads/:id/farmer-profile`, async (request, reply) => {
+    await assertModuleAccess(request, 'telecaller_crm', 'write');
+    const { id } = request.params as { id: string };
+    const detail = await telecallerAdminService.getLeadDetail(id);
+    const body = z
+      .object({
+        name: z.string().optional(),
+        whatsappSame: z.boolean().optional(),
+        whatsappPhone: z.string().optional(),
+        language: z.string().optional(),
+        pincode: z.string().optional(),
+        village: z.string().optional(),
+        totalAcreage: z.number().optional(),
+        shippingAddress: z.string().optional(),
+        deliveryPincode: z.string().optional(),
+        assignedCropAdvisor: z.string().optional(),
+        roiEnabled: z.boolean().optional(),
+        farmerNotes: z.string().optional(),
+        cropBlocks: z
+          .array(
+            z.object({
+              cropName: z.string(),
+              acreage: z.number().optional(),
+              plantingDate: z.string().optional(),
+            })
+          )
+          .optional(),
+      })
+      .parse(request.body);
+    const profile = await telecallerFarmerProfileService.updateProfile(
+      detail.lead.farmerId as string,
+      body
+    );
+    return reply.send({ ok: true, ...profile });
+  });
+
+  app.get(`${api}/leads/:id/roi-entries`, async (request, reply) => {
+    await assertModuleAccess(request, 'telecaller_crm', 'read');
+    const { id } = request.params as { id: string };
+    const detail = await telecallerAdminService.getLeadDetail(id);
+    const result = await farmerRoiAdminService.listEntries(detail.lead.farmerId as string);
+    return reply.send({ ok: true, ...result });
+  });
+
+  app.patch(`${api}/leads/:id/roi-entries/:entryId`, async (request, reply) => {
+    const admin = await assertModuleAccess(request, 'telecaller_crm', 'write');
+    const { id, entryId } = request.params as { id: string; entryId: string };
+    const detail = await telecallerAdminService.getLeadDetail(id);
+    const body = z
+      .object({
+        password: z.string().min(1),
+        entryDate: z.string().optional(),
+        category: z.enum(['labour', 'purchase', 'misc', 'harvest', 'income']).optional(),
+        comments: z.string().nullable().optional(),
+        debitInr: z.number().nullable().optional(),
+        creditInr: z.number().nullable().optional(),
+      })
+      .parse(request.body);
+    const entry = await farmerRoiAdminService.staffEditEntry({
+      farmerId: detail.lead.farmerId as string,
+      entryId,
+      staffEmail: admin.email,
+      password: body.password,
+      patch: {
+        entryDate: body.entryDate,
+        category: body.category,
+        comments: body.comments,
+        debitInr: body.debitInr,
+        creditInr: body.creditInr,
+      },
+    });
+    return reply.send({ ok: true, entry });
   });
 
   app.get(`${api}/leads/:id/crm`, async (request, reply) => {
@@ -283,6 +376,26 @@ export async function osTelecallerRoutes(app: FastifyInstance): Promise<void> {
         cropType: z.string().optional(),
         district: z.string().optional(),
         state: z.string().optional(),
+        whatsappSame: z.boolean().optional(),
+        whatsappPhone: z.string().optional(),
+        language: z.string().optional(),
+        pincode: z.string().optional(),
+        village: z.string().optional(),
+        totalAcreage: z.number().optional(),
+        shippingAddress: z.string().optional(),
+        deliveryPincode: z.string().optional(),
+        assignedCropAdvisor: z.string().optional(),
+        roiEnabled: z.boolean().optional(),
+        farmerNotes: z.string().optional(),
+        cropBlocks: z
+          .array(
+            z.object({
+              cropName: z.string(),
+              acreage: z.number().optional(),
+              plantingDate: z.string().optional(),
+            })
+          )
+          .optional(),
       })
       .parse(request.body);
     const detail = await telecallerAdminService.createLead(body, admin.email);

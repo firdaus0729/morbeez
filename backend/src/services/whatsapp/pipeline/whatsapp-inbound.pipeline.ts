@@ -30,6 +30,10 @@ import { whatsappConversationalService } from '../whatsapp-conversational.servic
 import { farmerService } from '../../farmer/farmer.service.js';
 import { conversationSessionService } from '../conversation-session.service.js';
 import { whatsappScenarioRouter } from '../scenarios/whatsapp-scenario-router.service.js';
+import {
+  nutrientSoilGateService,
+  soilGatePreface,
+} from '../scenarios/nutrient-soil-gate.service.js';
 import { cropSelectionService } from '../scenarios/crop-selection.service.js';
 import { farmerPurgeService } from '../../farmer/farmer-purge.service.js';
 import { orderWhatsappService } from '../orders/order-whatsapp.service.js';
@@ -272,6 +276,11 @@ async function tryAssessmentPlaybook(params: {
 
 function validationQuestion(issue: string, language: AdvisoryLanguage): string {
   const lower = issue.toLowerCase();
+  if (/thrip|silver|streak|scrap/.test(lower)) {
+    return language === 'ml'
+      ? 'സ്ഥിരീകരിക്കാൻ: ഇലയുടെ അടിയിൽ ചെറിയ കീടങ്ങളോ കറുത്ത മലമുണ്ടോ?'
+      : 'To confirm: do you see tiny insects or black dots under the leaves?';
+  }
   if (/root|rot|nematode|rhizome/.test(lower)) {
     return language === 'ml'
       ? 'സ്ഥിരീകരിക്കാൻ: വേരുകൾ മൃദുവായിട്ടുണ്ടോ, ദുർഗന്ധമുണ്ടോ?'
@@ -615,7 +624,7 @@ export const whatsappInboundPipeline = {
     }
 
     if (VOICE_TYPES.has(msg.msgType)) {
-      await this.processVoice(msg, captured, send.text);
+      await this.processVoice(msg, captured, send.text, send);
     } else if (CROP_MEDIA_TYPES.has(msg.msgType)) {
       await this.processImage(msg, captured, send.text, send);
     } else if (msg.text) {
@@ -632,7 +641,8 @@ export const whatsappInboundPipeline = {
   async processVoice(
     msg: InboundMessage,
     captured: { farmerId: string; phone: string; language: AdvisoryLanguage; isPremium: boolean },
-    sendText: (phone: string, text: string) => Promise<void>
+    sendText: (phone: string, text: string) => Promise<void>,
+    send?: Senders
   ): Promise<void> {
     let media: Awaited<ReturnType<typeof extractInboundMedia>>;
     try {
@@ -687,7 +697,9 @@ export const whatsappInboundPipeline = {
       phone: captured.phone,
       language,
       voiceTranscript: transcript,
+      channel: 'whatsapp',
       sendText,
+      send,
     });
   },
 
@@ -963,7 +975,11 @@ export const whatsappInboundPipeline = {
         compactHistory: context.compactHistory,
         contextPack,
       });
-      const assessment = policyEngineService.evaluate(result.advisory, contextPack);
+      const hasImage = Boolean(params.imageBase64);
+      const assessment = policyEngineService.evaluate(result.advisory, {
+        ...contextPack,
+        hasImage,
+      });
 
       const safety = validateAdvisorySafety(result.advisory, params.language);
       if (!safety.safe) {
@@ -1002,6 +1018,48 @@ export const whatsappInboundPipeline = {
             : 'Symptoms need further confirmation. Please send clearer leaf/root images. Our team will contact you.'
         );
         await conversationSessionService.setState(params.farmerId, 'root_photos_requested');
+        return;
+      }
+
+      if (hasImage && assessment.confidenceBand === 'low' && !localizedSummary(result.advisory, params.language)) {
+        await params.sendText(
+          params.phone,
+          params.language === 'ml'
+            ? 'ചിത്രം വ്യക്തമല്ല. ദയവായി ബാധിത ഇലയുടെ അടുത്ത ഫോട്ടോ വീണ്ടും അയയ്ക്കുക.'
+            : 'The photo was not clear enough. Please send a closer photo of the affected leaves.'
+        );
+        await conversationSessionService.setState(params.farmerId, 'diagnosis_awaiting_photos');
+        return;
+      }
+
+      if (
+        params.channel === 'whatsapp' &&
+        (await nutrientSoilGateService.shouldGateBeforeFertilizerAdvice(
+          params.farmerId,
+          result.advisory
+        ))
+      ) {
+        await nutrientSoilGateService.storePending(params.farmerId, {
+          sessionId: result.sessionId,
+          advisory: result.advisory,
+        });
+        await params.sendText(params.phone, soilGatePreface(params.language));
+        if (params.send) {
+          await whatsappScenarioRouter.askSoilReportConfirmation(
+            params.phone,
+            params.farmerId,
+            params.language,
+            params.send
+          );
+        } else {
+          await params.sendText(
+            params.phone,
+            params.language === 'ml'
+              ? 'മണ്ണ് പരിശോധന റിപ്പോർട്ട് ഉണ്ടോ? Yes / No'
+              : 'Do you have a soil test report? Reply Yes or No.'
+          );
+          await conversationSessionService.setState(params.farmerId, 'nutrient_soil_confirm');
+        }
         return;
       }
 

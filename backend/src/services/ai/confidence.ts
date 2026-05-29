@@ -17,7 +17,10 @@ export function computeConfidence(
     plantSignal = 0.75;
   }
 
-  const merged = gptConfidence * 0.6 + plantSignal * 0.4;
+  const hasPlantDisease = Boolean(plantId?.diseases?.length);
+  const merged = hasPlantDisease
+    ? gptConfidence * 0.6 + plantSignal * 0.4
+    : gptConfidence * 0.92 + plantSignal * 0.08;
   return Math.round(Math.min(1, Math.max(0, merged)) * 10000) / 10000;
 }
 

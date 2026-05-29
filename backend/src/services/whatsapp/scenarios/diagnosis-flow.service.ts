@@ -11,7 +11,7 @@ export const diagnosisFlowService = {
     await conversationSessionService.patchContext(farmerId, {
       diagnosis: { ...ctx.diagnosis, imageCount },
     });
-    return { imageCount, shouldRunDiagnosis: imageCount >= 2 };
+    return { imageCount, shouldRunDiagnosis: imageCount >= 1 };
   },
 
   firstImagePrompt(language: AdvisoryLanguage): string {

@@ -824,6 +824,38 @@
   color: #0f172a;
 }
 
+.tc-header-menu-wrap {
+  position: relative;
+}
+
+.tc-header-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 40;
+  min-width: 200px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+  padding: 4px 0;
+}
+
+.tc-header-dropdown button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 8px 12px;
+  font-size: 13px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+.tc-header-dropdown button:hover {
+  background: #f1f5f9;
+}
+
 @media (max-width: 768px) {
   .telecaller-page .tc-leads-filters {
     grid-template-columns: 1fr;

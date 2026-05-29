@@ -41,12 +41,18 @@ export const soilFlowService = {
     const meta = (farmer?.metadata ?? {}) as Record<string, unknown>;
     if (meta.soil_report_uploaded || meta.soil_report_at) return true;
 
-    const { count } = await supabase
+    const { count: findingsCount } = await supabase
       .from('crm_field_findings')
       .select('id', { count: 'exact', head: true })
       .eq('farmer_id', farmerId)
       .or('observations.ilike.%soil%,disease_pest.ilike.%soil%');
-    return (count ?? 0) > 0;
+    if ((findingsCount ?? 0) > 0) return true;
+
+    const { count: reportCount } = await supabase
+      .from('crm_soil_reports')
+      .select('id', { count: 'exact', head: true })
+      .eq('farmer_id', farmerId);
+    return (reportCount ?? 0) > 0;
   },
 
   async handleLowYieldWithoutReport(

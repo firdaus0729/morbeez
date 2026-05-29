@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import { api } from '../../lib/api';
 import { CrmModals, type CrmModalType } from './CrmModals';
+import { EditFarmerModal } from './EditFarmerModal';
 import { LeadExportMenu } from './LeadExportMenu';
+import { RoiTrackerTab } from './RoiTrackerTab';
 import { openWhatsAppShare } from '../../lib/crmExport';
 
 const STAGE_CLASS: Record<string, string> = {
@@ -32,7 +34,8 @@ type Tab =
   | 'pending_tasks'
   | 'escalations'
   | 'notes'
-  | 'orders';
+  | 'orders'
+  | 'roi_tracker';
 
 type LeadDetail = {
   lead: {
@@ -41,6 +44,7 @@ type LeadDetail = {
     farmerName: string;
     farmerInitials: string;
     phone: string | null;
+    pincode?: string | null;
     district: string | null;
     state: string | null;
     stage: string;
@@ -91,6 +95,7 @@ const TABS: Array<{ id: Tab; label: string }> = [
   { id: 'escalations', label: 'Escalations' },
   { id: 'notes', label: 'Notes' },
   { id: 'orders', label: 'Orders' },
+  { id: 'roi_tracker', label: 'ROI tracker' },
 ];
 
 const TAB_ICONS: Record<Tab, string> = {
@@ -104,6 +109,7 @@ const TAB_ICONS: Record<Tab, string> = {
   escalations: '⚠',
   notes: '📝',
   orders: '🛒',
+  roi_tracker: '📒',
 };
 
 export function LeadDetailPanel({ leadId, canWrite }: Props) {
@@ -129,6 +135,8 @@ export function LeadDetailPanel({ leadId, canWrite }: Props) {
   const [noteText, setNoteText] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
+  const [showEditFarmer, setShowEditFarmer] = useState(false);
+  const [headerMenuOpen, setHeaderMenuOpen] = useState(false);
 
   const base = '/morbeez-staff/api/v1/os/telecaller';
 
@@ -369,7 +377,75 @@ export function LeadDetailPanel({ leadId, canWrite }: Props) {
                 >
                   📞
                 </a>
-                <button type="button" className="tc-icon-btn" aria-label="More">⋯</button>
+                <div className="tc-header-menu-wrap">
+                  <button
+                    type="button"
+                    className="tc-icon-btn"
+                    aria-label="More actions"
+                    aria-expanded={headerMenuOpen}
+                    onClick={() => setHeaderMenuOpen((v) => !v)}
+                  >
+                    ⋯
+                  </button>
+                  {headerMenuOpen ? (
+                    <div className="tc-header-dropdown" role="menu">
+                      {canWrite ? (
+                        <>
+                          <button
+                            type="button"
+                            role="menuitem"
+                            onClick={() => {
+                              setHeaderMenuOpen(false);
+                              setShowEditFarmer(true);
+                            }}
+                          >
+                            Edit farmer profile
+                          </button>
+                          <button
+                            type="button"
+                            role="menuitem"
+                            onClick={() => {
+                              setHeaderMenuOpen(false);
+                              setModal('task');
+                            }}
+                          >
+                            Create follow-up
+                          </button>
+                          <button
+                            type="button"
+                            role="menuitem"
+                            onClick={() => {
+                              setHeaderMenuOpen(false);
+                              setModal('recommendation');
+                            }}
+                          >
+                            Add recommendation
+                          </button>
+                          <button
+                            type="button"
+                            role="menuitem"
+                            onClick={() => {
+                              setHeaderMenuOpen(false);
+                              setModal('visit');
+                            }}
+                          >
+                            Schedule site visit
+                          </button>
+                        </>
+                      ) : null}
+                      <button
+                        type="button"
+                        role="menuitem"
+                        onClick={() => {
+                          setHeaderMenuOpen(false);
+                          setTab('roi_tracker');
+                        }}
+                      >
+                        Open ROI tracker
+                      </button>
+                    </div>
+                  ) : null}
+                </div>
               </div>
               <a
                 className="tc-call-btn"
@@ -384,7 +460,11 @@ export function LeadDetailPanel({ leadId, canWrite }: Props) {
             </div>
             <p className="tc-detail-subline">
               <strong>{l.phone ?? '—'}</strong> <span className="mx-2">•</span> {f.territory}{' '}
-              <span className="mx-2">•</span> Pincode: 670645
+              {l.pincode ? (
+                <>
+                  <span className="mx-2">•</span> Pincode: {l.pincode}
+                </>
+              ) : null}
             </p>
             {canWrite ? (
               <select
@@ -445,6 +525,14 @@ export function LeadDetailPanel({ leadId, canWrite }: Props) {
           leadId={leadId}
           blocks={blocks}
           onClose={() => setModal(null)}
+          onSaved={bumpData}
+        />
+      ) : null}
+
+      {showEditFarmer ? (
+        <EditFarmerModal
+          leadId={leadId}
+          onClose={() => setShowEditFarmer(false)}
           onSaved={bumpData}
         />
       ) : null}
@@ -931,6 +1019,8 @@ export function LeadDetailPanel({ leadId, canWrite }: Props) {
             />
           </>
         ) : null}
+
+        {tab === 'roi_tracker' ? <RoiTrackerTab leadId={leadId} canWrite={canWrite} /> : null}
 
         {tab === 'whatsapp' ? (
           <div className="tc-wa-layout">
