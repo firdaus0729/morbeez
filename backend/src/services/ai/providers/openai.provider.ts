@@ -1,6 +1,10 @@
 import { env } from '../../../config/env.js';
 import { AppError } from '../../../lib/errors.js';
 import { logger } from '../../../lib/logger.js';
+import {
+  logOpenAiQuotaInsufficient,
+  parseOpenAiHttpError,
+} from '../openai-quota.service.js';
 import type { StructuredAdvisory } from '../types.js';
 import type { TranscriptionInput, TranscriptionProvider, VisionInput, VisionProvider } from './base.provider.js';
 import { openaiTokenLimitBody } from './openai-chat-params.js';
@@ -69,7 +73,12 @@ export const openaiVisionProvider: VisionProvider = {
 
     if (!res.ok) {
       const text = await res.text();
-      logger.error({ status: res.status, text }, 'OpenAI vision failed');
+      const quota = parseOpenAiHttpError(res.status, text);
+      if (quota.isQuotaIssue) {
+        logOpenAiQuotaInsufficient('openai-vision', quota);
+      } else {
+        logger.error({ status: res.status, text }, 'OpenAI vision failed');
+      }
       throw new AppError('Vision analysis failed', res.status, 'OPENAI_VISION_FAILED', text);
     }
 
@@ -128,7 +137,12 @@ export async function openaiTextAdvisory(
   });
 
   if (!res.ok) {
-    throw new AppError('Text advisory failed', res.status, 'OPENAI_TEXT_FAILED', await res.text());
+    const text = await res.text();
+    const quota = parseOpenAiHttpError(res.status, text);
+    if (quota.isQuotaIssue) {
+      logOpenAiQuotaInsufficient('openai-text-advisory', quota);
+    }
+    throw new AppError('Text advisory failed', res.status, 'OPENAI_TEXT_FAILED', text);
   }
 
   const data = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> };

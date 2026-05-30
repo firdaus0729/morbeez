@@ -8,6 +8,7 @@ import {
 } from './compatibility-lookup.service.js';
 import { farmerMemoryService } from './farmer-memory.service.js';
 import { farmerReplyPolishService } from './farmer-reply-polish.service.js';
+import { knowledgeFallbackService } from './knowledge-fallback.service.js';
 
 /**
  * Agronomy-first reply: verified tank-mix DB → conversational AI with farmer memory.
@@ -54,6 +55,16 @@ export async function tryAgronomyReply(params: {
       isPremium: params.isPremium ?? false,
     });
     if (!usage.allowed) {
+      const kb = await knowledgeFallbackService.tryReply({
+        farmerId: params.farmerId,
+        text,
+        language: params.language,
+        memory,
+      });
+      if (kb) {
+        await params.sendText(params.phone, kb);
+        return true;
+      }
       await params.sendText(
         params.phone,
         aiUsageControlService.usageLimitMessage(params.language, usage.reason)
@@ -78,6 +89,7 @@ export async function tryAgronomyReply(params: {
   }
 
   const reply = await whatsappConversationalService.generateReply({
+    farmerId: params.farmerId,
     userMessage: text,
     language: params.language,
     farmerName: params.farmerName,

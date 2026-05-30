@@ -26,6 +26,7 @@ import {
   shouldUseConversationalContinuation,
 } from './conversation-continuation.service.js';
 import { shouldSkipFaqForMessage } from './faq-cache.service.js';
+import { knowledgeFallbackService } from './knowledge-fallback.service.js';
 import { farmerReplyPolishService } from './farmer-reply-polish.service.js';
 import { validateAdvisorySafety } from './safety-validation.service.js';
 import { extractInboundMedia } from './media-extract.service.js';
@@ -255,6 +256,34 @@ function languageSelectCopy(): {
       { id: 'lang.hi', title: 'Hindi' },
     ],
   };
+}
+
+async function sendKnowledgeFallbackOrLimit(params: {
+  farmerId: string;
+  phone: string;
+  language: AdvisoryLanguage;
+  text: string;
+  sendText: (phone: string, text: string) => Promise<void>;
+  limitMessage: string;
+  followUp?: boolean;
+}): Promise<boolean> {
+  const memory = await farmerMemoryService.build(params.farmerId, {
+    symptomsText: params.text,
+  });
+  const kb = await knowledgeFallbackService.tryReply({
+    farmerId: params.farmerId,
+    text: params.text,
+    language: params.language,
+    memory,
+    followUp: params.followUp,
+  });
+  if (kb) {
+    await params.sendText(params.phone, kb);
+    await farmerService.logInteraction(params.farmerId, 'whatsapp', 'outbound', kb.slice(0, 500)).catch(() => {});
+    return true;
+  }
+  await params.sendText(params.phone, params.limitMessage);
+  return false;
 }
 
 async function classifyCommercialLead(farmerId: string, text: string): Promise<void> {
@@ -809,13 +838,19 @@ export const whatsappInboundPipeline = {
           isPremium: captured.isPremium,
         });
         if (!usage.allowed) {
-          await sendText(
-            captured.phone,
-            aiUsageControlService.usageLimitMessage(captured.language, usage.reason)
-          );
+          await sendKnowledgeFallbackOrLimit({
+            farmerId: captured.farmerId,
+            phone: captured.phone,
+            language: captured.language,
+            text: msg.text,
+            sendText,
+            limitMessage: aiUsageControlService.usageLimitMessage(captured.language, usage.reason),
+            followUp: true,
+          });
           return;
         }
         const reply = await whatsappConversationalService.generateReply({
+          farmerId: captured.farmerId,
           userMessage: msg.text,
           language: captured.language,
           farmerName: msg.profileName,
@@ -879,7 +914,14 @@ export const whatsappInboundPipeline = {
           isPremium: captured.isPremium,
         });
         if (!usage.allowed) {
-          await sendText(captured.phone, aiUsageControlService.usageLimitMessage(captured.language, usage.reason));
+          await sendKnowledgeFallbackOrLimit({
+            farmerId: captured.farmerId,
+            phone: captured.phone,
+            language: captured.language,
+            text: msg.text,
+            sendText,
+            limitMessage: aiUsageControlService.usageLimitMessage(captured.language, usage.reason),
+          });
           return;
         }
       }
@@ -904,11 +946,19 @@ export const whatsappInboundPipeline = {
         isPremium: captured.isPremium,
       });
       if (!usage.allowed) {
-        await sendText(captured.phone, aiUsageControlService.usageLimitMessage(captured.language, usage.reason));
+        await sendKnowledgeFallbackOrLimit({
+          farmerId: captured.farmerId,
+          phone: captured.phone,
+          language: captured.language,
+          text: msg.text,
+          sendText,
+          limitMessage: aiUsageControlService.usageLimitMessage(captured.language, usage.reason),
+        });
         return;
       }
 
       const reply = await whatsappConversationalService.generateReply({
+        farmerId: captured.farmerId,
         userMessage: msg.text,
         language: captured.language,
         farmerName: msg.profileName,
@@ -1146,6 +1196,20 @@ export const whatsappInboundPipeline = {
       }
     } catch (err) {
       logger.error({ err, farmerId: params.farmerId }, 'WhatsApp pipeline diagnosis failed');
+      const symptomText = params.symptomsText ?? params.voiceTranscript ?? '';
+      const memory = await farmerMemoryService.build(params.farmerId, {
+        symptomsText: symptomText || undefined,
+      });
+      const kb = await knowledgeFallbackService.tryReply({
+        farmerId: params.farmerId,
+        text: symptomText || 'crop advisory',
+        language: params.language,
+        memory,
+      });
+      if (kb) {
+        await this.sendAndLog(params.farmerId, params.phone, kb, params.sendText);
+        return;
+      }
       await params.sendText(
         params.phone,
         params.language === 'ml'

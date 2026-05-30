@@ -60,6 +60,7 @@ North star: WhatsApp is the farmer relationship + sales CX engine; staff console
 - Skip FAQ cache for explicit agronomy questions; image flow respects `knownCropLocked`
 - `farmer-reply-polish.service.ts` — facts-locked OpenAI paraphrase for DB tank-mix + Crop Doctor summaries (`ENABLE_WHATSAPP_REPLY_POLISH`)
 - Farmer memory loads agronomist `verifiedRegionalHints` into Crop Doctor + conversational prompts
+- `openai-quota.service.ts` + `knowledge-fallback.service.ts` — on `insufficient_quota` / 429, log warn and reply from reuse DB, Ca chart, drench rules (no empty welcome)
 
 ## Phase 6 — Farmer Experience Learning (FEX)
 

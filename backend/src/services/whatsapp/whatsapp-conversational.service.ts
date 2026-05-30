@@ -1,7 +1,12 @@
 import { env } from '../../config/env.js';
 import { openaiTokenLimitBody } from '../ai/providers/openai-chat-params.js';
+import {
+  logOpenAiQuotaInsufficient,
+  parseOpenAiHttpError,
+} from '../ai/openai-quota.service.js';
 import { logger } from '../../lib/logger.js';
 import type { AdvisoryLanguage } from '../ai/types.js';
+import { knowledgeFallbackService } from './pipeline/knowledge-fallback.service.js';
 import type { FarmerMemorySnapshot } from './pipeline/farmer-memory.service.js';
 import { farmerMemoryService } from './pipeline/farmer-memory.service.js';
 
@@ -23,8 +28,30 @@ Rules:
 - Never discuss crypto, politics, or non-agriculture topics — politely redirect to farming.
 - Converse naturally; one short follow-up question at most.`;
 
+async function fallbackWithoutOpenAi(params: {
+  farmerId: string;
+  userMessage: string;
+  language: AdvisoryLanguage;
+  memory?: FarmerMemorySnapshot;
+  followUp?: boolean;
+}): Promise<string> {
+  const memory =
+    params.memory ??
+    (await farmerMemoryService.build(params.farmerId, { symptomsText: params.userMessage }));
+
+  const knowledge = await knowledgeFallbackService.tryReply({
+    farmerId: params.farmerId,
+    text: params.userMessage,
+    language: params.language,
+    memory,
+    followUp: params.followUp,
+  });
+  if (knowledge) return knowledge;
+  return farmerMemoryService.memoryAwareFallback(memory, params.language);
+}
+
 /**
- * Lightweight OpenAI chat reply for WhatsApp (greetings, general questions).
+ * Lightweight OpenAI chat reply for WhatsApp (greetings, general chat).
  * Full crop diagnosis still uses cropDoctorService when symptoms/media warrant it.
  */
 export const whatsappConversationalService = {
@@ -36,6 +63,7 @@ export const whatsappConversationalService = {
   },
 
   async generateReply(params: {
+    farmerId: string;
     userMessage: string;
     language: AdvisoryLanguage;
     farmerName?: string;
@@ -46,7 +74,7 @@ export const whatsappConversationalService = {
     followUp?: boolean;
   }): Promise<string> {
     if (!env.OPENAI_API_KEY) {
-      return defaultFallback(params.language, params.memory);
+      return fallbackWithoutOpenAi(params);
     }
 
     const name = params.farmerName?.split(' ')[0] ?? 'Farmer';
@@ -94,33 +122,26 @@ Write a helpful WhatsApp reply.`;
 
       if (!res.ok) {
         const errText = await res.text();
-        logger.error({ status: res.status, errText }, 'WhatsApp OpenAI chat failed');
-        return defaultFallback(params.language, params.memory);
+        const quota = parseOpenAiHttpError(res.status, errText);
+        if (quota.isQuotaIssue) {
+          logOpenAiQuotaInsufficient('whatsapp-conversational', quota, {
+            farmerId: params.farmerId,
+          });
+        } else {
+          logger.error({ status: res.status, errText }, 'WhatsApp OpenAI chat failed');
+        }
+        return fallbackWithoutOpenAi(params);
       }
 
       const data = (await res.json()) as {
         choices?: Array<{ message?: { content?: string } }>;
       };
       const text = data.choices?.[0]?.message?.content?.trim();
-      if (!text) return defaultFallback(params.language, params.memory);
+      if (!text) return fallbackWithoutOpenAi(params);
       return text.slice(0, 3500);
     } catch (err) {
-      logger.error({ err }, 'WhatsApp OpenAI chat error');
-      return defaultFallback(params.language, params.memory);
+      logger.error({ err, farmerId: params.farmerId }, 'WhatsApp OpenAI chat error');
+      return fallbackWithoutOpenAi(params);
     }
   },
 };
-
-function defaultFallback(
-  language: AdvisoryLanguage,
-  memory?: FarmerMemorySnapshot
-): string {
-  if (memory) {
-    return farmerMemoryService.memoryAwareFallback(memory, language);
-  }
-  const messages: Record<string, string> = {
-    en: `Send a crop photo or describe your problem (symptoms), and I'll guide you.\n\nType *quote* for prices or *call* for our team.`,
-    ml: `വിളയുടെ ഫോട്ടോ അയയ്ക്കുക, അല്ലെങ്കിൽ പ്രശ്നം വിവരിക്കുക.\n\nവിലയ്ക്ക് *quote* ടൈപ്പ് ചെയ്യുക.`,
-  };
-  return messages[language] ?? messages.en;
-}

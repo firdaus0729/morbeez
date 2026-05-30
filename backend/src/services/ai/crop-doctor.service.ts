@@ -16,6 +16,12 @@ import { env } from '../../config/env.js';
 import { aiReuseService, buildSymptomKey } from './ai-reuse.service.js';
 import { computeDap } from '../whatsapp/broadcasts/dap.service.js';
 import { recommendationRecordsService } from '../core/recommendation-records.service.js';
+import { isOpenAiQuotaAppError, logOpenAiQuotaInsufficient } from './openai-quota.service.js';
+import {
+  advisoryFromKnowledgeText,
+  knowledgeFallbackService,
+} from '../whatsapp/pipeline/knowledge-fallback.service.js';
+import { farmerMemoryService } from '../whatsapp/pipeline/farmer-memory.service.js';
 
 async function getFarmerHistory(farmerId: string): Promise<string> {
   const { data } = await supabase
@@ -158,7 +164,7 @@ export const cropDoctorService = {
       language: input.language,
     });
 
-    let advisory: StructuredAdvisory;
+    let advisory: StructuredAdvisory | undefined;
     const visionStarted = Date.now();
 
     try {
@@ -183,13 +189,45 @@ export const cropDoctorService = {
       await aiLogService.logRequest({
         sessionId,
         provider: 'openai',
-        endpoint: 'vision',
+        endpoint: input.imageBase64 ? 'vision' : 'text',
         latencyMs: Date.now() - visionStarted,
         success: false,
         errorMessage: String(err),
       });
+
+      if (isOpenAiQuotaAppError(err)) {
+        logOpenAiQuotaInsufficient('crop-doctor', { isQuotaIssue: true, message: String(err) });
+        const symptomText = [input.symptomsText, input.voiceTranscript].filter(Boolean).join('\n');
+        const memory = await farmerMemoryService.build(input.farmerId, {
+          symptomsText: symptomText || undefined,
+        });
+        const kb = await knowledgeFallbackService.tryReply({
+          farmerId: input.farmerId,
+          text: symptomText || input.compactHistory || 'crop problem',
+          language: input.language,
+          memory,
+        });
+        if (kb) {
+          advisory = advisoryFromKnowledgeText(kb, input.language);
+          await aiLogService.logRequest({
+            sessionId,
+            provider: 'knowledge_fallback',
+            endpoint: 'text',
+            latencyMs: Date.now() - visionStarted,
+            success: true,
+          });
+        }
+      }
+
+      if (!advisory) {
+        await supabase.from('ai_advisory_sessions').update({ status: 'failed' }).eq('id', sessionId);
+        throw err;
+      }
+    }
+
+    if (!advisory) {
       await supabase.from('ai_advisory_sessions').update({ status: 'failed' }).eq('id', sessionId);
-      throw err;
+      throw new Error('Crop Doctor produced no advisory');
     }
 
     await persistOutput(sessionId, advisory, 'openai', input.language);

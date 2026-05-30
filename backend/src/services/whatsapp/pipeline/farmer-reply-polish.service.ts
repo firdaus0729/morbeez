@@ -1,5 +1,9 @@
 import { env } from '../../../config/env.js';
 import { logger } from '../../../lib/logger.js';
+import {
+  logOpenAiQuotaInsufficient,
+  parseOpenAiHttpError,
+} from '../../ai/openai-quota.service.js';
 import { openaiTokenLimitBody } from '../../ai/providers/openai-chat-params.js';
 import type { AdvisoryLanguage, StructuredAdvisory } from '../../ai/types.js';
 import {
@@ -122,7 +126,13 @@ Write the final WhatsApp message body only (no JSON).`;
       });
 
       if (!res.ok) {
-        logger.warn({ status: res.status }, 'Reply polish failed, using draft');
+        const errText = await res.text();
+        const quota = parseOpenAiHttpError(res.status, errText);
+        if (quota.isQuotaIssue) {
+          logOpenAiQuotaInsufficient('whatsapp-reply-polish', quota);
+        } else {
+          logger.warn({ status: res.status }, 'Reply polish failed, using draft');
+        }
         return params.factualDraft;
       }
 
