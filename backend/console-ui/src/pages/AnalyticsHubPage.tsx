@@ -5,7 +5,13 @@ import { StatIcon } from '../components/NavIcon';
 
 const base = '/morbeez-staff/api/v1/os/analytics';
 
-type Tab = 'geography' | 'retention' | 'broadcasts' | 'recommendations' | 'ai_accuracy';
+type Tab =
+  | 'geography'
+  | 'retention'
+  | 'broadcasts'
+  | 'recommendations'
+  | 'ai_accuracy'
+  | 'module_precision';
 
 type Summary = {
   periodDays: number;
@@ -84,6 +90,7 @@ const TABS: Array<{ id: Tab; label: string }> = [
   { id: 'broadcasts', label: 'Broadcasts' },
   { id: 'recommendations', label: 'Recommendations' },
   { id: 'ai_accuracy', label: 'AI Accuracy' },
+  { id: 'module_precision', label: 'Morbeez precision' },
 ];
 
 type AiTrends = {
@@ -93,6 +100,25 @@ type AiTrends = {
   dailyLowConfidence: number[];
   confidenceBands: { high: number; medium: number; low: number };
   outcomeDistribution: Array<{ outcome: string; count: number }>;
+};
+
+type ModulePrecision = {
+  periodDays: number;
+  since: string;
+  kpis: {
+    whatsappRepliesTagged: number;
+    modularReplySharePct: number;
+    openaiReplySharePct: number;
+    verifiedReuseCasesTotal: number;
+    diagnosisSessions: number;
+    diagnosisFromReuseCachePct: number;
+    escalationRatePct: number;
+    avgDiagnosisConfidencePct: number;
+    uspHeadline: string;
+  };
+  moduleBreakdown: Array<{ module: string; count: number; sharePct: number }>;
+  topReuseCases: Array<{ cropType: string; district: string; hitCount: number }>;
+  topCropsByReplies: Array<{ crop: string; count: number }>;
 };
 
 export function AnalyticsHubPage() {
@@ -106,6 +132,8 @@ export function AnalyticsHubPage() {
   const [pinLoading, setPinLoading] = useState(false);
   const [aiTrends, setAiTrends] = useState<AiTrends | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
+  const [modulePrecision, setModulePrecision] = useState<ModulePrecision | null>(null);
+  const [precisionLoading, setPrecisionLoading] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -133,6 +161,15 @@ export function AnalyticsHubPage() {
       .then((d) => setAiTrends(d.trends))
       .catch(() => setAiTrends(null))
       .finally(() => setAiLoading(false));
+  }, [tab, days]);
+
+  useEffect(() => {
+    if (tab !== 'module_precision') return;
+    setPrecisionLoading(true);
+    api<{ ok: boolean; precision: ModulePrecision }>(`${base}/module-precision?days=${days}`)
+      .then((d) => setModulePrecision(d.precision))
+      .catch(() => setModulePrecision(null))
+      .finally(() => setPrecisionLoading(false));
   }, [tab, days]);
 
   async function drillDistrict(district: string) {
@@ -437,6 +474,88 @@ export function AnalyticsHubPage() {
                 <StatusTable title="By status" rows={data.recommendations.byStatus} />
                 <StatusTable title="By outcome" rows={data.recommendations.byOutcome.map((o) => ({ status: o.outcome, count: o.count }))} />
               </div>
+            </div>
+          ) : null}
+
+          {tab === 'module_precision' ? (
+            <div className="space-y-6">
+              {precisionLoading ? (
+                <Panel title="Morbeez module precision">
+                  <p className="text-sm text-slate-500">Loading module analytics…</p>
+                </Panel>
+              ) : modulePrecision ? (
+                <>
+                  <p className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+                    {modulePrecision.kpis.uspHeadline}
+                  </p>
+                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                    <KpiCard
+                      label="Tagged WhatsApp replies"
+                      value={String(modulePrecision.kpis.whatsappRepliesTagged)}
+                    />
+                    <KpiCard
+                      label="Modular Morbeez share"
+                      value={`${modulePrecision.kpis.modularReplySharePct}%`}
+                      tone={
+                        modulePrecision.kpis.modularReplySharePct >= 50 ? 'good' : 'warn'
+                      }
+                    />
+                    <KpiCard
+                      label="OpenAI path share"
+                      value={`${modulePrecision.kpis.openaiReplySharePct}%`}
+                      tone={
+                        modulePrecision.kpis.openaiReplySharePct <= 40 ? 'good' : 'warn'
+                      }
+                    />
+                    <KpiCard
+                      label="Verified reuse cases"
+                      value={String(modulePrecision.kpis.verifiedReuseCasesTotal)}
+                    />
+                    <KpiCard
+                      label="Diagnosis from reuse cache"
+                      value={`${modulePrecision.kpis.diagnosisFromReuseCachePct}%`}
+                    />
+                    <KpiCard
+                      label="Escalation rate"
+                      value={`${modulePrecision.kpis.escalationRatePct}%`}
+                    />
+                    <KpiCard
+                      label="Avg diagnosis confidence"
+                      value={`${modulePrecision.kpis.avgDiagnosisConfidencePct}%`}
+                    />
+                  </div>
+                  <StatusTable
+                    title="Reply source (module mix)"
+                    rows={modulePrecision.moduleBreakdown.map((m) => ({
+                      status: m.module,
+                      count: m.count,
+                    }))}
+                  />
+                  <div className="grid gap-6 lg:grid-cols-2">
+                    <StatusTable
+                      title="Top verified reuse cases"
+                      rows={modulePrecision.topReuseCases.map((r) => ({
+                        status: `${r.cropType} · ${r.district}`,
+                        count: r.hitCount,
+                      }))}
+                    />
+                    <StatusTable
+                      title="Top crops by tagged replies"
+                      rows={modulePrecision.topCropsByReplies.map((c) => ({
+                        status: c.crop,
+                        count: c.count,
+                      }))}
+                    />
+                  </div>
+                </>
+              ) : (
+                <Panel title="Morbeez module precision">
+                  <p className="text-sm text-slate-500">
+                    No attribution data yet — replies will appear after farmers receive module-tagged
+                    answers.
+                  </p>
+                </Panel>
+              )}
             </div>
           ) : null}
 

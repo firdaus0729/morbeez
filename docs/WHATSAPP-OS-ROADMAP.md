@@ -62,6 +62,13 @@ North star: WhatsApp is the farmer relationship + sales CX engine; staff console
 - Farmer memory loads agronomist `verifiedRegionalHints` into Crop Doctor + conversational prompts
 - `openai-quota.service.ts` + `knowledge-fallback.service.ts` — on `insufficient_quota` / 429, log warn and reply from reuse DB, Ca chart, drench rules (no empty welcome)
 
+## Phase 6c — Module attribution (USP)
+
+- `supabase/migrations/20260633000000_whatsapp_reply_attributions.sql` — per-reply module source
+- `reply-attribution.service.ts` — farmer one-liner (“Morbeez verified cases… Not generic ChatGPT”) + analytics log
+- Wired on playbook, agronomy, knowledge fallback, conversational, Crop Doctor paths
+- `GET /morbeez-staff/api/v1/os/analytics/module-precision` — Console **Analytics → Morbeez precision**
+
 ## Phase 6 — Farmer Experience Learning (FEX)
 
 - `supabase/migrations/20260630000000_farmer_experience_learning.sql` — `farmer_advisory_feedback`

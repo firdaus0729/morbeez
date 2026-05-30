@@ -27,6 +27,11 @@ import {
 } from './conversation-continuation.service.js';
 import { shouldSkipFaqForMessage } from './faq-cache.service.js';
 import { knowledgeFallbackService } from './knowledge-fallback.service.js';
+import {
+  replyAttributionService,
+  type MorbeezReplyModule,
+  type ReplyAttributionMeta,
+} from './reply-attribution.service.js';
 import { farmerReplyPolishService } from './farmer-reply-polish.service.js';
 import { validateAdvisorySafety } from './safety-validation.service.js';
 import { extractInboundMedia } from './media-extract.service.js';
@@ -203,7 +208,19 @@ async function tryAssessmentPlaybook(params: {
     return false;
   }
 
-  await params.sendText(params.phone, playbook.message);
+  const playbookMemory = await farmerMemoryService.build(params.farmerId);
+  const playbookOutbound = await replyAttributionService.deliverAttributedReply({
+    farmerId: params.farmerId,
+    phone: params.phone,
+    language: params.language,
+    body: playbook.message,
+    module: 'playbook',
+    meta: { cropType: playbookMemory.cropType },
+    sendText: params.sendText,
+  });
+  await farmerService
+    .logInteraction(params.farmerId, 'whatsapp', 'outbound', playbookOutbound.slice(0, 500))
+    .catch(() => {});
   if (playbook.escalate) {
     await assessmentPlaybookService.applyEscalation(
       params.farmerId,
@@ -270,7 +287,7 @@ async function sendKnowledgeFallbackOrLimit(params: {
   const memory = await farmerMemoryService.build(params.farmerId, {
     symptomsText: params.text,
   });
-  const kb = await knowledgeFallbackService.tryReply({
+  const kb = await knowledgeFallbackService.tryReplyWithModule({
     farmerId: params.farmerId,
     text: params.text,
     language: params.language,
@@ -278,8 +295,18 @@ async function sendKnowledgeFallbackOrLimit(params: {
     followUp: params.followUp,
   });
   if (kb) {
-    await params.sendText(params.phone, kb);
-    await farmerService.logInteraction(params.farmerId, 'whatsapp', 'outbound', kb.slice(0, 500)).catch(() => {});
+    const outbound = await replyAttributionService.deliverAttributedReply({
+      farmerId: params.farmerId,
+      phone: params.phone,
+      language: params.language,
+      body: kb.text,
+      module: kb.module,
+      meta: kb.meta,
+      sendText: params.sendText,
+    });
+    await farmerService
+      .logInteraction(params.farmerId, 'whatsapp', 'outbound', outbound.slice(0, 500))
+      .catch(() => {});
     return true;
   }
   await params.sendText(params.phone, params.limitMessage);
@@ -857,7 +884,11 @@ export const whatsappInboundPipeline = {
           memory,
           followUp: true,
         });
-        await this.sendAndLog(captured.farmerId, captured.phone, reply, sendText);
+        await this.sendAndLog(captured.farmerId, captured.phone, reply, sendText, {
+          module: 'follow_up_memory',
+          language: captured.language,
+          meta: { cropType: memory.cropType },
+        });
         return;
       }
     }
@@ -888,7 +919,7 @@ export const whatsappInboundPipeline = {
         phone: captured.phone,
         language: captured.language,
         text: msg.text,
-        sendText: (phone, text) => this.sendAndLog(captured.farmerId, phone, text, sendText),
+        sendText,
         farmerName: msg.profileName,
         isPremium: captured.isPremium,
       });
@@ -964,7 +995,11 @@ export const whatsappInboundPipeline = {
         farmerName: msg.profileName,
         memory,
       });
-      await this.sendAndLog(captured.farmerId, captured.phone, reply, sendText);
+      await this.sendAndLog(captured.farmerId, captured.phone, reply, sendText, {
+        module: 'conversational_openai',
+        language: captured.language,
+        meta: { cropType: memory.cropType },
+      });
       return;
     }
 
@@ -978,10 +1013,30 @@ export const whatsappInboundPipeline = {
     farmerId: string,
     phone: string,
     text: string,
-    sendText: (phone: string, text: string) => Promise<void>
+    sendText: (phone: string, text: string) => Promise<void>,
+    attribution?: {
+      module: MorbeezReplyModule;
+      language: AdvisoryLanguage;
+      meta?: ReplyAttributionMeta;
+    }
   ): Promise<void> {
-    await sendText(phone, text);
-    await farmerService.logInteraction(farmerId, 'whatsapp', 'outbound', text.slice(0, 500)).catch(() => {});
+    let outbound = text;
+    if (attribution) {
+      outbound = await replyAttributionService.deliverAttributedReply({
+        farmerId,
+        phone,
+        language: attribution.language,
+        body: text,
+        module: attribution.module,
+        meta: attribution.meta,
+        sendText,
+      });
+    } else {
+      await sendText(phone, text);
+    }
+    await farmerService
+      .logInteraction(farmerId, 'whatsapp', 'outbound', outbound.slice(0, 500))
+      .catch(() => {});
   },
 
   async runDiagnosis(params: {
@@ -1180,7 +1235,14 @@ export const whatsappInboundPipeline = {
         });
       }
 
-      await this.sendAndLog(params.farmerId, params.phone, reply, params.sendText);
+      await this.sendAndLog(params.farmerId, params.phone, reply, params.sendText, {
+        module: result.reused ? 'crop_doctor_reuse' : 'crop_doctor_openai',
+        language: params.language,
+        meta: {
+          cropType: memory.cropType,
+          issueLabel: result.advisory.probableIssue,
+        },
+      });
 
       if (params.channel === 'whatsapp' && params.send) {
         await whatsappScenarioRouter.afterDiagnosis({
@@ -1200,14 +1262,18 @@ export const whatsappInboundPipeline = {
       const memory = await farmerMemoryService.build(params.farmerId, {
         symptomsText: symptomText || undefined,
       });
-      const kb = await knowledgeFallbackService.tryReply({
+      const kb = await knowledgeFallbackService.tryReplyWithModule({
         farmerId: params.farmerId,
         text: symptomText || 'crop advisory',
         language: params.language,
         memory,
       });
       if (kb) {
-        await this.sendAndLog(params.farmerId, params.phone, kb, params.sendText);
+        await this.sendAndLog(params.farmerId, params.phone, kb.text, params.sendText, {
+          module: kb.module,
+          language: params.language,
+          meta: kb.meta,
+        });
         return;
       }
       await params.sendText(

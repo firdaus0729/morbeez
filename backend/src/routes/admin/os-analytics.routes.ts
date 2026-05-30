@@ -1,6 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { assertModuleAccess } from '../../lib/rbac.js';
 import { osAnalyticsService } from '../../services/admin/os-analytics.service.js';
+import { osPrecisionService } from '../../services/admin/os-precision.service.js';
 
 function parseDays(q: { days?: string }): number {
   const n = q.days ? Number(q.days) : 30;
@@ -68,5 +69,12 @@ export async function osAnalyticsRoutes(app: FastifyInstance): Promise<void> {
     const days = parseDays(request.query as { days?: string });
     const trends = await osAnalyticsService.getAiAccuracyTrends(days);
     return reply.send({ ok: true, trends });
+  });
+
+  app.get(`${api}/module-precision`, async (request, reply) => {
+    await assertModuleAccess(request, 'analytics', 'read');
+    const days = parseDays(request.query as { days?: string });
+    const precision = await osPrecisionService.getModulePrecision(days);
+    return reply.send({ ok: true, precision });
   });
 }

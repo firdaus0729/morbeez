@@ -18,6 +18,7 @@ import {
 } from './conversation-continuation.service.js';
 import { farmerMemoryService, type FarmerMemorySnapshot } from './farmer-memory.service.js';
 import { responseComposerService } from './response-composer.service.js';
+import type { MorbeezReplyModule, ReplyAttributionMeta } from './reply-attribution.service.js';
 
 const FALLBACK_NOTE: Record<AdvisoryLanguage, string> = {
   en: '\n\n(Verified Morbeez field guide — live AI is temporarily unavailable.)',
@@ -101,6 +102,20 @@ export function advisoryFromKnowledgeText(summary: string, language: AdvisoryLan
   };
 }
 
+export type KnowledgeFallbackHit = {
+  text: string;
+  module: MorbeezReplyModule;
+  meta?: ReplyAttributionMeta;
+};
+
+function metaFromMemory(memory: FarmerMemorySnapshot, district?: string | null): ReplyAttributionMeta {
+  return {
+    cropType: memory.cropType,
+    district: district ?? undefined,
+    issueLabel: memory.lastAdvisorySummary?.slice(0, 120),
+  };
+}
+
 export const knowledgeFallbackService = {
   async tryReply(params: {
     farmerId: string;
@@ -109,12 +124,31 @@ export const knowledgeFallbackService = {
     memory?: FarmerMemorySnapshot;
     followUp?: boolean;
   }): Promise<string | null> {
+    const hit = await this.tryReplyWithModule(params);
+    return hit?.text ?? null;
+  },
+
+  async tryReplyWithModule(params: {
+    farmerId: string;
+    text: string;
+    language: AdvisoryLanguage;
+    memory?: FarmerMemorySnapshot;
+    followUp?: boolean;
+  }): Promise<KnowledgeFallbackHit | null> {
     const text = params.text.trim();
     if (!text) return null;
 
     const memory =
       params.memory ??
       (await farmerMemoryService.build(params.farmerId, { symptomsText: text }));
+
+    const { data: farmer } = await supabase
+      .from('farmers')
+      .select('district')
+      .eq('id', params.farmerId)
+      .maybeSingle();
+    const district = farmer?.district ? String(farmer.district).trim().toLowerCase() : null;
+    const baseMeta = metaFromMemory(memory, district);
 
     const pair = parseProductPairFromText(text);
     if (pair) {
@@ -124,23 +158,25 @@ export const knowledgeFallbackService = {
           { farmerId: params.farmerId, pair },
           'Knowledge fallback: spray compatibility rule'
         );
-        return compatibilityLookupService.formatFarmerReply(lookup, params.language, pair);
+        return {
+          text: compatibilityLookupService.formatFarmerReply(lookup, params.language, pair),
+          module: 'compatibility_chart',
+          meta: baseMeta,
+        };
       }
     }
 
     const caMg = scanTextForCaMgConflict(text, params.language);
     if (caMg) {
       logger.info({ farmerId: params.farmerId }, 'Knowledge fallback: Ca nitrate chart');
-      return caMg + (FALLBACK_NOTE[params.language] ?? FALLBACK_NOTE.en);
+      return {
+        text: caMg + (FALLBACK_NOTE[params.language] ?? FALLBACK_NOTE.en),
+        module: 'compatibility_chart',
+        meta: baseMeta,
+      };
     }
 
     if (env.ENABLE_AI_REUSE_CACHE) {
-      const { data: farmer } = await supabase
-        .from('farmers')
-        .select('district')
-        .eq('id', params.farmerId)
-        .maybeSingle();
-      const district = farmer?.district ? String(farmer.district).trim().toLowerCase() : null;
       let dap = memory.dap ?? 0;
       if (memory.activePlotId) {
         const block = await blockService.getById(memory.activePlotId, params.farmerId);
@@ -162,13 +198,19 @@ export const knowledgeFallbackService = {
           params.language === 'ml' && match.advisory.farmerSummaryMl
             ? match.advisory.farmerSummaryMl
             : match.advisory.farmerSummaryEn;
-        return (
-          body +
-          (params.language === 'ml'
-            ? '\n\n(മുൻ വിജയകരമായ കേസിൽ നിന്നുള്ള ശുപാർശ)'
-            : '\n\n(From a similar verified case in your region)') +
-          (FALLBACK_NOTE[params.language] ?? FALLBACK_NOTE.en)
-        );
+        return {
+          text:
+            body +
+            (params.language === 'ml'
+              ? '\n\n(മുൻ വിജയകരമായ കേസിൽ നിന്നുള്ള ശുപാർശ)'
+              : '\n\n(From a similar verified case in your region)') +
+            (FALLBACK_NOTE[params.language] ?? FALLBACK_NOTE.en),
+          module: 'verified_case',
+          meta: {
+            ...baseMeta,
+            issueLabel: match.advisory.probableIssue,
+          },
+        };
       }
     }
 
@@ -176,13 +218,17 @@ export const knowledgeFallbackService = {
       const expanded = followUpExpansion(memory, params.language);
       if (expanded) {
         logger.info({ farmerId: params.farmerId }, 'Knowledge fallback: follow-up expansion');
-        return expanded;
+        return { text: expanded, module: 'follow_up_memory', meta: baseMeta };
       }
     }
 
     if (isDrenchOrMixQuestion(text) || /correct mix|is this (ok|fine|correct)/i.test(text)) {
       logger.info({ farmerId: params.farmerId }, 'Knowledge fallback: drench/mix guidance');
-      return drenchMixGuidance(memory, params.language);
+      return {
+        text: drenchMixGuidance(memory, params.language),
+        module: 'knowledge_fallback',
+        meta: baseMeta,
+      };
     }
 
     if (memory.verifiedRegionalHints?.trim()) {
@@ -192,7 +238,11 @@ export const knowledgeFallbackService = {
         params.language === 'ml'
           ? `നിങ്ങളുടെ ${crop} വിളയ്ക്ക് പ്രാദേശികമായി സ്ഥിരീകരിച്ച കുറിപ്പുകൾ:\n\n${hint}\n\nകൂടുതൽ വിശകലനത്തിന് വ്യക്തമായ ഫോട്ടോ അയയ്ക്കുക അല്ലെങ്കിൽ *call* ടൈപ്പ് ചെയ്യുക.`
           : `Verified notes for your ${crop} crop in your area:\n\n${hint}\n\nSend a clear photo for full analysis or type *call* for our agronomist.`;
-      return body + (FALLBACK_NOTE[params.language] ?? FALLBACK_NOTE.en);
+      return {
+        text: body + (FALLBACK_NOTE[params.language] ?? FALLBACK_NOTE.en),
+        module: 'regional_learning',
+        meta: baseMeta,
+      };
     }
 
     return null;
