@@ -54,6 +54,8 @@ export interface DiagnoseInput {
   voiceTranscript?: string;
   imageBase64?: string;
   imageMimeType?: string;
+  /** Supabase storage path in advisory-images (set when farmer photo is persisted). */
+  imageStoragePath?: string;
   channel: 'api' | 'whatsapp' | 'web';
   /** WhatsApp pipeline: minimal history string (low token cost) */
   compactHistory?: string;

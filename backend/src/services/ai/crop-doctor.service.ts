@@ -88,6 +88,7 @@ export const cropDoctorService = {
         language: input.language,
         symptoms_text: input.symptomsText ?? null,
         voice_transcript: input.voiceTranscript ?? null,
+        image_storage_path: input.imageStoragePath ?? null,
         status: 'processing',
         metadata: input.contextPack ?? {},
       })

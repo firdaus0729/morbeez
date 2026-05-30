@@ -493,44 +493,42 @@ export function CaseReviewPanel({ canWrite }: { canWrite: boolean }) {
             <Loading />
           ) : (
             <>
-              <section className="cr-media-block">
-                <div className="cr-viewer-wrap">
-                  <div className="cr-viewer">
-                    {activeImage?.url ? (
-                      <img
-                        src={activeImage.url}
-                        alt="Crop symptom"
-                        className="cr-viewer-img"
-                        style={{ transform: `scale(${zoom / 100})` }}
-                      />
-                    ) : (
-                      <div className="cr-viewer-empty">No image available</div>
-                    )}
-                    <span className="cr-viewer-count">
-                      {detail.images.length ? `${imageIndex + 1}/${detail.images.length}` : '0/0'}
-                    </span>
-                    <div className="cr-viewer-zoom">
-                      <button type="button" onClick={() => setZoom((z) => Math.max(50, z - 25))}>
-                        −
-                      </button>
-                      <span>{zoom}%</span>
-                      <button type="button" onClick={() => setZoom((z) => Math.min(200, z + 25))}>
-                        +
-                      </button>
+              {detail.images.length > 0 ? (
+                <section className="cr-media-block">
+                  <div className="cr-viewer-wrap">
+                    <div className="cr-viewer">
+                      {activeImage?.url ? (
+                        <img
+                          src={activeImage.url}
+                          alt="Crop symptom"
+                          className="cr-viewer-img"
+                          style={{ transform: `scale(${zoom / 100})` }}
+                        />
+                      ) : null}
+                      <span className="cr-viewer-count">
+                        {`${imageIndex + 1}/${detail.images.length}`}
+                      </span>
+                      <div className="cr-viewer-zoom">
+                        <button type="button" onClick={() => setZoom((z) => Math.max(50, z - 25))}>
+                          −
+                        </button>
+                        <span>{zoom}%</span>
+                        <button type="button" onClick={() => setZoom((z) => Math.min(200, z + 25))}>
+                          +
+                        </button>
+                      </div>
+                      {activeImage?.url ? (
+                        <a
+                          href={activeImage.url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="cr-viewer-expand"
+                          aria-label="Open full size"
+                        >
+                          <IconExpand />
+                        </a>
+                      ) : null}
                     </div>
-                    {activeImage?.url ? (
-                      <a
-                        href={activeImage.url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="cr-viewer-expand"
-                        aria-label="Open full size"
-                      >
-                        <IconExpand />
-                      </a>
-                    ) : null}
-                  </div>
-                  {detail.images.length > 0 ? (
                     <div className="cr-thumbs-v">
                       {detail.images.map((img, i) => (
                         <button
@@ -539,12 +537,13 @@ export function CaseReviewPanel({ canWrite }: { canWrite: boolean }) {
                           className={`cr-thumb-v${i === imageIndex ? ' is-active' : ''}`}
                           onClick={() => setImageIndex(i)}
                         >
-                          {img.url ? <img src={img.url} alt="" /> : <span>—</span>}
+                          <img src={img.url} alt="" />
                         </button>
                       ))}
                     </div>
-                  ) : null}
-                </div>
+                  </div>
+                </section>
+              ) : null}
 
                 <div className="cr-ai-block">
                   <h3 className="cr-h3">AI Diagnosis (Top 3)</h3>
@@ -575,7 +574,6 @@ export function CaseReviewPanel({ canWrite }: { canWrite: boolean }) {
                     <p className="cr-summary-text">{detail.ai.summary || '—'}</p>
                   ) : null}
                 </div>
-              </section>
 
               <section className="cr-context-block">
                 <h3 className="cr-h3">Context Summary</h3>

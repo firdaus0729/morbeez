@@ -850,13 +850,8 @@ export const telecallerAdminService = {
 
     throwIfSupabaseError(error, 'Could not load field findings');
 
-    let rows = data ?? [];
-    let total = count ?? 0;
-    if (!rows.length) {
-      const demo = this.demoFieldFindings(farmerId);
-      total = demo.length;
-      rows = demo.slice(from, from + limit);
-    }
+    const rows = data ?? [];
+    const total = count ?? 0;
 
     const findings = rows.map((r) => this.mapFieldFinding(r));
 
@@ -897,57 +892,6 @@ export const telecallerAdminService = {
       photoUrls: photos,
       photoCount: photos.length,
     };
-  },
-
-  demoFieldFindings(farmerId: string): Record<string, unknown>[] {
-    const tones = ['warning', 'danger', 'healthy', 'warning', 'healthy', 'danger', 'healthy'] as const;
-    const diseases = [
-      'Nutrient Deficiency',
-      'Leaf Spot',
-      'Healthy',
-      'Nutrient Deficiency',
-      'Healthy',
-      'Bacterial Wilt',
-      'Healthy',
-    ];
-    const blocks = ['Block A', 'Block B', 'Block C', 'Block A', 'Block B', 'Block A', 'Block C'];
-    const crops = ['Banana', 'Banana', 'Paddy', 'Ginger', 'Wheat', 'Chilli', 'Cotton'];
-    const now = Date.now();
-
-    const agronomists = [
-      { name: 'Arjun Nair', role: 'Field Agronomist' },
-      { name: 'Priya Menon', role: 'Senior Agronomist' },
-      { name: 'Suresh Iyer', role: 'Crop Specialist' },
-    ];
-
-    return Array.from({ length: 27 }, (_, i) => ({
-      id: `demo-${farmerId.slice(0, 8)}-${i}`,
-      farmer_id: farmerId,
-      block_name: blocks[i],
-      crop_type: crops[i],
-      agronomist_name: agronomists[i % agronomists.length].name,
-      agronomist_role: agronomists[i % agronomists.length].role,
-      observations:
-        i % 2 === 0
-          ? 'Yellowing observed on lower leaves. Soil moisture adequate.'
-          : 'Crop vigour good overall. Minor pest pressure on new growth.',
-      parameters: [
-        { label: 'Leaf Stage', value: 'Vegetative' },
-        { label: 'Plant Height', value: `${120 + i * 5} cm` },
-        { label: 'No. of Leaves', value: String(8 + i) },
-        { label: 'SPAD', value: String(42 + i) },
-        { label: 'Soil Moisture', value: `${55 + i}%` },
-      ],
-      disease_pest: diseases[i],
-      disease_tone: tones[i],
-      action_taken:
-        tones[i] === 'healthy'
-          ? 'Continue current nutrition schedule.'
-          : 'Recommended foliar spray and follow-up in 7 days.',
-      follow_up_at: new Date(now + (i + 3) * 86400000).toISOString(),
-      photo_urls: ['1', '2', '3'].slice(0, 2 + (i % 2)),
-      visited_at: new Date(now - i * 86400000 * 2).toISOString(),
-    }));
   },
 
   async createFieldFinding(

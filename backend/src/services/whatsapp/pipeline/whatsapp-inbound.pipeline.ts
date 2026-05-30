@@ -38,6 +38,7 @@ import { extractInboundMedia } from './media-extract.service.js';
 import { shopifyLinksService } from '../../shopify/shopify-links.service.js';
 import { whatsappConversationalService } from '../whatsapp-conversational.service.js';
 import { farmerService } from '../../farmer/farmer.service.js';
+import { advisoryImageStorageService } from '../../core/advisory-image-storage.service.js';
 import { conversationSessionService } from '../conversation-session.service.js';
 import { whatsappScenarioRouter } from '../scenarios/whatsapp-scenario-router.service.js';
 import {
@@ -1060,6 +1061,16 @@ export const whatsappInboundPipeline = {
       const memory = await farmerMemoryService.build(params.farmerId, { symptomsText });
       const contextPack = await contextPackService.build(params.farmerId);
 
+      let imageStoragePath: string | undefined;
+      if (params.imageBase64) {
+        const stored = await advisoryImageStorageService.uploadFromBase64(
+          params.farmerId,
+          params.imageBase64,
+          params.imageMimeType ?? 'image/jpeg'
+        );
+        if (stored) imageStoragePath = stored;
+      }
+
       const result = await cropDoctorService.diagnose({
         farmerId: params.farmerId,
         cropType: memory.cropType,
@@ -1069,6 +1080,7 @@ export const whatsappInboundPipeline = {
         voiceTranscript: params.voiceTranscript,
         imageBase64: params.imageBase64,
         imageMimeType: params.imageMimeType,
+        imageStoragePath,
         channel: params.channel ?? 'whatsapp',
         compactHistory: farmerMemoryService.formatCompactHistory(memory),
         contextPack,

@@ -280,8 +280,7 @@ export function AgronomistHubPage({ canWrite }: { canWrite: boolean }) {
           <p>{error}</p>
           {error.includes('schema') || error.includes('migration') ? (
             <p className="mt-2 text-xs opacity-90">
-              Run <code className="rounded bg-red-100/80 px-1">supabase db push</code>, restart the API, then
-              optional demo: <code className="rounded bg-red-100/80 px-1">supabase db query --linked -f archive/demo/01_…</code>
+              Run <code className="rounded bg-red-100/80 px-1">supabase db push</code> and restart the API.
             </p>
           ) : null}
         </Alert>
@@ -345,6 +344,27 @@ export function AgronomistHubPage({ canWrite }: { canWrite: boolean }) {
             ) : (
               <>
                 <h2 className="font-medium text-slate-900">Finding detail</h2>
+                {Array.isArray(selected.finding.photoUrls) && selected.finding.photoUrls.length > 0 ? (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {selected.finding.photoUrls.map((url, i) =>
+                      typeof url === 'string' && url.startsWith('http') ? (
+                        <a
+                          key={`${url}-${i}`}
+                          href={url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="block overflow-hidden rounded-lg border border-slate-200"
+                        >
+                          <img
+                            src={url}
+                            alt={`Field photo ${i + 1}`}
+                            className="h-28 w-28 object-cover"
+                          />
+                        </a>
+                      ) : null
+                    )}
+                  </div>
+                ) : null}
                 <p className="mt-2 text-sm text-slate-700 whitespace-pre-wrap">
                   {selected.finding.observations ?? 'No observations recorded.'}
                 </p>

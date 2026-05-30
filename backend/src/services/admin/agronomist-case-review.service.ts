@@ -5,6 +5,10 @@ import { recommendationRecordsService } from '../core/recommendation-records.ser
 import { agronomistWorkflowService } from './agronomist-workflow.service.js';
 import { weatherAlertsService } from '../whatsapp/scenarios/weather-alerts.service.js';
 import type { AdvisoryLanguage } from '../ai/types.js';
+import {
+  resolveAdvisoryImageUrl,
+  urlFromWhatsAppPayload,
+} from '../core/advisory-image-storage.service.js';
 
 function formatDt(iso: string | null | undefined): string | null {
   if (!iso) return null;
@@ -46,10 +50,13 @@ function priorityRank(p: string): number {
   return 3;
 }
 
-function imageUrlFromPath(path: string | null | undefined): string | null {
-  if (!path?.trim()) return null;
-  const { data } = supabase.storage.from('advisory-images').getPublicUrl(path.trim());
-  return data?.publicUrl ?? null;
+async function pushFarmerImage(
+  images: Array<{ id: string; url: string | null; caption: string | null; at: string }>,
+  row: { id: string; url: string | null; caption: string | null; at: string }
+): Promise<void> {
+  if (!row.url) return;
+  if (images.some((i) => i.url === row.url)) return;
+  images.push(row);
 }
 
 type AiDiagnosisRow = { label: string; confidence: number };
@@ -135,6 +142,15 @@ export const agronomistCaseReviewService = {
     }
     sorted = sorted.slice(0, limit);
 
+    const farmerIds = [...new Set(sorted.map((i) => String(i.farmerId)))];
+    const { data: farmerSources } = farmerIds.length
+      ? await supabase.from('farmers').select('id, source').in('id', farmerIds)
+      : { data: [] as { id: string; source: string | null }[] };
+    const demoFarmerIds = new Set(
+      (farmerSources ?? []).filter((f) => f.source === 'demo_seed').map((f) => String(f.id))
+    );
+    sorted = sorted.filter((i) => !demoFarmerIds.has(String(i.farmerId)));
+
     const enriched = await Promise.all(
       sorted.map(async (item) => {
         const primary = await blockService.getPrimaryBlock(String(item.farmerId));
@@ -192,12 +208,13 @@ export const agronomistCaseReviewService = {
       .order('created_at', { ascending: false })
       .limit(12);
 
-    const images: Array<{ id: string; url: string | null; caption: string | null; at: string }> = [];
+    const images: Array<{ id: string; url: string; caption: string | null; at: string }> = [];
     const mainPath = sessionRow?.image_storage_path ? String(sessionRow.image_storage_path) : null;
     if (mainPath) {
-      images.push({
+      const url = await resolveAdvisoryImageUrl(mainPath);
+      await pushFarmerImage(images, {
         id: 'session-main',
-        url: imageUrlFromPath(mainPath),
+        url,
         caption: sessionRow?.symptoms_text ? String(sessionRow.symptoms_text).slice(0, 120) : null,
         at: sessionCreated ?? new Date().toISOString(),
       });
@@ -211,14 +228,15 @@ export const agronomistCaseReviewService = {
         (payload.image_storage_path as string) ||
         (payload.path as string) ||
         null;
-      const url = path ? imageUrlFromPath(path) : null;
-      if (!url && !log.content) continue;
+      let url = path ? await resolveAdvisoryImageUrl(path) : null;
+      if (!url) url = urlFromWhatsAppPayload(payload);
+      if (!url) continue;
       const t = new Date(String(log.created_at)).getTime();
       if (sessionCreated) {
         const s = new Date(sessionCreated).getTime();
         if (Math.abs(t - s) > 72 * 60 * 60 * 1000) continue;
       }
-      images.push({
+      await pushFarmerImage(images, {
         id: String(log.id),
         url,
         caption: log.content ? String(log.content).slice(0, 200) : null,

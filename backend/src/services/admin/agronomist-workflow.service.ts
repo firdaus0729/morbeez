@@ -29,7 +29,7 @@ export const agronomistWorkflowService = {
     const { data: findings, error } = await supabase
       .from('crm_field_findings')
       .select(
-        'id, farmer_id, block_id, block_name, crop_type, agronomist_name, observations, disease_pest, disease_tone, action_taken, follow_up_at, photo_urls, visited_at, farmers(id, name, phone, preferred_language, district), farm_blocks(id, name, crop_type, plot_label, planting_date, created_at)'
+        'id, farmer_id, block_id, block_name, crop_type, agronomist_name, observations, disease_pest, disease_tone, action_taken, follow_up_at, photo_urls, visited_at, farmers(id, name, phone, preferred_language, district, source), farm_blocks(id, name, crop_type, plot_label, planting_date, created_at)'
       )
       .is('archived_at', null)
       .order('visited_at', { ascending: false })
@@ -52,6 +52,8 @@ export const agronomistWorkflowService = {
 
     const items = (findings ?? [])
       .filter((f) => {
+        const farmer = (f.farmers as unknown) as Record<string, unknown> | null;
+        if (farmer?.source === 'demo_seed') return false;
         const rec = recByFinding.get(String(f.id));
         return !rec || rec.status === 'draft';
       })

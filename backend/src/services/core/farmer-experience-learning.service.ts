@@ -273,8 +273,8 @@ export const farmerExperienceLearningService = {
     let imageUrl: string | null = null;
     const storagePath = session?.image_storage_path ? String(session.image_storage_path) : null;
     if (storagePath) {
-      const { data: pub } = supabase.storage.from('advisory-images').getPublicUrl(storagePath);
-      imageUrl = pub?.publicUrl ?? null;
+      const { resolveAdvisoryImageUrl } = await import('./advisory-image-storage.service.js');
+      imageUrl = await resolveAdvisoryImageUrl(storagePath);
     }
 
     const { data: farmerRow } = await supabase
