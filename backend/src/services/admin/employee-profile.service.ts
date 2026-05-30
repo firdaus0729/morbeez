@@ -188,6 +188,60 @@ export const employeeProfileService = {
         updated_at: now,
       });
     }
+    if (input.status !== undefined) {
+      await this.syncAdminActive(id, input.status === 'active');
+    }
+
     return this.getById(id);
+  },
+
+  /** Accept employee_profiles.id or linked admin_users.id. */
+  async resolveStaffReference(id: string): Promise<{
+    profileId: string | null;
+    adminUserId: string | null;
+  }> {
+    const { data: asProfile, error: profileErr } = await supabase
+      .from('employee_profiles')
+      .select('id, admin_user_id')
+      .eq('id', id)
+      .maybeSingle();
+    throwIfSupabaseError(profileErr, 'Could not resolve employee');
+    if (asProfile) {
+      return {
+        profileId: String(asProfile.id),
+        adminUserId: asProfile.admin_user_id ? String(asProfile.admin_user_id) : null,
+      };
+    }
+
+    const { data: byAdmin, error: adminErr } = await supabase
+      .from('employee_profiles')
+      .select('id, admin_user_id')
+      .eq('admin_user_id', id)
+      .maybeSingle();
+    throwIfSupabaseError(adminErr, 'Could not resolve employee');
+    if (byAdmin) {
+      return {
+        profileId: String(byAdmin.id),
+        adminUserId: String(byAdmin.admin_user_id),
+      };
+    }
+
+    return { profileId: null, adminUserId: id };
+  },
+
+  async syncAdminActive(profileId: string, active: boolean): Promise<void> {
+    const { data: profile, error } = await supabase
+      .from('employee_profiles')
+      .select('admin_user_id')
+      .eq('id', profileId)
+      .maybeSingle();
+    throwIfSupabaseError(error, 'Could not load employee profile');
+    if (!profile?.admin_user_id) return;
+
+    const { error: updErr } = await supabase
+      .from('admin_users')
+      .update({ active, updated_at: new Date().toISOString() })
+      .eq('id', profile.admin_user_id);
+    throwIfSupabaseError(updErr, 'Could not sync console login status');
   },
 };

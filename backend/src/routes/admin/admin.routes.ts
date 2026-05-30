@@ -680,6 +680,17 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
       .select('id, email, full_name, role, active, last_login_at, created_at')
       .single();
     throwIfSupabaseError(error, 'Could not update employee');
+
+    if (body.active !== undefined) {
+      const { error: profileErr } = await supabase
+        .from('employee_profiles')
+        .update({
+          status: body.active ? 'active' : 'inactive',
+          updated_at: new Date().toISOString(),
+        })
+        .eq('admin_user_id', id);
+      throwIfSupabaseError(profileErr, 'Could not sync employee profile status');
+    }
     if (!data) return reply.code(404).send({ ok: false, error: 'Employee not found' });
     await logAdminMutation({
       actorId: actor.id,
@@ -839,7 +850,11 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
         attendanceRules: z.record(z.any()).optional(),
       })
       .parse(request.body);
-    const employee = await employeeProfileService.update(id, body);
+    const resolved = await employeeProfileService.resolveStaffReference(id);
+    if (!resolved.profileId) {
+      return reply.code(404).send({ ok: false, error: 'Employee HR profile not found' });
+    }
+    const employee = await employeeProfileService.update(resolved.profileId, body);
     return reply.send({ ok: true, employee });
   });
 
@@ -847,8 +862,12 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
     const actor = requireAdmin(request);
     assertStaffManagement(request);
     const { id } = request.params as { id: string };
+    const resolved = await employeeProfileService.resolveStaffReference(id);
+    if (!resolved.profileId) {
+      return reply.code(404).send({ ok: false, error: 'Employee HR profile not found' });
+    }
     const invite = await staffInviteService.createInvite({
-      employeeProfileId: id,
+      employeeProfileId: resolved.profileId,
       createdBy: actor.id,
     });
     return reply.send({ ok: true, invite });
@@ -858,8 +877,12 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
     const actor = requireAdmin(request);
     assertStaffManagement(request);
     const { id } = request.params as { id: string };
+    const resolved = await employeeProfileService.resolveStaffReference(id);
+    if (!resolved.profileId) {
+      return reply.code(404).send({ ok: false, error: 'Employee HR profile not found' });
+    }
     const reset = await staffPasswordService.createEmployeeResetLink({
-      employeeProfileId: id,
+      employeeProfileId: resolved.profileId,
       createdBy: actor.id,
     });
     return reply.send({ ok: true, reset });
@@ -880,9 +903,52 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
     if (!actorRow?.password_hash || !verifyPassword(body.confirmPassword, actorRow.password_hash)) {
       return reply.code(401).send({ ok: false, error: 'Password confirmation failed' });
     }
-    const runId = await employeeReassignmentService.runForDeactivation(id);
-    const employee = await employeeProfileService.update(id, { status: 'inactive' });
+    const resolved = await employeeProfileService.resolveStaffReference(id);
+    if (resolved.adminUserId && resolved.adminUserId === actor.id) {
+      return reply.code(400).send({ ok: false, error: 'You cannot deactivate your own account' });
+    }
+
+    if (!resolved.profileId) {
+      if (!resolved.adminUserId) {
+        return reply.code(404).send({ ok: false, error: 'Employee not found' });
+      }
+      await assertCanDeactivateSuperAdmin(resolved.adminUserId);
+      const { error: adminErr } = await supabase
+        .from('admin_users')
+        .update({ active: false, updated_at: new Date().toISOString() })
+        .eq('id', resolved.adminUserId);
+      throwIfSupabaseError(adminErr, 'Could not deactivate employee');
+      return reply.send({ ok: true, legacyAdminOnly: true });
+    }
+
+    if (resolved.adminUserId) await assertCanDeactivateSuperAdmin(resolved.adminUserId);
+
+    const runId = await employeeReassignmentService.runForDeactivation(resolved.profileId);
+    const employee = await employeeProfileService.update(resolved.profileId, { status: 'inactive' });
+    await employeeProfileService.syncAdminActive(resolved.profileId, false);
     return reply.send({ ok: true, runId, employee });
+  });
+
+  app.post(`${api}/employees/:id/reactivate`, async (request, reply) => {
+    requireAdminRole(request, 'super_admin', 'admin');
+    const { id } = request.params as { id: string };
+    const resolved = await employeeProfileService.resolveStaffReference(id);
+
+    if (!resolved.profileId) {
+      if (!resolved.adminUserId) {
+        return reply.code(404).send({ ok: false, error: 'Employee not found' });
+      }
+      const { error: adminErr } = await supabase
+        .from('admin_users')
+        .update({ active: true, updated_at: new Date().toISOString() })
+        .eq('id', resolved.adminUserId);
+      throwIfSupabaseError(adminErr, 'Could not reactivate employee');
+      return reply.send({ ok: true, legacyAdminOnly: true });
+    }
+
+    const employee = await employeeProfileService.update(resolved.profileId, { status: 'active' });
+    await employeeProfileService.syncAdminActive(resolved.profileId, true);
+    return reply.send({ ok: true, employee });
   });
 
   app.post(`${api}/employees/:id/attendance/recompute`, async (request, reply) => {

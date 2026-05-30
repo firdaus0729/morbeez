@@ -25,6 +25,7 @@ import { StatIcon } from '../components/NavIcon';
 
 type Employee = {
   id: string;
+  hasProfile?: boolean;
   email: string;
   fullName: string;
   role: string;
@@ -231,10 +232,26 @@ export function EmployeesPage({ canWrite = false }: { canWrite?: boolean }) {
     id: string,
     input: { fullName?: string; role?: string; active?: boolean }
   ) {
-    await api(`/morbeez-staff/api/v1/staff/${id}`, {
-      method: 'PATCH',
-      body: JSON.stringify(input),
-    });
+    const row = workspace?.employees.find((e) => e.id === id);
+    if (row?.hasProfile === false) {
+      await api(`/morbeez-staff/api/v1/staff/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          fullName: input.fullName,
+          role: input.role,
+          active: input.active,
+        }),
+      });
+    } else {
+      await api(`/morbeez-staff/api/v1/employees/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          fullName: input.fullName,
+          role: input.role,
+          status: input.active ? 'active' : 'inactive',
+        }),
+      });
+    }
     await loadWorkspace();
   }
 
@@ -242,6 +259,14 @@ export function EmployeesPage({ canWrite = false }: { canWrite?: boolean }) {
     await api(`/morbeez-staff/api/v1/employees/${id}/deactivate`, {
       method: 'POST',
       body: JSON.stringify({ confirmPassword }),
+    });
+    await loadWorkspace();
+  }
+
+  async function reactivateEmployee(id: string) {
+    await api(`/morbeez-staff/api/v1/employees/${id}/reactivate`, {
+      method: 'POST',
+      body: '{}',
     });
     await loadWorkspace();
   }
@@ -795,6 +820,24 @@ export function EmployeesPage({ canWrite = false }: { canWrite?: boolean }) {
                               }}
                             >
                               Deactivate
+                            </button>
+                          ) : null}
+                          {canWrite && !e.active ? (
+                            <button
+                              type="button"
+                              className="block w-full rounded px-2 py-1.5 text-left text-sm text-emerald-700 hover:bg-emerald-50"
+                              onClick={async () => {
+                                if (!confirm(`Reactivate ${e.fullName}?`)) return;
+                                try {
+                                  await reactivateEmployee(e.id);
+                                } catch (err) {
+                                  alert(
+                                    err instanceof Error ? err.message : 'Could not reactivate employee'
+                                  );
+                                }
+                              }}
+                            >
+                              Reactivate
                             </button>
                           ) : null}
                           {canWrite ? (
