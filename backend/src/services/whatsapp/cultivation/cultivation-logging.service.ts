@@ -9,6 +9,7 @@ import { whatsappService } from '../whatsapp.service.js';
 import { sendReplyButtonMenu } from '../whatsapp-interactive-menu.service.js';
 import { callbackFlowService } from '../scenarios/callback-flow.service.js';
 import type { AdvisoryLanguage } from '../../ai/types.js';
+import { escalationService } from '../../ai/escalation.service.js';
 import {
   applicationPrompt,
   appliedThanks,
@@ -273,13 +274,12 @@ export const cultivationLoggingService = {
     const sessionId = ctx.lastAdvisorySessionId;
 
     if (sessionId) {
-      await supabase.from('agronomist_escalations').insert({
-        session_id: sessionId,
-        farmer_id: farmerId,
+      const { escalationId } = await escalationService.ensureOpenEscalation({
+        sessionId,
+        farmerId,
         reason: 'No improvement reported after spray application (WhatsApp)',
         confidence_at_escalation: 0.5,
         priority: 'high',
-        status: 'pending',
       });
 
       await eventBus.publish(
@@ -287,6 +287,7 @@ export const cultivationLoggingService = {
         {
           sessionId,
           farmerId,
+          escalationId,
           reason: 'cultivation_no_improvement',
           priority: 'high',
         },

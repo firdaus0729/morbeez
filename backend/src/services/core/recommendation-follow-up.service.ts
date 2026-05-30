@@ -11,6 +11,7 @@ import { aiReuseService } from '../ai/ai-reuse.service.js';
 import { learningLoopService } from './learning-loop.service.js';
 import { followUpCopy } from './recommendation-follow-up-copy.js';
 import type { AdvisoryLanguage } from '../ai/types.js';
+import { escalationService } from '../ai/escalation.service.js';
 
 const APPLICATION_CHECK_DAYS = () =>
   Number(process.env.REC_FOLLOWUP_APPLICATION_DAYS ?? 1);
@@ -581,13 +582,12 @@ export const recommendationFollowUpService = {
     });
 
     if (rec.ai_session_id) {
-      await supabase.from('agronomist_escalations').insert({
-        session_id: rec.ai_session_id,
-        farmer_id: farmerId,
+      await escalationService.ensureOpenEscalation({
+        sessionId: rec.ai_session_id,
+        farmerId,
         reason: 'No improvement after recommendation (Day-5 follow-up)',
         confidence_at_escalation: 0.5,
         priority: 'high',
-        status: 'pending',
       });
     }
   },
@@ -601,13 +601,12 @@ export const recommendationFollowUpService = {
     });
 
     if (rec.ai_session_id) {
-      await supabase.from('agronomist_escalations').insert({
-        session_id: rec.ai_session_id,
-        farmer_id: farmerId,
+      await escalationService.ensureOpenEscalation({
+        sessionId: rec.ai_session_id,
+        farmerId,
         reason: 'Worsened after recommendation (Day-5 follow-up)',
         confidence_at_escalation: 0.4,
         priority: 'urgent',
-        status: 'pending',
       });
     }
   },

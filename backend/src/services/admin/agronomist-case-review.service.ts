@@ -1,4 +1,5 @@
 import { supabase } from '../../lib/supabase.js';
+import { dedupeEscalationsByFarmer } from '../ai/escalation.service.js';
 import { escalationAdminService } from './escalation-admin.service.js';
 import { blockService } from '../core/block.service.js';
 import { recommendationRecordsService } from '../core/recommendation-records.service.js';
@@ -140,7 +141,7 @@ export const agronomistCaseReviewService = {
         return new Date(String(b.createdAt)).getTime() - new Date(String(a.createdAt)).getTime();
       });
     }
-    sorted = sorted.slice(0, limit);
+    sorted = dedupeEscalationsByFarmer(sorted).slice(0, limit);
 
     const farmerIds = [...new Set(sorted.map((i) => String(i.farmerId)))];
     const { data: farmerSources } = farmerIds.length

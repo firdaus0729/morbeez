@@ -10,6 +10,7 @@ import { localPracticesService } from './local-practices.service.js';
 import { weatherAlertsService } from '../whatsapp/scenarios/weather-alerts.service.js';
 import type { AdvisoryLanguage } from '../ai/types.js';
 import { env } from '../../config/env.js';
+import { escalationService } from '../ai/escalation.service.js';
 
 export type FarmerFeedbackStatus = 'pending_capture' | 'pending_review' | 'approved' | 'rejected' | 'partial';
 
@@ -127,27 +128,24 @@ export const farmerExperienceLearningService = {
   async submitForReview(feedbackId: string): Promise<FarmerFeedbackRow> {
     const fb = await this.getById(feedbackId);
 
-    const { data: esc, error: escErr } = await supabase
-      .from('agronomist_escalations')
-      .insert({
-        session_id: fb.session_id,
-        farmer_id: fb.farmer_id,
-        reason: `Farmer experience feedback: suggested "${fb.farmer_suggested_diagnosis ?? '—'}" vs AI "${fb.ai_probable_issue ?? '—'}"`,
-        confidence_at_escalation: fb.ai_confidence ?? 0.5,
-        priority: 'high',
-        status: 'pending',
-      })
-      .select('id')
-      .single();
+    if (!fb.session_id) {
+      throw new NotFoundError('Feedback has no advisory session');
+    }
 
-    throwIfSupabaseError(escErr, 'Could not create escalation for feedback');
+    const { escalationId: escId } = await escalationService.ensureOpenEscalation({
+      sessionId: fb.session_id,
+      farmerId: fb.farmer_id,
+      reason: `Farmer experience feedback: suggested "${fb.farmer_suggested_diagnosis ?? '—'}" vs AI "${fb.ai_probable_issue ?? '—'}"`,
+      confidence_at_escalation: fb.ai_confidence ?? 0.5,
+      priority: 'high',
+    });
 
     const { data, error } = await supabase
       .from('farmer_advisory_feedback')
       .update({
         status: 'pending_review',
         capture_step: 'done',
-        escalation_id: esc?.id ?? null,
+        escalation_id: escId,
         updated_at: new Date().toISOString(),
       })
       .eq('id', feedbackId)
