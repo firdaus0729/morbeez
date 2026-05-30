@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { api } from '../../lib/api';
-import { Alert, Btn, Loading } from '../ui';
+import { Alert, Btn } from '../ui';
 import {
   IconArrowUp,
   IconChevronLeft,
@@ -175,14 +175,15 @@ export function CaseReviewPanel({ canWrite }: { canWrite: boolean }) {
   const loadQueue = useCallback(async () => {
     setLoading(true);
     setError('');
+    const keepSelection = selectedId;
     try {
       const r = await api<{ ok: boolean; items: QueueItem[]; total: number }>(
         `${base}/cases?status=${encodeURIComponent(statusFilter)}&sort=${sort}&limit=${pageSize}&page=${page}`
       );
       setQueue(r.items ?? []);
       setTotal(r.total ?? 0);
-      if (r.items?.length && !selectedId) setSelectedId(r.items[0].id);
-      else if (r.items?.length && selectedId && !r.items.some((i) => i.id === selectedId)) {
+      if (r.items?.length && !keepSelection) setSelectedId(r.items[0].id);
+      else if (r.items?.length && keepSelection && !r.items.some((i) => i.id === keepSelection)) {
         setSelectedId(r.items[0].id);
       }
     } catch (e) {
@@ -190,7 +191,7 @@ export function CaseReviewPanel({ canWrite }: { canWrite: boolean }) {
     } finally {
       setLoading(false);
     }
-  }, [statusFilter, sort, page, selectedId]);
+  }, [statusFilter, sort, page]);
 
   const loadDetail = useCallback(async (id: string) => {
     setDetailLoading(true);
@@ -227,8 +228,12 @@ export function CaseReviewPanel({ canWrite }: { canWrite: boolean }) {
   }, [statusFilter, sort, page]);
 
   useEffect(() => {
-    if (selectedId) void loadDetail(selectedId);
-    else setDetail(null);
+    if (!selectedId) {
+      setDetail(null);
+      return;
+    }
+    setDetail(null);
+    void loadDetail(selectedId);
   }, [selectedId, loadDetail]);
 
   const activeImage = detail?.images[imageIndex] ?? detail?.images[0];
@@ -327,8 +332,10 @@ export function CaseReviewPanel({ canWrite }: { canWrite: boolean }) {
               </select>
             </label>
 
-            {loading ? <Loading /> : null}
-            <ul className="cr-queue-list">
+            {loading && queue.length === 0 ? (
+              <p className="cr-muted cr-pad text-sm">Loading queue…</p>
+            ) : null}
+            <ul className="cr-queue-list" aria-busy={loading}>
               {queue.map((item) => (
                 <li key={item.id}>
                   <button
@@ -427,8 +434,8 @@ export function CaseReviewPanel({ canWrite }: { canWrite: boolean }) {
         </aside>
 
         {/* ── Header spans center + right ── */}
-        {detail && !detailLoading ? (
-          <header className="cr-header">
+        {detail ? (
+          <header className="cr-header" aria-busy={detailLoading}>
             <div className="cr-header-farmer">
               <div className="cr-avatar" aria-hidden>
                 {farmerInitial(detail.farmer?.name ?? 'F')}
@@ -489,8 +496,10 @@ export function CaseReviewPanel({ canWrite }: { canWrite: boolean }) {
         <main className="cr-col-center">
           {!selectedId ? (
             <p className="cr-empty-center">Select a case from the escalation queue.</p>
-          ) : detailLoading || !detail ? (
-            <Loading />
+          ) : detailLoading && !detail ? (
+            <p className="cr-muted cr-pad">Loading case…</p>
+          ) : !detail ? (
+            <p className="cr-empty-center">Could not load this case.</p>
           ) : (
             <>
               {detail.images.length > 0 ? (
@@ -685,7 +694,7 @@ export function CaseReviewPanel({ canWrite }: { canWrite: boolean }) {
 
         {/* ── Right column (25%) ── */}
         <aside className="cr-col-right">
-          {detail && !detailLoading ? (
+          {detail ? (
             <>
               <h3 className="cr-h3 cr-actions-title">Agronomist Action</h3>
               {canWrite ? (

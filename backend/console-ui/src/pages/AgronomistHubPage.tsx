@@ -70,7 +70,7 @@ export function AgronomistHubPage({ canWrite }: { canWrite: boolean }) {
   );
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [submissions, setSubmissions] = useState<Submission[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [aiLoading, setAiLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -295,7 +295,7 @@ export function AgronomistHubPage({ canWrite }: { canWrite: boolean }) {
         active={tab}
         onChange={setTab}
       />
-      {loading ? <Loading /> : null}
+      {loading && (tab === 'queue' || tab === 'submissions') ? <Loading /> : null}
 
       {tab === 'case_review' ? <CaseReviewPanel canWrite={canWrite} /> : null}
 
