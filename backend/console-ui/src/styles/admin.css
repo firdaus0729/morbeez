@@ -1,4 +1,4 @@
-/* Morbeez Agriculture — Operations Console (dashboard mockup) */
+﻿/* Morbeez Agriculture â€” Operations Console (dashboard mockup) */
 :root {
   --green-900: #1a4d32;
   --green-800: #215c3a;
@@ -48,7 +48,7 @@ body {
   color: var(--text-muted);
 }
 
-/* ─── Login ─── */
+/* â”€â”€â”€ Login â”€â”€â”€ */
 .login-page {
   min-height: 100vh;
   display: flex;
@@ -111,7 +111,7 @@ body {
   font-size: 0.9rem;
 }
 
-/* ─── App shell ─── */
+/* â”€â”€â”€ App shell â”€â”€â”€ */
 .app-shell {
   display: flex;
   min-height: 100vh;
@@ -348,7 +348,7 @@ body {
   font-size: 12px;
 }
 
-/* ─── Main & topbar ─── */
+/* â”€â”€â”€ Main & topbar â”€â”€â”€ */
 .main {
   flex: 1;
   margin-left: var(--sidebar-w);
@@ -499,7 +499,7 @@ body {
   padding-top: 20px;
 }
 
-/* ─── Dashboard stat cards ─── */
+/* â”€â”€â”€ Dashboard stat cards â”€â”€â”€ */
 .stat-grid {
   display: grid;
   grid-template-columns: repeat(6, 1fr);
@@ -612,7 +612,7 @@ body {
   color: var(--text-muted);
 }
 
-/* ─── Dashboard main grid ─── */
+/* â”€â”€â”€ Dashboard main grid â”€â”€â”€ */
 .dash-main-grid {
   display: grid;
   grid-template-columns: 1.65fr 1fr;
@@ -719,7 +719,7 @@ body {
   text-align: center;
 }
 
-/* ─── Alert strip ─── */
+/* â”€â”€â”€ Alert strip â”€â”€â”€ */
 .alert-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -805,7 +805,7 @@ body {
   }
 }
 
-/* ─── Shared: forms, panels, tables (inner pages) ─── */
+/* â”€â”€â”€ Shared: forms, panels, tables (inner pages) â”€â”€â”€ */
 .field {
   margin-bottom: 16px;
 }
@@ -1193,7 +1193,7 @@ tr:hover td {
 .mt-3 { margin-top: 12px; }
 .mt-4 { margin-top: 20px; }
 
-/* ─── Products list page (mockup) ─── */
+/* â”€â”€â”€ Products list page (mockup) â”€â”€â”€ */
 .route-products .page-heading,
 .route-inventory .page-heading {
   font-size: 1.75rem;
@@ -1206,7 +1206,7 @@ tr:hover td {
   margin-left: 4px;
 }
 
-/* ─── Inventory page ─── */
+/* â”€â”€â”€ Inventory page â”€â”€â”€ */
 .route-inventory .inventory-toolbar .inventory-search-wrap {
   flex: 1;
   max-width: none;
@@ -1283,7 +1283,7 @@ tr:hover td {
   color: #dc2626;
 }
 
-/* ─── Orders page ─── */
+/* â”€â”€â”€ Orders page â”€â”€â”€ */
 .route-orders .page-heading {
   font-size: 1.75rem;
 }
@@ -1405,7 +1405,7 @@ tr:hover td {
   color: #dc2626;
 }
 
-/* ─── Order detail page ─── */
+/* â”€â”€â”€ Order detail page â”€â”€â”€ */
 .route-order-detail .page-heading {
   display: none;
 }
@@ -1853,7 +1853,7 @@ tr:hover td {
   grid-column: 1 / -1;
 }
 
-/* ─── Offers & coupons page ─── */
+/* â”€â”€â”€ Offers & coupons page â”€â”€â”€ */
 .route-offers .page-heading {
   font-size: 1.75rem;
 }
@@ -1927,7 +1927,7 @@ tr:hover td {
   color: #166534;
 }
 
-/* ─── Farmers CRM page ─── */
+/* â”€â”€â”€ Farmers CRM page â”€â”€â”€ */
 .route-farmers .page-heading {
   font-size: 1.75rem;
 }
@@ -1994,7 +1994,7 @@ tr:hover td {
   gap: 12px;
 }
 
-/* ─── Combos page ─── */
+/* â”€â”€â”€ Combos page â”€â”€â”€ */
 .route-combos .page-heading {
   font-size: 1.75rem;
 }
@@ -2032,7 +2032,7 @@ tr:hover td {
   color: #dc2626;
 }
 
-/* ─── AI Advisory page ─── */
+/* â”€â”€â”€ AI Advisory page â”€â”€â”€ */
 .route-ai-advisory .page-heading {
   font-size: 1.75rem;
 }
@@ -2233,7 +2233,7 @@ tr:hover td {
   padding: 8px;
 }
 
-/* ─── AI Mapping page ─── */
+/* â”€â”€â”€ AI Mapping page â”€â”€â”€ */
 .route-ai-mapping .page-heading {
   font-size: 1.75rem;
 }
@@ -2400,7 +2400,7 @@ tr:hover td {
   }
 }
 
-/* ─── Flash sales page ─── */
+/* â”€â”€â”€ Flash sales page â”€â”€â”€ */
 .route-flash-sales .page-heading {
   font-size: 1.75rem;
 }
@@ -3022,7 +3022,7 @@ tr:hover td {
   }
 }
 
-/* ─── Product wizard (5 steps) ─── */
+/* â”€â”€â”€ Product wizard (5 steps) â”€â”€â”€ */
 .route-product-wizard .content {
   padding: 0;
 }
@@ -3415,7 +3415,7 @@ tr:hover td {
   }
 }
 
-/* ─── Responsive ─── */
+/* â”€â”€â”€ Responsive â”€â”€â”€ */
 @media (max-width: 1400px) {
   .stat-grid {
     grid-template-columns: repeat(3, 1fr);
@@ -3432,7 +3432,7 @@ tr:hover td {
   }
 }
 
-/* Desktop: collapsed sidebar — menu stays visible to reopen */
+/* Desktop: collapsed sidebar â€” menu stays visible to reopen */
 @media (min-width: 901px) {
   body.sidebar-collapsed .sidebar {
     transform: translateX(-100%);
@@ -3494,7 +3494,7 @@ tr:hover td {
   }
 }
 
-/* ─── Sidebar groups ─── */
+/* â”€â”€â”€ Sidebar groups â”€â”€â”€ */
 .sidebar-group {
   margin: 2px 0;
 }
@@ -3571,7 +3571,7 @@ tr:hover td {
   font-weight: 600;
 }
 
-/* ─── Telecaller CRM ─── */
+/* â”€â”€â”€ Telecaller CRM â”€â”€â”€ */
 
 .telecaller-page {
   display: flex;
@@ -4141,7 +4141,7 @@ tr:hover td {
   }
 }
 
-/* Telecaller workspace — responsive polish */
+/* Telecaller workspace â€” responsive polish */
 .route-telecaller .content,
 .route-lead-detail .content {
   padding-left: 20px;
@@ -4235,7 +4235,7 @@ tr:hover td {
   }
 }
 
-/* ─── Global search (Ctrl+K) ─── */
+/* â”€â”€â”€ Global search (Ctrl+K) â”€â”€â”€ */
 #search-palette.hidden {
   display: none !important;
 }
@@ -4342,7 +4342,7 @@ tr:hover td {
   margin: 0;
 }
 
-/* ─── WhatsApp CRM inbox ─── */
+/* â”€â”€â”€ WhatsApp CRM inbox â”€â”€â”€ */
 .wa-inbox {
   display: grid;
   grid-template-columns: 320px 1fr;
@@ -4498,7 +4498,7 @@ tr:hover td {
   }
 }
 
-/* ─── CRM topbar (Telecaller workspace) — mockup layout ─── */
+/* â”€â”€â”€ CRM topbar (Telecaller workspace) â€” mockup layout â”€â”€â”€ */
 .route-telecaller .topbar.crm-topbar-shell,
 .route-lead-detail .topbar.crm-topbar-shell {
   display: flex;
@@ -4895,7 +4895,7 @@ tr:hover td {
   background: var(--green-100);
 }
 
-/* ─── Lead detail page (full profile) ─── */
+/* â”€â”€â”€ Lead detail page (full profile) â”€â”€â”€ */
 .lead-detail-page {
   padding: 0 4px 32px;
 }
@@ -5326,7 +5326,7 @@ tr:hover td {
   position: relative;
 }
 
-/* ─── CRM workspace: split pane + side drawer (responsive) ─── */
+/* â”€â”€â”€ CRM workspace: split pane + side drawer (responsive) â”€â”€â”€ */
 .tc-workspace-shell {
   position: relative;
   min-width: 0;
@@ -6398,3 +6398,5 @@ tr:hover td {
     max-height: none;
   }
 }
+
+/* Agronomist Case Review â†’ see styles/case-review.css (imported by CaseReviewPanel) */

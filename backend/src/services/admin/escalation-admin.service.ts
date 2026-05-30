@@ -100,7 +100,7 @@ export const escalationAdminService = {
     return {
       id: data.id,
       sessionId: data.session_id,
-      farmerId: data.farmer_id,
+      farmerId: String(data.farmer_id),
       farmer: farmer
         ? {
             id: farmer.id,

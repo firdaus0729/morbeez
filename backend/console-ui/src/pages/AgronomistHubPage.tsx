@@ -5,6 +5,7 @@ import { defaultsForPage } from '../lib/console-page-search';
 import { matchesSearch } from '../lib/search-filter';
 import { Alert, HubTabs, Loading, ReadOnlyBanner } from '../components/ui';
 import { FarmerFeedbackPanel } from '../components/agronomist/FarmerFeedbackPanel';
+import { CaseReviewPanel } from '../components/agronomist/CaseReviewPanel';
 
 const base = '/morbeez-staff/api/v1/os/agronomist';
 
@@ -56,7 +57,9 @@ type Submission = {
 };
 
 export function AgronomistHubPage({ canWrite }: { canWrite: boolean }) {
-  const [tab, setTab] = useState<'queue' | 'submissions' | 'farmer_feedback'>('queue');
+  const [tab, setTab] = useState<
+    'case_review' | 'queue' | 'submissions' | 'farmer_feedback'
+  >('case_review');
   const [search, setSearch] = useState('');
   const [queue, setQueue] = useState<QueueItem[]>([]);
   const searchDefaults = defaultsForPage('agronomist');
@@ -223,7 +226,8 @@ export function AgronomistHubPage({ canWrite }: { canWrite: boolean }) {
       if (form.recommendationId === recommendationId) {
         setForm((f) => ({ ...f, recommendationId: '' }));
       }
-      await load();
+      if (tab === 'submissions') await loadSubmissions();
+      else await loadQueue();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to archive draft');
     } finally {
@@ -284,7 +288,8 @@ export function AgronomistHubPage({ canWrite }: { canWrite: boolean }) {
       ) : null}
       <HubTabs
         tabs={[
-          { id: 'queue' as const, label: 'Review queue' },
+          { id: 'case_review' as const, label: 'Case review' },
+          { id: 'queue' as const, label: 'Field findings' },
           { id: 'farmer_feedback' as const, label: 'Farmer feedback' },
           { id: 'submissions' as const, label: 'My submissions' },
         ]}
@@ -292,6 +297,8 @@ export function AgronomistHubPage({ canWrite }: { canWrite: boolean }) {
         onChange={setTab}
       />
       {loading ? <Loading /> : null}
+
+      {tab === 'case_review' ? <CaseReviewPanel canWrite={canWrite} /> : null}
 
       {tab === 'queue' && !loading ? (
         <div className="mt-6 grid gap-6 lg:grid-cols-2">

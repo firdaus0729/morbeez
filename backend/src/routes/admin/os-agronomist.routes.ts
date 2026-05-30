@@ -9,6 +9,7 @@ import { throwIfSupabaseError } from '../../lib/supabase-errors.js';
 import { recommendationFollowUpService } from '../../services/core/recommendation-follow-up.service.js';
 import { crmFarmerService } from '../../services/admin/crm-farmer.service.js';
 import { farmerExperienceLearningService } from '../../services/core/farmer-experience-learning.service.js';
+import { agronomistCaseReviewService } from '../../services/admin/agronomist-case-review.service.js';
 
 const draftSchema = z.object({
   findingId: z.string().uuid(),
@@ -28,6 +29,43 @@ const draftSchema = z.object({
 
 export async function osAgronomistRoutes(app: FastifyInstance): Promise<void> {
   const api = '/morbeez-staff/api/v1/os/agronomist';
+
+  app.get(`${api}/cases`, async (request, reply) => {
+    await assertModuleAccess(request, 'agronomist', 'read');
+    const q = request.query as { status?: string; sort?: string; page?: string; limit?: string };
+    const result = await agronomistCaseReviewService.listQueue({
+      status: q.status ?? 'pending',
+      sort: q.sort === 'newest' ? 'newest' : 'priority',
+      page: q.page ? Number(q.page) : 1,
+      limit: q.limit ? Number(q.limit) : 24,
+    });
+    return reply.send({ ok: true, ...result });
+  });
+
+  app.get(`${api}/cases/:id`, async (request, reply) => {
+    await assertModuleAccess(request, 'agronomist', 'read');
+    const { id } = request.params as { id: string };
+    const detail = await agronomistCaseReviewService.getCaseDetail(id);
+    return reply.send({ ok: true, ...detail });
+  });
+
+  app.post(`${api}/cases/:id/review`, async (request, reply) => {
+    const admin = await assertModuleAccess(request, 'agronomist', 'write');
+    const { id } = request.params as { id: string };
+    const body = z
+      .object({
+        action: z.enum(['approve_ai', 'correct_ai', 'partial_match', 'escalate_urgent']),
+        correctDiagnosis: z.string().max(500).optional(),
+        severity: z.enum(['mild', 'moderate', 'severe']).optional(),
+        recommendationText: z.string().max(8000).optional(),
+        dosage: z.string().max(2000).optional(),
+        notesForLearning: z.string().max(2000).optional(),
+        submitForApproval: z.boolean().optional(),
+      })
+      .parse(request.body);
+    const result = await agronomistCaseReviewService.submitReview(id, body, admin.email);
+    return reply.send({ ok: true, ...result });
+  });
 
   app.get(`${api}/queue`, async (request, reply) => {
     await assertModuleAccess(request, 'agronomist', 'read');
