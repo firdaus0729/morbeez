@@ -1,5 +1,10 @@
 import { supabase } from '../../../lib/supabase.js';
 import type { AdvisoryLanguage } from '../../ai/types.js';
+import {
+  CALCIUM_NITRATE_MIX_WARNING,
+  CALCIUM_NITRATE_PRODUCT,
+  lookupCalciumNitratePair,
+} from './calcium-nitrate-tank-mix.knowledge.js';
 import { responseComposerService } from './response-composer.service.js';
 
 export type CompatibilityLookupResult = {
@@ -55,6 +60,18 @@ export const compatibilityLookupService = {
     const a = productA.trim();
     const b = productB.trim();
     if (!a || !b) return { found: false };
+
+    const chart = lookupCalciumNitratePair(a, b);
+    if (chart?.found) {
+      return {
+        found: true,
+        productA: chart.productA,
+        productB: chart.productB,
+        compatible: chart.compatible,
+        minIntervalHours: chart.compatible ? null : 24,
+        notes: chart.notes ?? null,
+      };
+    }
 
     const { data, error } = await supabase
       .from('spray_compatibility_rules')
@@ -128,11 +145,22 @@ export const compatibilityLookupService = {
       if (interval && !compatible) body += `\nകുറഞ്ഞ ഇടവേള: ${interval}.`;
       if (lookup.notes) body += `\n${lookup.notes}`;
     } else {
+      const source =
+        a === CALCIUM_NITRATE_PRODUCT || b === CALCIUM_NITRATE_PRODUCT
+          ? 'Morbeez Calcium Nitrate chart'
+          : 'our database';
       body = compatible
-        ? `${a} + ${b}: recorded as compatible in our database.`
-        : `${a} + ${b}: not recommended as a tank mix in our database.`;
-      if (interval && !compatible) body += `\nMinimum gap: ${interval}.`;
+        ? `${a} + ${b}: compatible per ${source}.`
+        : `${a} + ${b}: do not mix in the same tank (${source}).`;
+      if (interval && !compatible) body += `\nApply separately (gap ${interval} if alternating).`;
       if (lookup.notes) body += `\n${lookup.notes}`;
+      if (
+        !compatible &&
+        (a === CALCIUM_NITRATE_PRODUCT || b === CALCIUM_NITRATE_PRODUCT) &&
+        /magnesium|mkp|phosphonic|sulphate|sulfate/i.test(`${a} ${b}`)
+      ) {
+        body += `\n⚠️ ${CALCIUM_NITRATE_MIX_WARNING}`;
+      }
     }
 
     return responseComposerService.compose({

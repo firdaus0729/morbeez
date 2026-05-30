@@ -79,5 +79,5 @@ North star: WhatsApp is the farmer relationship + sales CX engine; staff console
 1. Farmer: Hi → contextual greeting → main menu (Crop Assessment, Track Order, Call Back, More)
 2. Crop Assessment → crop/plot picker → photo → vision classify → playbook or crop doctor → short reply + one question
 3. More → Previous recommendations (last 3)
-4. Tank mix question → compatibility lookup from `spray_compatibility_rules`
+4. Tank mix question → compatibility lookup from `spray_compatibility_rules` + Morbeez **Calcium Nitrate chart** (`calcium-nitrate-tank-mix.knowledge.ts`, migration `20260631100000_calcium_nitrate_tank_mix_rules.sql`)
 5. Low-confidence pest → expert review + telecaller task (4h SLA)
