@@ -163,6 +163,7 @@ export const cropDoctorService = {
       farmerHistory,
       whatsappContext: input.compactHistory,
       verifiedRegionalHints: verifiedRegionalHints ?? undefined,
+      environmentalContext: input.environmentalContext,
       language: input.language,
     });
 

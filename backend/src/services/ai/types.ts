@@ -59,8 +59,10 @@ export interface DiagnoseInput {
   channel: 'api' | 'whatsapp' | 'web';
   /** WhatsApp pipeline: minimal history string (low token cost) */
   compactHistory?: string;
-  /** Optional structured context for post-analysis policy checks */
+  /** Environmental + regional context (weather, season, nearby cases) */
   contextPack?: Record<string, unknown>;
+  /** Pre-formatted environmental block for the model prompt */
+  environmentalContext?: string;
 }
 
 export interface DiagnoseResult {

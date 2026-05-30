@@ -1062,7 +1062,12 @@ export const whatsappInboundPipeline = {
         sessCtx.pendingSymptomsText ||
         undefined;
       const memory = await farmerMemoryService.build(params.farmerId, { symptomsText });
-      const contextPack = await contextPackService.build(params.farmerId);
+      const contextPack = await contextPackService.build(params.farmerId, {
+        cropType: memory.cropType,
+        symptomsText,
+        dap: memory.dap,
+      });
+      const environmentalContext = contextPackService.formatForPrompt(contextPack);
 
       let imageStoragePath: string | undefined;
       if (params.imageBase64) {
@@ -1087,6 +1092,7 @@ export const whatsappInboundPipeline = {
         channel: params.channel ?? 'whatsapp',
         compactHistory: farmerMemoryService.formatCompactHistory(memory),
         contextPack,
+        environmentalContext,
       });
       const hasImage = Boolean(params.imageBase64);
       const assessment = policyEngineService.evaluate(result.advisory, {

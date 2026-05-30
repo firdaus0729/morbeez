@@ -34,6 +34,7 @@ export const policyEngineService = {
       weatherRiskScore?: number;
       heavyRainLikely?: boolean;
       highHeatLikely?: boolean;
+      highHumidityLikely?: boolean;
       /** When farmer sent a crop photo, always deliver AI advisory (do not ask only for clearer photos). */
       hasImage?: boolean;
     }
@@ -58,6 +59,11 @@ export const policyEngineService = {
     }
     if (contextPack?.highHeatLikely) {
       safetyNotes.push('High heat likely: avoid strong foliar spray during noon window.');
+    }
+    if (contextPack?.highHumidityLikely) {
+      safetyNotes.push(
+        'High humidity — blast/fungal diseases spread by air and rain splash; spray when leaves are dry.'
+      );
     }
 
     const hasActionableDiagnosis =

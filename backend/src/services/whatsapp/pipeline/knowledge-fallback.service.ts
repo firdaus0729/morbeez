@@ -19,6 +19,8 @@ import {
 import { farmerMemoryService, type FarmerMemorySnapshot } from './farmer-memory.service.js';
 import { responseComposerService } from './response-composer.service.js';
 import type { MorbeezReplyModule, ReplyAttributionMeta } from './reply-attribution.service.js';
+import { contextPackService } from './context-pack.service.js';
+import { diseaseWeatherRulesService } from './disease-weather-rules.service.js';
 
 const FALLBACK_NOTE: Record<AdvisoryLanguage, string> = {
   en: '\n\n(Verified Morbeez field guide — live AI is temporarily unavailable.)',
@@ -243,6 +245,38 @@ export const knowledgeFallbackService = {
         module: 'regional_learning',
         meta: baseMeta,
       };
+    }
+
+    const isDiseaseQuestion =
+      /disease|pest|fungus|blast|pyricularia|rot|spot|yellow|wilt|leaf|symptom|രോഗ|കീട/i.test(
+        text
+      );
+    if (isDiseaseQuestion) {
+      try {
+        const pack = await contextPackService.build(params.farmerId, {
+          cropType: memory.cropType,
+          symptomsText: text,
+          dap: memory.dap,
+        });
+        const highPriors = pack.diseasePriors.filter((p) => p.likelihood !== 'low');
+        if (highPriors.length) {
+          const crop = cropLabel(memory);
+          const priorsText = diseaseWeatherRulesService.formatForPrompt(highPriors);
+          const envLine = contextPackService.formatForPrompt(pack).slice(0, 800);
+          const body =
+            params.language === 'ml'
+              ? `നിങ്ങളുടെ ${crop} — പ്രാദേശിക കാലാവസ്ഥയും സീസണും കണക്കിലെടുത്ത്:\n\n${priorsText}\n\n${envLine}\n\nവ്യക്തമായ ഇലയുടെ ഫോട്ടോ അയയ്ക്കുക — പൂർണ്ണ വിശകലനത്തിന്.`
+              : `For your ${crop}, based on current weather and season in your area:\n\n${priorsText}\n\n${envLine}\n\nSend a clear leaf photo for a full Morbeez diagnosis (not generic internet advice).`;
+          logger.info({ farmerId: params.farmerId }, 'Knowledge fallback: disease–weather priors');
+          return {
+            text: body + (FALLBACK_NOTE[params.language] ?? FALLBACK_NOTE.en),
+            module: 'regional_learning',
+            meta: { ...baseMeta, issueLabel: highPriors[0]?.issueLabel },
+          };
+        }
+      } catch {
+        /* non-blocking */
+      }
     }
 
     return null;

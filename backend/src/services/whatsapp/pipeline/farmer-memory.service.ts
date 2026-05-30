@@ -14,6 +14,7 @@ export type FarmerMemorySnapshot = {
   activePlotLabel?: string;
   dap?: number;
   district?: string;
+  pincode?: string;
   recentIssues: string;
   lastSpray?: string;
   lastAdvisorySummary?: string;
@@ -119,9 +120,11 @@ export const farmerMemoryService = {
 
     const { data: farmerRow } = await supabase
       .from('farmers')
-      .select('district')
+      .select('district, village, pincode_master(pincode)')
       .eq('id', farmerId)
       .maybeSingle();
+
+    const pm = farmerRow?.pincode_master as { pincode?: string } | null;
 
     return {
       farmerId,
@@ -131,6 +134,7 @@ export const farmerMemoryService = {
       activePlotLabel: sessionCtx.activePlotLabel,
       dap: compact.dap,
       district: farmerRow?.district ? String(farmerRow.district) : undefined,
+      pincode: pm?.pincode ?? undefined,
       recentIssues: compact.recentIssues,
       lastSpray: compact.lastSpray,
       lastAdvisorySummary: sessionCtx.diagnosis?.lastAdvisorySummary,
@@ -146,6 +150,7 @@ export const farmerMemoryService = {
       `Active crop: ${memory.cropType}${memory.dap != null ? ` (${memory.dap} DAP)` : ''}`,
       memory.activePlotLabel ? `Plot: ${memory.activePlotLabel}` : null,
       memory.district ? `District: ${memory.district}` : null,
+      memory.pincode ? `Pincode: ${memory.pincode}` : null,
       `Recent issues: ${memory.recentIssues}`,
       memory.lastAdvisorySummary
         ? `Last diagnosis summary: ${memory.lastAdvisorySummary.slice(0, 400)}`

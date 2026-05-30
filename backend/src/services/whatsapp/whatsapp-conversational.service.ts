@@ -9,6 +9,7 @@ import type { AdvisoryLanguage } from '../ai/types.js';
 import { knowledgeFallbackService } from './pipeline/knowledge-fallback.service.js';
 import type { FarmerMemorySnapshot } from './pipeline/farmer-memory.service.js';
 import { farmerMemoryService } from './pipeline/farmer-memory.service.js';
+import { contextPackService } from './pipeline/context-pack.service.js';
 
 const OPENAI_BASE = 'https://api.openai.com/v1';
 
@@ -78,15 +79,33 @@ export const whatsappConversationalService = {
     }
 
     const name = params.farmerName?.split(' ')[0] ?? 'Farmer';
-    const memoryBlock = params.memory
-      ? farmerMemoryService.formatConversationBlock(params.memory, 10)
-      : (params.conversationHistory ?? []).slice(-10).join('\n') || '(none)';
+    const memory =
+      params.memory ??
+      (await farmerMemoryService.build(params.farmerId, { symptomsText: params.userMessage }));
+    const memoryBlock = farmerMemoryService.formatConversationBlock(memory, 10);
+
+    let environmentalBlock = '';
+    try {
+      const pack = await contextPackService.build(params.farmerId, {
+        cropType: memory.cropType,
+        symptomsText: params.userMessage,
+        dap: memory.dap,
+      });
+      environmentalBlock = contextPackService.formatForPrompt(pack);
+    } catch {
+      environmentalBlock = '';
+    }
 
     const userPrompt = `Farmer name: ${name}
 Language hint: ${params.language}
 
 Farmer memory (trust this — do not contradict without reason):
 ${memoryBlock}
+${
+  environmentalBlock
+    ? `\nEnvironmental / regional context (use for disease timing, blast in humid monsoon, spray weather):\n${environmentalBlock}\n`
+    : ''
+}
 
 Farmer message: ${params.userMessage.trim() || '(empty)'}
 ${

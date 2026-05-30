@@ -32,6 +32,7 @@ OUTPUT: Respond ONLY with valid JSON matching this schema:
 }
 
 Focus crops: ginger (primary MVP), also pepper, banana, vegetables.
+When season is monsoon or disease_peak and humidity is high, prioritize fungal/airborne issues (e.g. Pyricularia blast on ginger) if leaf lesions match; mention airborne spread and spray timing after rain gaps.
 Always populate dosageGuidance with at least one practical tank-mix option (per 200 L) when treatment is recommended.
 If you suspect nutrient deficiency, state that a soil test report is needed to confirm before precise fertilizer doses (the app will ask for the report).
 Put the farmer-facing summary in farmerSummaryEn using the farmer's preferred language script (English, Malayalam, Tamil, Kannada, or Hindi as appropriate).
@@ -48,6 +49,8 @@ export function buildUserPrompt(params: {
   /** WhatsApp session memory: crop, DAP, recent chat — do not re-ask crop if present here */
   whatsappContext?: string;
   verifiedRegionalHints?: string;
+  /** Live weather, season, disease–weather priors, nearby farmer cases */
+  environmentalContext?: string;
   language: string;
 }): string {
   return [
@@ -63,6 +66,9 @@ export function buildUserPrompt(params: {
       : null,
     params.verifiedRegionalHints
       ? `Agronomist-verified regional learnings (weight these; do not contradict without reason):\n${params.verifiedRegionalHints}`
+      : null,
+    params.environmentalContext
+      ? `Environmental and regional context (weight heavily for disease choice — e.g. Pyricularia in monsoon + high humidity):\n${params.environmentalContext}`
       : null,
     'Analyze the crop image if provided. Merge Plant.id signals when available (Plant.id may miss thrips — trust visible streaking/lesions on leaves).',
     params.symptomsText || params.voiceTranscript

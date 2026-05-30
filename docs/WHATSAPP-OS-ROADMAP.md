@@ -62,6 +62,14 @@ North star: WhatsApp is the farmer relationship + sales CX engine; staff console
 - Farmer memory loads agronomist `verifiedRegionalHints` into Crop Doctor + conversational prompts
 - `openai-quota.service.ts` + `knowledge-fallback.service.ts` — on `insufficient_quota` / 429, log warn and reply from reuse DB, Ca chart, drench rules (no empty welcome)
 
+## Phase 6d — Weather + local diagnosis context
+
+- `weather-fetch.service.ts` — Open-Meteo with humidity; pincode lat/lon from `pincode_master`
+- `context-pack.service.ts` — season phase, disease–weather priors, nearby pincode cases
+- `disease-weather-rules.service.ts` — blast/Pyricularia in monsoon + humidity, thrips, rot rules
+- `nearby-cases.service.ts` — peer farmers same pincode / district disease history (30d)
+- Crop Doctor + conversational prompts receive `environmentalContext`; policy adds humidity safety notes
+
 ## Phase 6c — Module attribution (USP)
 
 - `supabase/migrations/20260633000000_whatsapp_reply_attributions.sql` — per-reply module source
