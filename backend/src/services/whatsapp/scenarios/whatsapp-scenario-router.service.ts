@@ -43,6 +43,8 @@ import { pincodeService } from '../../core/pincode.service.js';
 import { recommendationFollowUpService } from '../../core/recommendation-follow-up.service.js';
 import { returnUserGreetingService } from './return-user-greeting.service.js';
 import { farmerFeedbackFlowService } from './farmer-feedback-flow.service.js';
+import { isExplicitAgronomyQuestion } from '../pipeline/agriculture-free-text.service.js';
+import { tryCompatibilityQuickReply } from '../pipeline/compatibility-lookup.service.js';
 
 const CROP_MEDIA = new Set(['image', 'image_message', 'document']);
 const MENU_IDS = new Set([
@@ -1010,7 +1012,21 @@ export const whatsappScenarioRouter = {
       return { handled: true };
     }
 
-    // Scenario 8 — unknown terminology
+    // Tank-mix / fertilizer questions — verified DB rules only; else fall through to OpenAI
+    if (text && isExplicitAgronomyQuestion(text)) {
+      const compatHandled = await tryCompatibilityQuickReply({
+        text,
+        language: lang,
+        phone: msg.phone,
+        sendText: send.text,
+      });
+      if (compatHandled) {
+        await conversationSessionService.setState(captured.farmerId, 'main_menu');
+        return { handled: true };
+      }
+    }
+
+    // Scenario 8 — unknown regional term (short phrase only, not general ag questions)
     if (text && terminologyService.isLikelyUnknownRegionalPhrase(text)) {
       const { data: farmer } = await supabase
         .from('farmers')

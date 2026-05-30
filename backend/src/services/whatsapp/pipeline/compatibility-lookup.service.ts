@@ -20,6 +20,7 @@ export function parseProductPairFromText(text: string): { productA: string; prod
     /(?:mix|combine|tank\s*mix|spray)\s+(.+?)\s+(?:and|with|\+|&)\s+(.+?)(?:\?|$)/i,
     /(.+?)\s+(?:and|with|\+)\s+(.+?)\s+(?:mix|together|compatible)/i,
     /(?:can i|is it ok to)\s+(?:mix|combine)\s+(.+?)\s+(?:and|with)\s+(.+?)(?:\?|$)/i,
+    /(?:can|could)\s+(.+?)\s+(?:with|and)\s+(.+?)\s+mix/i,
   ];
 
   for (const re of patterns) {
@@ -37,7 +38,7 @@ export function parseProductPairFromText(text: string): { productA: string; prod
 
 function cleanProductToken(raw: string): string {
   return raw
-    .replace(/^(the|a|an)\s+/i, '')
+    .replace(/^(the|a|an|can|could|i)\s+/i, '')
     .replace(/[?.!,]+$/g, '')
     .trim()
     .slice(0, 80);
@@ -145,3 +146,23 @@ export const compatibilityLookupService = {
     });
   },
 };
+
+/** DB-backed tank-mix reply when we have a verified rule; otherwise false so OpenAI can answer. */
+export async function tryCompatibilityQuickReply(params: {
+  text: string;
+  language: AdvisoryLanguage;
+  phone: string;
+  sendText: (phone: string, text: string) => Promise<void>;
+}): Promise<boolean> {
+  const pair = parseProductPairFromText(params.text);
+  if (!pair) return false;
+
+  const lookup = await compatibilityLookupService.lookup(pair.productA, pair.productB);
+  if (!lookup.found) return false;
+
+  await params.sendText(
+    params.phone,
+    compatibilityLookupService.formatFarmerReply(lookup, params.language, pair)
+  );
+  return true;
+}

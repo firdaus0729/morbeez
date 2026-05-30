@@ -53,6 +53,7 @@ import {
   compatibilityLookupService,
   parseProductPairFromText,
 } from './compatibility-lookup.service.js';
+import { isExplicitAgronomyQuestion } from './agriculture-free-text.service.js';
 import { responseComposerService } from './response-composer.service.js';
 import { assessmentPlaybookService } from '../scenarios/assessment-playbook.service.js';
 import { roiFlowService } from '../roi/roi-flow.service.js';
@@ -241,20 +242,24 @@ async function tryAssessmentPlaybook(params: {
     const pair = parseProductPairFromText(params.text);
     if (pair) {
       const lookup = await compatibilityLookupService.lookup(pair.productA, pair.productB);
-      await params.sendText(
-        params.phone,
-        compatibilityLookupService.formatFarmerReply(lookup, params.language, pair)
-      );
-      if (!lookup.found || lookup.compatible === false) {
-        await assessmentPlaybookService.applyEscalation(
-          params.farmerId,
-          'compatibility',
-          params.text.slice(0, 300)
+      if (lookup.found) {
+        await params.sendText(
+          params.phone,
+          compatibilityLookupService.formatFarmerReply(lookup, params.language, pair)
         );
+        if (lookup.compatible === false) {
+          await assessmentPlaybookService.applyEscalation(
+            params.farmerId,
+            'compatibility',
+            params.text.slice(0, 300)
+          );
+        }
+        await conversationSessionService.setState(params.farmerId, 'playbook_pending');
+        return true;
       }
-      await conversationSessionService.setState(params.farmerId, 'playbook_pending');
-      return true;
+      return false;
     }
+    return false;
   }
 
   if (!inputClassifierService.shouldUsePlaybook(classification)) {
@@ -878,6 +883,8 @@ export const whatsappInboundPipeline = {
         msg.text
       ) && msg.text.trim().length >= 25;
 
+    const generalAgronomyQuestion = isExplicitAgronomyQuestion(msg.text);
+
     if (env.ENABLE_AI_CROP_DOCTOR && agriDiagnosisIntent) {
       const activePlotId = await multiPlotService.getActivePlotId(captured.farmerId);
       const ctxPeek = await fetchCompactFarmerContext(captured.farmerId, { activePlotId });
@@ -910,7 +917,7 @@ export const whatsappInboundPipeline = {
       return;
     }
 
-    if (whatsappConversationalService.isEnabled()) {
+    if (whatsappConversationalService.isEnabled() && (generalAgronomyQuestion || msg.text.trim().length >= 15)) {
       const usage = await aiUsageControlService.checkAndConsume({
         farmerId: captured.farmerId,
         kind: 'text',

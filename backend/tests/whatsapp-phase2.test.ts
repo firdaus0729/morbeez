@@ -5,6 +5,10 @@ import { imageInputClassifierService } from '../src/services/whatsapp/pipeline/i
 import {
   parseProductPairFromText,
 } from '../src/services/whatsapp/pipeline/compatibility-lookup.service.js';
+import {
+  isExplicitAgronomyQuestion,
+  isLikelyUnknownRegionalPhrase,
+} from '../src/services/whatsapp/pipeline/agriculture-free-text.service.js';
 import { seasonalPriorityService } from '../src/services/whatsapp/pipeline/seasonal-priority.service.js';
 
 describe('vision merge', () => {
@@ -36,6 +40,28 @@ describe('compatibility parse', () => {
     assert.ok(pair);
     assert.match(pair!.productA, /Mancozeb/i);
     assert.match(pair!.productB, /Copper/i);
+  });
+
+  it('extracts product pair from "Can X with Y mix" phrasing', () => {
+    const pair = parseProductPairFromText(
+      'Can calcium nitrate with magnesium sulphate mix ?'
+    );
+    assert.ok(pair);
+    assert.match(pair!.productA, /calcium nitrate/i);
+    assert.match(pair!.productB, /magnesium sulphate/i);
+  });
+});
+
+describe('agriculture free-text routing', () => {
+  it('treats tank-mix questions as agronomy, not regional terminology', () => {
+    const q = 'Can calcium nitrate with magnesium sulphate mix ?';
+    assert.ok(isExplicitAgronomyQuestion(q));
+    assert.equal(isLikelyUnknownRegionalPhrase(q), false);
+  });
+
+  it('still flags short unknown regional tokens', () => {
+    assert.equal(isLikelyUnknownRegionalPhrase('chimbi'), true);
+    assert.equal(isExplicitAgronomyQuestion('chimbi'), false);
   });
 });
 
