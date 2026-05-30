@@ -1,4 +1,5 @@
 import { supabase } from '../../../lib/supabase.js';
+import { leadService } from '../../crm/lead.service.js';
 import { farmerService } from '../../farmer/farmer.service.js';
 import type { InboundMessage } from './types.js';
 import type { AdvisoryLanguage } from '../../ai/types.js';
@@ -26,40 +27,19 @@ export const leadCaptureService = {
       .eq('farmer_id', farmer.id);
     const hadHistoricalLead = (historicalLeadCount ?? 0) > 0;
 
-    const { data: existingLead } = await supabase
-      .from('leads')
-      .select('id, notes')
-      .eq('farmer_id', farmer.id)
-      .eq('source', 'whatsapp')
-      .order('updated_at', { ascending: false })
-      .limit(1);
-
-    if (!existingLead?.length) {
-      await supabase.from('leads').insert({
-        farmer_id: farmer.id,
-        intent: 'general',
-        source: 'whatsapp',
-        status: 'new',
-        stage: 'new_lead',
-        notes: msg.text?.slice(0, 300) || `Inbound ${msg.msgType}`,
-        campaign_source: msg.attribution?.campaignSource ?? null,
-        referral_source: msg.attribution?.referralSource ?? 'whatsapp',
-        affiliate_source: msg.attribution?.affiliateSource ?? null,
-        whatsapp_profile_name: msg.profileName ?? null,
-        last_interaction_at: new Date().toISOString(),
-      });
-    } else {
-      const noteLine = msg.text?.trim() ? `Request: ${msg.text.trim().slice(0, 240)}` : null;
-      const mergedNotes = [existingLead[0].notes, noteLine].filter(Boolean).join('\n');
-      await supabase
-        .from('leads')
-        .update({
-          last_interaction_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-          notes: mergedNotes || existingLead[0].notes,
-        })
-        .eq('id', existingLead[0].id);
-    }
+    await leadService.ensureLeadForFarmer({
+      farmerId: farmer.id,
+      intent: 'general',
+      source: 'whatsapp',
+      status: 'new',
+      stage: 'new_lead',
+      notes: msg.text?.slice(0, 300) || `Inbound ${msg.msgType}`,
+      mergeNotes: true,
+      campaign_source: msg.attribution?.campaignSource ?? null,
+      referral_source: msg.attribution?.referralSource ?? 'whatsapp',
+      affiliate_source: msg.attribution?.affiliateSource ?? null,
+      whatsapp_profile_name: msg.profileName ?? null,
+    });
 
     return {
       farmerId: farmer.id,

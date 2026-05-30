@@ -1,4 +1,5 @@
 import { supabase } from '../../../lib/supabase.js';
+import { leadService } from '../../crm/lead.service.js';
 import { createTelecallerTask } from '../pipeline/telecaller-tasks.service.js';
 import { t } from './whatsapp-flow-copy.js';
 import type { AdvisoryLanguage } from '../../ai/types.js';
@@ -26,14 +27,15 @@ export const callbackFlowService = {
       priority: 'high',
     });
 
-    await supabase.from('leads').insert({
-      farmer_id: farmerId,
+    await leadService.ensureLeadForFarmer({
+      farmerId,
       intent: 'callback',
       source: 'whatsapp',
       status: 'new',
       priority: 'high',
       stage: 'follow_up',
       notes: notes?.slice(0, 500) ?? 'Callback from WhatsApp menu',
+      mergeNotes: true,
     });
 
     return t('callbackReceived', language);

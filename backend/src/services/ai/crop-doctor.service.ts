@@ -22,6 +22,7 @@ import {
   knowledgeFallbackService,
 } from '../whatsapp/pipeline/knowledge-fallback.service.js';
 import { farmerMemoryService } from '../whatsapp/pipeline/farmer-memory.service.js';
+import { leadService } from '../crm/lead.service.js';
 
 async function getFarmerHistory(farmerId: string): Promise<string> {
   const { data } = await supabase
@@ -364,13 +365,15 @@ export const cropDoctorService = {
   },
 
   async requestCallback(sessionId: string, farmerId: string): Promise<void> {
-    await supabase.from('leads').insert({
-      farmer_id: farmerId,
+    await leadService.ensureLeadForFarmer({
+      farmerId,
       intent: 'callback',
       source: 'crop_doctor',
       status: 'new',
       priority: 'high',
+      stage: 'follow_up',
       notes: `Crop doctor session ${sessionId}`,
+      mergeNotes: true,
     });
 
     await supabase.from('advisory_automation_jobs').insert({

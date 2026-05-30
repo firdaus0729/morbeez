@@ -316,19 +316,22 @@ async function sendKnowledgeFallbackOrLimit(params: {
 
 async function classifyCommercialLead(farmerId: string, text: string): Promise<void> {
   const lower = text.toLowerCase();
-  let intent: string | null = null;
+  let intent: 'quotation' | 'callback' | 'support' | null = null;
   if (/quote|quotation|price|rate|വില/i.test(lower)) intent = 'quotation';
   else if (/call|callback|ഫോൺ/i.test(lower)) intent = 'callback';
   else if (/help|support|problem/i.test(lower)) intent = 'support';
   if (!intent) return;
 
-  await supabase.from('leads').insert({
-    farmer_id: farmerId,
+  const { leadService } = await import('../../crm/lead.service.js');
+  await leadService.ensureLeadForFarmer({
+    farmerId,
     source: 'whatsapp',
     intent,
     status: 'new',
     stage: 'interested',
+    priority: intent === 'callback' ? 'high' : 'normal',
     notes: text.slice(0, 500),
+    mergeNotes: true,
   });
 
   if (intent === 'quotation') {
