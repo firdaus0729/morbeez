@@ -42,6 +42,8 @@ export const whatsappConversationalService = {
     /** @deprecated use memory */
     conversationHistory?: string[];
     memory?: FarmerMemorySnapshot;
+    /** Farmer is asking to deepen the previous assistant message — never reset to welcome */
+    followUp?: boolean;
   }): Promise<string> {
     if (!env.OPENAI_API_KEY) {
       return defaultFallback(params.language, params.memory);
@@ -59,6 +61,16 @@ Farmer memory (trust this — do not contradict without reason):
 ${memoryBlock}
 
 Farmer message: ${params.userMessage.trim() || '(empty)'}
+${
+  params.followUp
+    ? `
+IMPORTANT: This is a FOLLOW-UP. The farmer wants MORE DETAIL on your previous advice (mix, drench, disease, etc.).
+- Expand step-by-step: what each product does, order of mixing, what NOT to combine, jar test, timing.
+- Reference the last Assistant message in the conversation log.
+- Do NOT say welcome, do NOT ask which crop if crop is already known in memory.
+- Be specific and practical for their ginger/field context.`
+    : ''
+}
 
 Write a helpful WhatsApp reply.`;
 

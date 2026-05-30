@@ -53,7 +53,27 @@ function cropMentionedInTurns(turns: string[]): boolean {
   return false;
 }
 
+/** Recent back-and-forth within 45 minutes — continuation, not a new session. */
+const THREAD_WINDOW_MS = 45 * 60 * 1000;
+
 export const farmerMemoryService = {
+  async hasRecentThread(farmerId: string): Promise<boolean> {
+    const since = new Date(Date.now() - THREAD_WINDOW_MS).toISOString();
+    const { data } = await supabase
+      .from('interaction_logs')
+      .select('direction, created_at')
+      .eq('farmer_id', farmerId)
+      .eq('channel', 'whatsapp')
+      .gte('created_at', since)
+      .order('created_at', { ascending: false })
+      .limit(6);
+
+    if (!data?.length || data.length < 2) return false;
+    const hasOutbound = data.some((r) => r.direction === 'outbound');
+    const hasInbound = data.some((r) => r.direction === 'inbound');
+    return hasOutbound && hasInbound;
+  },
+
   async build(
     farmerId: string,
     options?: { symptomsText?: string; activePlotId?: string | null }

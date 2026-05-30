@@ -1,10 +1,17 @@
+import {
+  isDrenchOrMixQuestion,
+  isConversationFollowUp,
+} from './conversation-continuation.service.js';
+
 /** Detect farmer free-text that should use agronomy AI / DB — not menu or terminology templates. */
 const AGRONOMY_QUESTION_RE =
-  /\b(mix|tank\s*mix|compatible|compatibility|fertiliz|nitrate|sulphate|sulfate|pesticide|herbicide|insecticide|spray|dose|dosage|calcium|magnesium|copper|mancozeb|urea|dap|npk|fungicide|thrips|aphid|blight|wilt|yellow|chlorosis|harvest|irrigation|fertigation|nematode|weedicide|glyphosate|oxychloride)\b/i;
+  /\b(mix|tank\s*mix|compatible|compatibility|fertiliz|nitrate|sulphate|sulfate|pesticide|herbicide|insecticide|spray|dose|dosage|calcium|magnesium|copper|mancozeb|urea|dap|npk|fungicide|thrips|aphid|blight|wilt|yellow|chlorosis|harvest|irrigation|fertigation|nematode|weedicide|glyphosate|oxychloride|trichoderma|pseudomonas|bacillus|drench|seaweed|triacontanol|paecilomyces)\b/i;
 
 export function isExplicitAgronomyQuestion(text: string): boolean {
   const t = text.trim();
   if (t.length < 8) return false;
+  if (isDrenchOrMixQuestion(t)) return true;
+  if (isConversationFollowUp(t)) return true;
   return AGRONOMY_QUESTION_RE.test(t);
 }
 

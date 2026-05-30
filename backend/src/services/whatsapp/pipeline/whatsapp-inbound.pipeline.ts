@@ -21,6 +21,11 @@ import { aiUsageControlService } from './ai-usage-control.service.js';
 import { faqCacheService } from './faq-cache.service.js';
 import { farmerMemoryService } from './farmer-memory.service.js';
 import { tryAgronomyReply } from './agronomy-reply.service.js';
+import {
+  isConversationFollowUp,
+  shouldUseConversationalContinuation,
+} from './conversation-continuation.service.js';
+import { shouldSkipFaqForMessage } from './faq-cache.service.js';
 import { farmerReplyPolishService } from './farmer-reply-polish.service.js';
 import { validateAdvisorySafety } from './safety-validation.service.js';
 import { extractInboundMedia } from './media-extract.service.js';
@@ -552,10 +557,8 @@ export const whatsappInboundPipeline = {
       return;
     }
 
-    const skipFaqForAgronomy =
-      Boolean(msg.text?.trim()) && isExplicitAgronomyQuestion(msg.text!);
     const faqHit =
-      msg.text && !skipFaqForAgronomy
+      msg.text && !shouldSkipFaqForMessage(msg.text)
         ? await faqCacheService.match(msg.text, captured.language)
         : null;
     if (faqHit && !hasCropMedia) {
@@ -791,6 +794,38 @@ export const whatsappInboundPipeline = {
     }
 
     await classifyCommercialLead(captured.farmerId, msg.text);
+
+    if (
+      shouldUseConversationalContinuation(msg.text) ||
+      (isConversationFollowUp(msg.text) && (await farmerMemoryService.hasRecentThread(captured.farmerId)))
+    ) {
+      const memory = await farmerMemoryService.build(captured.farmerId, {
+        symptomsText: msg.text,
+      });
+      if (whatsappConversationalService.isEnabled()) {
+        const usage = await aiUsageControlService.checkAndConsume({
+          farmerId: captured.farmerId,
+          kind: 'text',
+          isPremium: captured.isPremium,
+        });
+        if (!usage.allowed) {
+          await sendText(
+            captured.phone,
+            aiUsageControlService.usageLimitMessage(captured.language, usage.reason)
+          );
+          return;
+        }
+        const reply = await whatsappConversationalService.generateReply({
+          userMessage: msg.text,
+          language: captured.language,
+          farmerName: msg.profileName,
+          memory,
+          followUp: true,
+        });
+        await this.sendAndLog(captured.farmerId, captured.phone, reply, sendText);
+        return;
+      }
+    }
 
     if (
       await tryAssessmentPlaybook({
