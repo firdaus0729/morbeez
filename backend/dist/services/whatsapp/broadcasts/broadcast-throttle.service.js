@@ -1,5 +1,7 @@
 import { env } from '../../../config/env.js';
 import { supabase } from '../../../lib/supabase.js';
+import { messageFatigueService } from '../pipeline/message-fatigue.service.js';
+import { seasonalPriorityService } from '../pipeline/seasonal-priority.service.js';
 const DEFAULT_MAX_PER_DAY = 2;
 const DEFAULT_KIND_COOLDOWN_HOURS = 72;
 const HIGH_PRIORITY_THRESHOLD = 70;
@@ -30,8 +32,15 @@ export const broadcastThrottleService = {
             .eq('farmer_id', params.farmerId)
             .eq('status', 'sent')
             .gte('created_at', sinceDay);
+        if (await messageFatigueService.shouldReduceProactiveMessages(params.farmerId)) {
+            const seasonal = seasonalPriorityService.resolve();
+            if (params.priority + seasonal.broadcastPriorityBoost < HIGH_PRIORITY_THRESHOLD + 10) {
+                return { allowed: false, reason: 'message_fatigue' };
+            }
+        }
         const maxDay = this.maxPerDay();
-        const isHighPriority = params.priority >= HIGH_PRIORITY_THRESHOLD;
+        const boostedPriority = seasonalPriorityService.adjustBroadcastPriority(params.priority);
+        const isHighPriority = boostedPriority >= HIGH_PRIORITY_THRESHOLD;
         if ((sentToday ?? 0) >= maxDay && !isHighPriority) {
             return { allowed: false, reason: 'daily_limit' };
         }

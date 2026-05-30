@@ -5,12 +5,14 @@ import { startOutboxWorkerIfEnabled } from './services/events/outbox.worker.js';
 import { startAdvisoryAutomationWorker } from './services/automation/advisory-automation.worker.js';
 import { startRetentionCleanupWorker } from './services/retention/retention-cleanup.worker.js';
 import { startWhatsAppBroadcastWorker } from './services/whatsapp/broadcasts/whatsapp-broadcast.worker.js';
+import { startRoiDailyPromptWorker } from './services/whatsapp/roi/roi-daily-prompt.worker.js';
 async function main() {
     const app = await buildApp();
     startOutboxWorkerIfEnabled();
     startAdvisoryAutomationWorker();
     startRetentionCleanupWorker();
     startWhatsAppBroadcastWorker();
+    startRoiDailyPromptWorker();
     await app.listen({ port: env.PORT, host: '0.0.0.0' });
     logger.info({ port: env.PORT, env: env.NODE_ENV }, 'Morbeez API started');
 }

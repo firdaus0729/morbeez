@@ -1,16 +1,32 @@
 import { supabase } from '../../../lib/supabase.js';
+import { farmerHealthScoreService } from './farmer-health-score.service.js';
 export async function createTelecallerTask(params) {
     const dueAt = new Date(Date.now() + 4 * 60 * 60 * 1000).toISOString();
+    let effectivePriority = params.priority ?? 'normal';
+    if (effectivePriority === 'normal') {
+        try {
+            const health = await farmerHealthScoreService.compute(params.farmerId);
+            if (farmerHealthScoreService.telecallerPriorityFromHealth(health.band) === 'high') {
+                effectivePriority = 'high';
+            }
+        }
+        catch {
+            /* non-blocking */
+        }
+    }
+    const healthNote = effectivePriority !== (params.priority ?? 'normal')
+        ? ' [priority boosted: farmer health at_risk]'
+        : '';
     await supabase.from('crm_tasks').insert({
         farmer_id: params.farmerId,
         lead_id: params.leadId ?? null,
         task_type: 'follow_up',
         title: params.title,
-        notes: params.notes ?? null,
+        notes: params.notes ? `${params.notes}${healthNote}` : healthNote.trim() || null,
         due_at: dueAt,
         status: 'pending',
     });
-    if (params.priority === 'urgent' || params.priority === 'high') {
+    if (effectivePriority === 'urgent' || effectivePriority === 'high') {
         const { data: lead } = await supabase
             .from('leads')
             .select('id, notes')
@@ -23,7 +39,7 @@ export async function createTelecallerTask(params) {
             await supabase
                 .from('leads')
                 .update({
-                priority: params.priority,
+                priority: effectivePriority,
                 stage: 'follow_up',
                 notes: mergedNotes,
                 updated_at: new Date().toISOString(),
@@ -36,7 +52,7 @@ export async function createTelecallerTask(params) {
                 intent: 'callback',
                 source: 'whatsapp_escalation',
                 status: 'new',
-                priority: params.priority,
+                priority: effectivePriority,
                 stage: 'follow_up',
                 notes: params.notes?.slice(0, 500) ?? params.title,
             });

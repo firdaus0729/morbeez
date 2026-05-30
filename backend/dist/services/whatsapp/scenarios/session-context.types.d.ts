@@ -1,4 +1,4 @@
-import type { DosageItem } from '../../ai/types.js';
+import type { DosageItem, StructuredAdvisory } from '../../ai/types.js';
 /** JSON stored on conversation_sessions.context */
 export interface DiagnosisPending {
     imageCount: number;
@@ -26,12 +26,33 @@ export interface SessionContext {
     /** Crop selection fallback after image when AI cannot infer crop */
     pendingCropSelection?: boolean;
     /** Minimal onboarding after language selection */
-    onboardingStep?: 'acreage' | 'crop' | 'custom_crop' | 'planting_date';
+    onboardingStep?: 'pincode' | 'acreage' | 'crop' | 'custom_crop' | 'planting_date';
     onboardingAcreageBucket?: '0_1' | '2_5' | '5_plus';
     /** Set true after acre → plot → planting date flow completes */
     onboardingComplete?: boolean;
     /** Auto recommendation follow-up engine */
     pendingRecommendationRecordId?: string;
     pendingRecommendationFollowUp?: 'application' | 'outcome';
+    /** Assessment playbook router (insect / weed / compatibility, etc.) */
+    lastPlaybookCategory?: string;
+    /** ROI tracker (farmers add only; telecaller edits in CRM) */
+    roiPendingEntryType?: string;
+    roiPendingEntryDate?: string;
+    roiPendingAmount?: number;
+    roiAwaitingCommentsChoice?: boolean;
+    roiAwaitingCommentsText?: boolean;
+    /** Full advisory held until soil report is confirmed or uploaded */
+    pendingNutrientAdvisory?: {
+        sessionId: string;
+        advisory: StructuredAdvisory;
+        productTitles?: string[];
+    };
+    /** WhatsApp manual soil lab entry (macro → micro) */
+    soilLabStep?: 'macro' | 'micro' | 'soil_type';
+    soilLabDraft?: Record<string, unknown>;
+    soilLabBlockId?: string;
+    /** Farmer Experience Learning — correction after AI diagnosis */
+    farmerFeedbackId?: string;
+    farmerFeedbackStep?: 'diagnosis' | 'experience_years' | 'experience' | 'product' | 'outcome';
 }
 //# sourceMappingURL=session-context.types.d.ts.map

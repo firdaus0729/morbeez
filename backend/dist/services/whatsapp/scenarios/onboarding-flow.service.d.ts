@@ -6,4 +6,8 @@ export declare const onboardingFlowService: {
     currentStepPrompt(step: string | undefined, lang: AdvisoryLanguage): string;
 };
 export declare function plantingDatePrompt(lang: AdvisoryLanguage): string;
+export declare function pincodePrompt(lang: AdvisoryLanguage): string;
+export declare function invalidPincodeReply(lang: AdvisoryLanguage): string;
+export declare function pincodeSavedReply(lang: AdvisoryLanguage, district: string, state: string): string;
+export declare function parsePincodeInput(text: string): string | null;
 //# sourceMappingURL=onboarding-flow.service.d.ts.map

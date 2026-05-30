@@ -1,4 +1,5 @@
 import { supabase } from '../../../lib/supabase.js';
+import { isLikelyUnknownRegionalPhrase as isRegionalTermLookup } from '../pipeline/agriculture-free-text.service.js';
 import { t } from './whatsapp-flow-copy.js';
 /** Scenarios 7–9 — regional terminology mapping. */
 const BUILTIN_TERMS = {
@@ -51,15 +52,7 @@ export const terminologyService = {
         return /\bchimb|chimbi\b/i.test(text) || /ചിമ്പ്|சிம்ப்/i.test(text);
     },
     isLikelyUnknownRegionalPhrase(text) {
-        const t = text.trim();
-        if (t.length < 4 || t.length > 80)
-            return false;
-        if (/^(hi|hello|menu|yes|no)$/i.test(t))
-            return false;
-        if (/[a-z]{3,}\s+[a-z]{3,}/i.test(t) && !/\b(crop|disease|leaf|ginger|pepper)\b/i.test(t)) {
-            return true;
-        }
-        return /[\u0D00-\u0D7F]{3,}/.test(t) && !/\b(വിള|രോഗ|കീട)\b/.test(t);
+        return isRegionalTermLookup(text);
     },
     chimbQuestionCopy(language) {
         return t('chimbQuestion', language);

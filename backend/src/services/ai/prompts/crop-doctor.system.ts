@@ -45,17 +45,22 @@ export function buildUserPrompt(params: {
   voiceTranscript?: string;
   plantIdSummary?: string;
   farmerHistory?: string;
+  /** WhatsApp session memory: crop, DAP, recent chat — do not re-ask crop if present here */
+  whatsappContext?: string;
   verifiedRegionalHints?: string;
   language: string;
 }): string {
   return [
-    `Crop: ${params.cropType}`,
+    `Crop: ${params.cropType} (already known from farmer profile — do not ask farmer to name crop again unless message clearly refers to a different crop).`,
     params.cropStage ? `Stage: ${params.cropStage}` : null,
     `Preferred response language context: ${params.language}`,
     params.symptomsText ? `Symptoms: ${params.symptomsText}` : null,
     params.voiceTranscript ? `Voice note transcript: ${params.voiceTranscript}` : null,
     params.plantIdSummary ? `Plant.id supplemental analysis:\n${params.plantIdSummary}` : null,
     params.farmerHistory ? `Previous farmer issues:\n${params.farmerHistory}` : null,
+    params.whatsappContext
+      ? `Farmer WhatsApp context (recent conversation and field state):\n${params.whatsappContext}`
+      : null,
     params.verifiedRegionalHints
       ? `Agronomist-verified regional learnings (weight these; do not contradict without reason):\n${params.verifiedRegionalHints}`
       : null,

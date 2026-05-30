@@ -66,6 +66,9 @@ export const farmerPurgeService = {
         await supabase.from('crm_call_logs').delete().eq('farmer_id', farmerId);
         await supabase.from('crm_internal_notes').delete().eq('farmer_id', farmerId);
         await supabase.from('cultivation_activities').delete().eq('farmer_id', farmerId);
+        await supabase.from('local_practices').delete().eq('farmer_id', farmerId);
+        await supabase.from('farmer_experience_stats').delete().eq('farmer_id', farmerId);
+        await supabase.from('farmer_advisory_feedback').delete().eq('farmer_id', farmerId);
         await supabase.from('ai_learning_samples').delete().eq('farmer_id', farmerId);
         await supabase.from('recommendation_follow_ups').delete().eq('farmer_id', farmerId);
         await supabase.from('recommendation_applications').delete().eq('farmer_id', farmerId);
@@ -75,6 +78,9 @@ export const farmerPurgeService = {
         await supabase.from('ai_accuracy_events').delete().eq('farmer_id', farmerId);
         await supabase.from('ai_case_outcomes').delete().eq('farmer_id', farmerId);
         await supabase.from('telecaller_notes').delete().eq('farmer_id', farmerId);
+        await supabase.from('farmer_roi_audit_log').delete().eq('farmer_id', farmerId);
+        await supabase.from('farmer_roi_entries').delete().eq('farmer_id', farmerId);
+        await supabase.from('farmer_roi_settings').delete().eq('farmer_id', farmerId);
         await supabase.from('farmer_image_hashes').delete().eq('farmer_id', farmerId);
         await supabase.from('farmer_ai_usage_daily').delete().eq('farmer_id', farmerId);
         await supabase.from('whatsapp_order_notifications').delete().eq('farmer_id', farmerId);

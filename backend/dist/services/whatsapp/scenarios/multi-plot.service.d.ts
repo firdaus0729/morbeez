@@ -10,6 +10,8 @@ export interface FarmerPlot {
 export declare const multiPlotService: {
     listPlots(farmerId: string): Promise<FarmerPlot[]>;
     getActivePlotId(farmerId: string): Promise<string | null>;
+    /** Match a crop slug (e.g. from crop.ginger) to a farm block and persist as active plot. */
+    setActivePlotByCropSlug(farmerId: string, cropSlug: string): Promise<FarmerPlot | null>;
     setActivePlot(farmerId: string, plot: FarmerPlot): Promise<void>;
     setPrimaryCropType(farmerId: string, cropType: string, cropLabel?: string): Promise<void>;
     parsePlotSelection(text: string, plots: FarmerPlot[]): FarmerPlot | null;

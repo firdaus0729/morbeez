@@ -1,6 +1,7 @@
 import { env } from '../../../config/env.js';
 import { AppError } from '../../../lib/errors.js';
 import { logger } from '../../../lib/logger.js';
+import { openaiTokenLimitBody } from './openai-chat-params.js';
 const OPENAI_BASE = 'https://api.openai.com/v1';
 async function openaiFetch(path, init) {
     if (!env.OPENAI_API_KEY) {
@@ -32,7 +33,7 @@ export const openaiVisionProvider = {
         const model = env.OPENAI_VISION_MODEL;
         const body = {
             model,
-            max_tokens: 2048,
+            ...openaiTokenLimitBody(model, 2048),
             response_format: { type: 'json_object' },
             messages: [
                 { role: 'system', content: input.systemPrompt },
@@ -96,7 +97,7 @@ export async function openaiTextAdvisory(systemPrompt, userPrompt) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
             model: env.OPENAI_TEXT_MODEL,
-            max_tokens: 2048,
+            ...openaiTokenLimitBody(env.OPENAI_TEXT_MODEL, 2048),
             response_format: { type: 'json_object' },
             messages: [
                 { role: 'system', content: systemPrompt },

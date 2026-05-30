@@ -94,6 +94,11 @@ const envSchema = z.object({
     .string()
     .transform((v) => v !== 'false')
     .default('true'),
+  /** Natural-language polish for verified DB/diagnosis replies (facts locked). Default on. */
+  ENABLE_WHATSAPP_REPLY_POLISH: z
+    .string()
+    .transform((v) => v !== 'false')
+    .default('true'),
   ENABLE_OUTBOX_WORKER: z
     .string()
     .transform((v) => v !== 'false')

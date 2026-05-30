@@ -30,8 +30,14 @@ export const policyEngineService = {
         if (contextPack?.highHeatLikely) {
             safetyNotes.push('High heat likely: avoid strong foliar spray during noon window.');
         }
-        const shouldRequestMoreEvidence = confidenceBand === 'low';
-        const needsValidationQuestion = confidenceBand === 'medium';
+        const hasActionableDiagnosis = Boolean(advisory.probableIssue?.trim()) &&
+            !/uncertain|unknown|cannot|unclear/i.test(advisory.probableIssue);
+        const shouldRequestMoreEvidence = !contextPack?.hasImage &&
+            confidenceBand === 'low' &&
+            !hasActionableDiagnosis;
+        const needsValidationQuestion = contextPack?.hasImage && confidenceBand === 'low'
+            ? true
+            : confidenceBand === 'medium';
         const escalationPriority = confidenceBand === 'low' && weatherRiskBand === 'high'
             ? 'urgent'
             : confidenceBand === 'low' || diseaseSeverity === 'high'

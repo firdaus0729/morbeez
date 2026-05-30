@@ -1,0 +1,135 @@
+import { supabase } from '../../../lib/supabase.js';
+import { fetchCompactFarmerContext } from './advisory-context.service.js';
+import { inferCropHint } from './crop-hints.js';
+import { conversationSessionService } from '../conversation-session.service.js';
+import { multiPlotService } from '../scenarios/multi-plot.service.js';
+async function fetchRecentTurns(farmerId, limit = 12) {
+    const { data } = await supabase
+        .from('interaction_logs')
+        .select('direction, content')
+        .eq('farmer_id', farmerId)
+        .eq('channel', 'whatsapp')
+        .order('created_at', { ascending: false })
+        .limit(limit);
+    if (!data?.length)
+        return [];
+    return [...data]
+        .reverse()
+        .map((row) => {
+        const role = row.direction === 'outbound' ? 'Assistant' : 'Farmer';
+        const content = String(row.content ?? '').trim().slice(0, 400);
+        return content ? `${role}: ${content}` : '';
+    })
+        .filter(Boolean);
+}
+function cropMentionedInTurns(turns) {
+    for (const line of turns) {
+        if (inferCropHint(line))
+            return true;
+    }
+    return false;
+}
+export const farmerMemoryService = {
+    async build(farmerId, options) {
+        const sessionCtx = await conversationSessionService.getContext(farmerId);
+        const hintedCrop = inferCropHint(options?.symptomsText);
+        let activePlotId = options?.activePlotId ?? (await multiPlotService.getActivePlotId(farmerId));
+        if (hintedCrop) {
+            const plots = await multiPlotService.listPlots(farmerId);
+            const matched = plots.find((p) => p.crop_type.toLowerCase() === hintedCrop);
+            if (matched) {
+                activePlotId = matched.id;
+                await multiPlotService.setActivePlot(farmerId, matched);
+            }
+        }
+        if (!activePlotId && sessionCtx.activeCropType) {
+            const matched = await multiPlotService.setActivePlotByCropSlug(farmerId, sessionCtx.activeCropType);
+            if (matched)
+                activePlotId = matched;
+        }
+        const compact = await fetchCompactFarmerContext(farmerId, { activePlotId });
+        const recentTurns = await fetchRecentTurns(farmerId, 12);
+        const cropType = hintedCrop ?? sessionCtx.activeCropType ?? compact.cropType;
+        const onboardingComplete = Boolean(sessionCtx.onboardingComplete);
+        const knownCropLocked = Boolean(activePlotId ||
+            sessionCtx.activeCropType ||
+            hintedCrop ||
+            cropMentionedInTurns(recentTurns) ||
+            onboardingComplete);
+        const { data: farmerRow } = await supabase
+            .from('farmers')
+            .select('district')
+            .eq('id', farmerId)
+            .maybeSingle();
+        return {
+            farmerId,
+            cropType,
+            cropStage: compact.cropStage,
+            activePlotId: activePlotId ?? compact.activePlotId ?? null,
+            activePlotLabel: sessionCtx.activePlotLabel,
+            dap: compact.dap,
+            district: farmerRow?.district ? String(farmerRow.district) : undefined,
+            recentIssues: compact.recentIssues,
+            lastSpray: compact.lastSpray,
+            lastAdvisorySummary: sessionCtx.diagnosis?.lastAdvisorySummary,
+            recentTurns,
+            knownCropLocked,
+            onboardingComplete,
+        };
+    },
+    formatCompactHistory(memory) {
+        const parts = [
+            `Active crop: ${memory.cropType}${memory.dap != null ? ` (${memory.dap} DAP)` : ''}`,
+            memory.activePlotLabel ? `Plot: ${memory.activePlotLabel}` : null,
+            memory.district ? `District: ${memory.district}` : null,
+            `Recent issues: ${memory.recentIssues}`,
+            memory.lastAdvisorySummary
+                ? `Last diagnosis summary: ${memory.lastAdvisorySummary.slice(0, 400)}`
+                : null,
+            memory.lastSpray ? `Last spray guidance: ${memory.lastSpray}` : null,
+        ].filter(Boolean);
+        const chat = memory.recentTurns.slice(-6);
+        if (chat.length) {
+            parts.push(`Recent WhatsApp chat:\n${chat.join('\n')}`);
+        }
+        return parts.join('\n');
+    },
+    formatConversationBlock(memory, maxTurns = 10) {
+        const header = [
+            `Known crop: ${memory.cropType} (do NOT ask which crop unless farmer clearly switched crops).`,
+            memory.dap != null ? `Growth stage: ~${memory.dap} DAP.` : null,
+            memory.lastAdvisorySummary
+                ? `Last advice given: ${memory.lastAdvisorySummary.slice(0, 300)}`
+                : null,
+        ]
+            .filter(Boolean)
+            .join('\n');
+        const turns = memory.recentTurns.slice(-maxTurns).join('\n');
+        return [header, turns ? `Conversation:\n${turns}` : null].filter(Boolean).join('\n\n');
+    },
+    knowsCrop(memory) {
+        return memory.knownCropLocked;
+    },
+    memoryAwareFallback(memory, language) {
+        const crop = memory.cropType.charAt(0).toUpperCase() + memory.cropType.slice(1).replace(/_/g, ' ');
+        const map = {
+            en: memory.knownCropLocked
+                ? `I'm here for your ${crop} crop. Send a clear photo of the problem area, or describe symptoms — I'll use what we already know about your field.`
+                : `Tell me your crop and the problem (or send a photo), and I'll guide you step by step.`,
+            ml: memory.knownCropLocked
+                ? `നിങ്ങളുടെ ${crop} വിളയ്ക്ക് ഞാൻ സഹായിക്കാം. പ്രശ്നമുള്ള ഇലയുടെ ഫോട്ടോ അയയ്ക്കുക, അല്ലെങ്കിൽ ലക്ഷണം വിവരിക്കുക.`
+                : `വിളയും പ്രശ്നവും പറയുക (അല്ലെങ്കിൽ ഫോട്ടോ അയയ്ക്കുക).`,
+            ta: memory.knownCropLocked
+                ? `உங்கள் ${crop} பயிருக்கு உதவுகிறேன். பிரச்சனை இலையின் புகைப்படம் அல்லது அறிகுறிகளை அனுப்புங்கள்.`
+                : `பயிர் மற்றும் பிரச்சனையை சொல்லுங்கள் (அல்லது புகைப்படம் அனுப்புங்கள்).`,
+            kn: memory.knownCropLocked
+                ? `ನಿಮ್ಮ ${crop} ಬೆಳೆಗೆ ಸಹಾಯ ಮಾಡುತ್ತೇನೆ. ಸಮಸ್ಯೆಯ ಫೋಟೋ ಅಥವಾ ಲಕ್ಷಣಗಳನ್ನು ಕಳುಹಿಸಿ.`
+                : `ಬೆಳೆ ಮತ್ತು ಸಮಸ್ಯೆಯನ್ನು ಹೇಳಿ (ಅಥವಾ ಫೋಟೋ ಕಳುಹಿಸಿ).`,
+            hi: memory.knownCropLocked
+                ? `आपकी ${crop} फसल के लिए मैं यहाँ हूँ। समस्या वाली तस्वीर या लक्षण भेजें।`
+                : `फसल और समस्या बताएँ (या फोटो भेजें).`,
+        };
+        return map[language] ?? map.en;
+    },
+};
+//# sourceMappingURL=farmer-memory.service.js.map

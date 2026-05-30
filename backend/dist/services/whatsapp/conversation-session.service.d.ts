@@ -1,7 +1,7 @@
 import type { AdvisoryLanguage } from '../ai/types.js';
 import type { SessionContext } from './scenarios/session-context.types.js';
 export type ConversationOwner = 'ai' | 'telecaller' | 'agronomist';
-export type ConversationState = 'language_select' | 'main_menu' | 'onboarding_minimal' | 'diagnosis' | 'diagnosis_awaiting_photos' | 'diagnosis_water_volume' | 'root_photos_requested' | 'nutrient_soil_confirm' | 'soil_flow' | 'terminology_clarify' | 'chimb_followup' | 'plot_select' | 'crop_select' | 'human_takeover';
+export type ConversationState = 'language_select' | 'main_menu' | 'onboarding_minimal' | 'diagnosis' | 'diagnosis_awaiting_photos' | 'diagnosis_water_volume' | 'root_photos_requested' | 'nutrient_soil_confirm' | 'soil_flow' | 'soil_lab_entry' | 'terminology_clarify' | 'chimb_followup' | 'plot_select' | 'crop_select' | 'playbook_pending' | 'roi_entry' | 'roi_set_pin' | 'roi_edit_pin' | 'roi_edit_amount' | 'farmer_feedback_capture' | 'human_takeover';
 export interface ConversationSession {
     id: string;
     farmer_id: string;

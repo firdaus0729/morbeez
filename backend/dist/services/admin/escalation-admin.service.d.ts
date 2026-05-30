@@ -27,7 +27,7 @@ export declare const escalationAdminService: {
     getById(id: string): Promise<{
         id: any;
         sessionId: any;
-        farmerId: any;
+        farmerId: string;
         farmer: {
             id: unknown;
             name: string;
@@ -72,7 +72,7 @@ export declare const escalationAdminService: {
     }, agentEmail: string): Promise<{
         id: any;
         sessionId: any;
-        farmerId: any;
+        farmerId: string;
         farmer: {
             id: unknown;
             name: string;

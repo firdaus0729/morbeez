@@ -46,6 +46,7 @@ export type ScenarioRouterResult = {
 export declare const whatsappScenarioRouter: {
     askSoilReportConfirmation(phone: string, farmerId: string, lang: AdvisoryLanguage, send: ScenarioSenders): Promise<void>;
     startMinimalOnboarding(phone: string, farmerId: string, lang: AdvisoryLanguage, send: ScenarioSenders): Promise<void>;
+    sendAcreageOnboardingStep(phone: string, lang: AdvisoryLanguage, send: ScenarioSenders): Promise<void>;
     sendPlotPicker(phone: string, farmerId: string, lang: AdvisoryLanguage, send: ScenarioSenders, pendingText?: string): Promise<void>;
     applyPlotSelection(msg: InboundMessage, captured: ScenarioCapture, lang: AdvisoryLanguage, plotId: string, send: ScenarioSenders): Promise<void>;
     tryRoute(msg: InboundMessage, captured: ScenarioCapture, session: ConversationSession, send: ScenarioSenders): Promise<ScenarioRouterResult>;
@@ -55,8 +56,10 @@ export declare const whatsappScenarioRouter: {
         welcomeOverride?: string;
         returningQuickActionsOnly?: boolean;
     }): Promise<void>;
+    showMoreMenu(phone: string, lang: AdvisoryLanguage, send: ScenarioSenders): Promise<void>;
     handleMenuSelection(msg: InboundMessage, captured: ScenarioCapture, lang: AdvisoryLanguage, menuId: string, send: ScenarioSenders): Promise<void>;
     handleSoilAction(msg: InboundMessage, captured: ScenarioCapture, lang: AdvisoryLanguage, action: string, send: ScenarioSenders): Promise<void>;
+    handleSoilLabEntry(msg: InboundMessage, captured: ScenarioCapture, lang: AdvisoryLanguage, text: string, send: ScenarioSenders): Promise<boolean>;
     handleWaterVolume(msg: InboundMessage, captured: ScenarioCapture, lang: AdvisoryLanguage, text: string, send: ScenarioSenders): Promise<boolean>;
     afterDiagnosis(params: {
         phone: string;
@@ -67,6 +70,7 @@ export declare const whatsappScenarioRouter: {
         summary: string;
         send: ScenarioSenders;
         hasProductRecommendations?: boolean;
+        skipNutrientSoilAsk?: boolean;
     }): Promise<void>;
 };
 //# sourceMappingURL=whatsapp-scenario-router.service.d.ts.map

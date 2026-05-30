@@ -125,6 +125,15 @@ const envSchema = z.object({
         .string()
         .transform((v) => v !== 'false')
         .default('true'),
+    ENABLE_WHATSAPP_ROI: z
+        .string()
+        .transform((v) => v !== 'false')
+        .default('true'),
+    /** Evening (6 PM IST) proactive ROI entry buttons for opted-in farmers. */
+    ENABLE_ROI_DAILY_PROMPT: z
+        .string()
+        .transform((v) => v !== 'false')
+        .default('true'),
     AI_ESCALATION_THRESHOLD: z.coerce.number().min(0).max(1).default(0.65),
     AI_DAILY_TEXT_LIMIT_FREE: z.coerce.number().default(10),
     AI_DAILY_TEXT_LIMIT_PREMIUM: z.coerce.number().default(100),

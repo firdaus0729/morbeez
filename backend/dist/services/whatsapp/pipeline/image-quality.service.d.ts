@@ -8,5 +8,5 @@ export type ImageQualityResult = {
 export declare function assessImageBuffer(buffer: Buffer, mimeType?: string): ImageQualityResult;
 export declare function isDuplicateImage(farmerId: string, contentHash: string): Promise<boolean>;
 export declare function recordImageHash(farmerId: string, contentHash: string): Promise<void>;
-export declare function imageQualityMessage(language: string, reason: 'too_small' | 'duplicate' | 'unsupported' | 'low_detail'): string;
+export declare function imageQualityMessage(language: string, reason: 'too_small' | 'duplicate' | 'unsupported' | 'low_detail' | 'blurry' | 'too_dark'): string;
 //# sourceMappingURL=image-quality.service.d.ts.map

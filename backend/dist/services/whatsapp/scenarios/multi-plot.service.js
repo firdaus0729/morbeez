@@ -66,6 +66,17 @@ export const multiPlotService = {
             .maybeSingle();
         return data?.active_block_id ?? data?.active_plot_id ?? null;
     },
+    /** Match a crop slug (e.g. from crop.ginger) to a farm block and persist as active plot. */
+    async setActivePlotByCropSlug(farmerId, cropSlug) {
+        const slug = normalizeCropKey(cropSlug);
+        const plots = await this.listPlots(farmerId);
+        const matched = plots.find((p) => normalizeCropKey(p.crop_type) === slug) ??
+            plots.find((p) => cropMentionedInText(slug, p.crop_type));
+        if (!matched)
+            return null;
+        await this.setActivePlot(farmerId, matched);
+        return matched;
+    },
     async setActivePlot(farmerId, plot) {
         const now = new Date().toISOString();
         await supabase

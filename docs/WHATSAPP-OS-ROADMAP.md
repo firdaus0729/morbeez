@@ -52,6 +52,15 @@ North star: WhatsApp is the farmer relationship + sales CX engine; staff console
 - Terminology resolve → `agronomy_terms` (staff Operations → terminology tasks)
 - Follow-up outcome **improved/partial** → `advisory_reuse_cases` via `learningLoopService`
 
+## Phase 6b — Conversational memory (WhatsApp)
+
+- `backend/src/services/whatsapp/pipeline/farmer-memory.service.ts` — unified crop + plot + `interaction_logs` + session context
+- `backend/src/services/whatsapp/pipeline/agronomy-reply.service.ts` — tank-mix DB → OpenAI with memory (no generic welcome)
+- `whatsapp-conversational.service.ts` — memory-aware prompts; Crop Doctor gets `whatsappContext` from compact history
+- Skip FAQ cache for explicit agronomy questions; image flow respects `knownCropLocked`
+- `farmer-reply-polish.service.ts` — facts-locked OpenAI paraphrase for DB tank-mix + Crop Doctor summaries (`ENABLE_WHATSAPP_REPLY_POLISH`)
+- Farmer memory loads agronomist `verifiedRegionalHints` into Crop Doctor + conversational prompts
+
 ## Phase 6 — Farmer Experience Learning (FEX)
 
 - `supabase/migrations/20260630000000_farmer_experience_learning.sql` — `farmer_advisory_feedback`

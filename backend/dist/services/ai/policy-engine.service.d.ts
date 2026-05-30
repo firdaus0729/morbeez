@@ -17,6 +17,8 @@ export declare const policyEngineService: {
         weatherRiskScore?: number;
         heavyRainLikely?: boolean;
         highHeatLikely?: boolean;
+        /** When farmer sent a crop photo, always deliver AI advisory (do not ask only for clearer photos). */
+        hasImage?: boolean;
     }): PolicyAssessment;
 };
 //# sourceMappingURL=policy-engine.service.d.ts.map

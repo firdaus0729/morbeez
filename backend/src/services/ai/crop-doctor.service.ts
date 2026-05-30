@@ -153,6 +153,7 @@ export const cropDoctorService = {
       voiceTranscript: input.voiceTranscript,
       plantIdSummary,
       farmerHistory,
+      whatsappContext: input.compactHistory,
       verifiedRegionalHints: verifiedRegionalHints ?? undefined,
       language: input.language,
     });

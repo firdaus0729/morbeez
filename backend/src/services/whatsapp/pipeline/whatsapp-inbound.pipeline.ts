@@ -19,10 +19,9 @@ import {
 } from './image-quality.service.js';
 import { aiUsageControlService } from './ai-usage-control.service.js';
 import { faqCacheService } from './faq-cache.service.js';
-import {
-  fetchCompactFarmerContext,
-  formatCompactHistory,
-} from './advisory-context.service.js';
+import { farmerMemoryService } from './farmer-memory.service.js';
+import { tryAgronomyReply } from './agronomy-reply.service.js';
+import { farmerReplyPolishService } from './farmer-reply-polish.service.js';
 import { validateAdvisorySafety } from './safety-validation.service.js';
 import { extractInboundMedia } from './media-extract.service.js';
 import { shopifyLinksService } from '../../shopify/shopify-links.service.js';
@@ -61,15 +60,6 @@ import type { InboundMessage } from './types.js';
 
 const CROP_MEDIA_TYPES = new Set(['image', 'image_message', 'document']);
 const VOICE_TYPES = new Set(['audio', 'voice', 'audio_message']);
-const CROP_HINTS: Array<{ crop: string; terms: string[] }> = [
-  { crop: 'ginger', terms: ['ginger', 'inchi', 'ഇഞ്ചി', 'इंजी', 'અદ્રક', 'अदरक', 'ഇഞ്ചി'] },
-  { crop: 'pepper', terms: ['pepper', 'kurumulaku', 'കുരുമുളക്', 'मिर्च', 'ಕಾಳು ಮೆಣಸು'] },
-  { crop: 'cardamom', terms: ['cardamom', 'elakka', 'ഏലക്ക', 'इलायची', 'ಏಲಕ್ಕಿ'] },
-  { crop: 'banana', terms: ['banana', 'vazha', 'വാഴ', 'केला', 'ಬಾಳೆ'] },
-  { crop: 'turmeric', terms: ['turmeric', 'manjal', 'മഞ്ഞൾ', 'हल्दी', 'ಅರಿಶಿನ'] },
-  { crop: 'coconut', terms: ['coconut', 'thenga', 'തേങ്ങ', 'नारियल', 'ತೆಂಗು'] },
-];
-
 type Senders = {
   text: (phone: string, text: string) => Promise<void>;
   list?: (params: {
@@ -128,72 +118,6 @@ function languageFromSelection(text: string): AdvisoryLanguage | null {
   if (t === 'kannada' || t === 'kn') return 'kn';
   if (t === 'hindi') return 'hi';
   return null;
-}
-
-function inferCropHint(text?: string): string | null {
-  if (!text?.trim()) return null;
-  const lower = text.toLowerCase();
-  for (const entry of CROP_HINTS) {
-    if (entry.terms.some((term) => lower.includes(term.toLowerCase()))) {
-      return entry.crop;
-    }
-  }
-  return null;
-}
-
-async function resolveDiagnosisContext(params: {
-  farmerId: string;
-  symptomsText?: string;
-}): Promise<{
-  activePlotId: string | null;
-  cropType: string;
-  cropStage?: string;
-  compactHistory: string;
-}> {
-  const initialActivePlotId = await multiPlotService.getActivePlotId(params.farmerId);
-  const sessionCtx = await conversationSessionService.getContext(params.farmerId);
-  const hintedCrop = inferCropHint(params.symptomsText);
-  let resolvedActivePlotId = initialActivePlotId;
-
-  if (hintedCrop) {
-    const plots = await multiPlotService.listPlots(params.farmerId);
-    const matched = plots.find((p) => p.crop_type.toLowerCase() === hintedCrop);
-    if (matched) {
-      resolvedActivePlotId = matched.id;
-      await multiPlotService.setActivePlot(params.farmerId, matched);
-    }
-  }
-
-  if (!resolvedActivePlotId && sessionCtx.activeCropType) {
-    const matched = await multiPlotService.setActivePlotByCropSlug(
-      params.farmerId,
-      sessionCtx.activeCropType
-    );
-    if (matched) resolvedActivePlotId = matched.id;
-  }
-
-  const ctx = await fetchCompactFarmerContext(params.farmerId, { activePlotId: resolvedActivePlotId });
-  return {
-    activePlotId: resolvedActivePlotId,
-    cropType: hintedCrop ?? sessionCtx.activeCropType ?? ctx.cropType,
-    cropStage: ctx.cropStage,
-    compactHistory: formatCompactHistory(ctx),
-  };
-}
-
-async function fetchRecentConversationHistory(farmerId: string, limit = 8): Promise<string[]> {
-  const { data } = await supabase
-    .from('interaction_logs')
-    .select('direction, content, created_at')
-    .eq('farmer_id', farmerId)
-    .eq('channel', 'whatsapp')
-    .order('created_at', { ascending: false })
-    .limit(limit);
-  if (!data?.length) return [];
-  return [...data]
-    .reverse()
-    .map((row) => `${row.direction === 'outbound' ? 'Assistant' : 'Farmer'}: ${String(row.content ?? '')}`)
-    .filter((line) => line.trim().length > 0);
 }
 
 async function tryAssessmentPlaybook(params: {
@@ -628,7 +552,12 @@ export const whatsappInboundPipeline = {
       return;
     }
 
-    const faqHit = msg.text ? await faqCacheService.match(msg.text, captured.language) : null;
+    const skipFaqForAgronomy =
+      Boolean(msg.text?.trim()) && isExplicitAgronomyQuestion(msg.text!);
+    const faqHit =
+      msg.text && !skipFaqForAgronomy
+        ? await faqCacheService.match(msg.text, captured.language)
+        : null;
     if (faqHit && !hasCropMedia) {
       await send.text(msg.phone, faqHit);
       return;
@@ -721,16 +650,15 @@ export const whatsappInboundPipeline = {
     senders?: Senders
   ): Promise<void> {
     const plots = await multiPlotService.listPlots(captured.farmerId);
-    const context = await resolveDiagnosisContext({
-      farmerId: captured.farmerId,
+    const memoryPeek = await farmerMemoryService.build(captured.farmerId, {
       symptomsText: msg.text || undefined,
     });
     const willReuse = await aiReuseService.peekMatch({
       farmerId: captured.farmerId,
-      cropType: context.cropType,
+      cropType: memoryPeek.cropType,
       symptomsText: msg.text || undefined,
-      activePlotId: context.activePlotId,
-      compactHistory: context.compactHistory,
+      activePlotId: memoryPeek.activePlotId,
+      compactHistory: farmerMemoryService.formatCompactHistory(memoryPeek),
     });
 
     if (!willReuse) {
@@ -804,11 +732,10 @@ export const whatsappInboundPipeline = {
       return;
     }
 
-    const activePlotId = await multiPlotService.getActivePlotId(captured.farmerId);
-    const sessionCtx = await conversationSessionService.getContext(captured.farmerId);
-    const hasCaptionCrop = Boolean(inferCropHint(msg.text || undefined));
-    const farmerAlreadySelectedCrop =
-      Boolean(activePlotId) || Boolean(sessionCtx.activeCropType) || hasCaptionCrop;
+    const memory = await farmerMemoryService.build(captured.farmerId, {
+      symptomsText: msg.text || undefined,
+    });
+    const farmerAlreadySelectedCrop = memory.knownCropLocked;
 
     if (plots.length <= 1 && !farmerAlreadySelectedCrop && senders) {
       const detected = await cropDetectionService.detectFromImage({
@@ -885,15 +812,29 @@ export const whatsappInboundPipeline = {
 
     const generalAgronomyQuestion = isExplicitAgronomyQuestion(msg.text);
 
+    if (generalAgronomyQuestion || parseProductPairFromText(msg.text)) {
+      const agronomyHandled = await tryAgronomyReply({
+        farmerId: captured.farmerId,
+        phone: captured.phone,
+        language: captured.language,
+        text: msg.text,
+        sendText: (phone, text) => this.sendAndLog(captured.farmerId, phone, text, sendText),
+        farmerName: msg.profileName,
+        isPremium: captured.isPremium,
+      });
+      if (agronomyHandled) return;
+    }
+
     if (env.ENABLE_AI_CROP_DOCTOR && agriDiagnosisIntent) {
-      const activePlotId = await multiPlotService.getActivePlotId(captured.farmerId);
-      const ctxPeek = await fetchCompactFarmerContext(captured.farmerId, { activePlotId });
+      const memory = await farmerMemoryService.build(captured.farmerId, {
+        symptomsText: msg.text,
+      });
       const willReuse = await aiReuseService.peekMatch({
         farmerId: captured.farmerId,
-        cropType: ctxPeek.cropType,
+        cropType: memory.cropType,
         symptomsText: msg.text,
-        activePlotId,
-        compactHistory: formatCompactHistory(ctxPeek),
+        activePlotId: memory.activePlotId,
+        compactHistory: farmerMemoryService.formatCompactHistory(memory),
       });
 
       if (!willReuse) {
@@ -917,7 +858,11 @@ export const whatsappInboundPipeline = {
       return;
     }
 
-    if (whatsappConversationalService.isEnabled() && (generalAgronomyQuestion || msg.text.trim().length >= 15)) {
+    const memory = await farmerMemoryService.build(captured.farmerId, {
+      symptomsText: msg.text,
+    });
+
+    if (whatsappConversationalService.isEnabled() && msg.text.trim().length >= 8) {
       const usage = await aiUsageControlService.checkAndConsume({
         farmerId: captured.farmerId,
         kind: 'text',
@@ -932,7 +877,7 @@ export const whatsappInboundPipeline = {
         userMessage: msg.text,
         language: captured.language,
         farmerName: msg.profileName,
-        conversationHistory: await fetchRecentConversationHistory(captured.farmerId, 10),
+        memory,
       });
       await this.sendAndLog(captured.farmerId, captured.phone, reply, sendText);
       return;
@@ -940,9 +885,7 @@ export const whatsappInboundPipeline = {
 
     await sendText(
       captured.phone,
-      captured.language === 'ml'
-        ? 'നമസ്കാരം! മോർബീസ് ക്രോപ്പ് ഡോക്ടർ. വിളയുടെ ഫോട്ടോ അയയ്ക്കുക അല്ലെങ്കിൽ പ്രശ്നം വിവരിക്കുക.'
-        : 'Hello from Morbeez Crop Doctor! Send a crop photo or describe your crop problem (crop name + symptoms).'
+      farmerMemoryService.memoryAwareFallback(memory, captured.language)
     );
   },
 
@@ -974,23 +917,20 @@ export const whatsappInboundPipeline = {
         params.symptomsText?.trim() ||
         sessCtx.pendingSymptomsText ||
         undefined;
-      const context = await resolveDiagnosisContext({
-        farmerId: params.farmerId,
-        symptomsText,
-      });
+      const memory = await farmerMemoryService.build(params.farmerId, { symptomsText });
       const contextPack = await contextPackService.build(params.farmerId);
 
       const result = await cropDoctorService.diagnose({
         farmerId: params.farmerId,
-        cropType: context.cropType,
-        cropStage: context.cropStage,
+        cropType: memory.cropType,
+        cropStage: memory.cropStage,
         language: params.language,
         symptomsText,
         voiceTranscript: params.voiceTranscript,
         imageBase64: params.imageBase64,
         imageMimeType: params.imageMimeType,
         channel: params.channel ?? 'whatsapp',
-        compactHistory: context.compactHistory,
+        compactHistory: farmerMemoryService.formatCompactHistory(memory),
         contextPack,
       });
       const hasImage = Boolean(params.imageBase64);
@@ -1008,7 +948,7 @@ export const whatsappInboundPipeline = {
       await accuracyMetricsService.logDiagnosisEvent({
         sessionId: result.sessionId,
         farmerId: params.farmerId,
-        cropType: context.cropType,
+        cropType: memory.cropType,
         confidence: result.advisory.confidence,
         escalated: Boolean(result.escalated),
         source: params.channel ?? 'whatsapp',
@@ -1018,7 +958,7 @@ export const whatsappInboundPipeline = {
       await createTelecallerTask({
         farmerId: params.farmerId,
         title: 'Symptom Confirmation Required',
-        notes: `Probable issue: ${result.advisory.probableIssue}; confidence ${Math.round(result.advisory.confidence * 100)}%; crop ${context.cropType}`,
+        notes: `Probable issue: ${result.advisory.probableIssue}; confidence ${Math.round(result.advisory.confidence * 100)}%; crop ${memory.cropType}`,
         priority: assessment.escalationPriority === 'urgent' ? 'urgent' : 'normal',
       });
 
@@ -1026,7 +966,7 @@ export const whatsappInboundPipeline = {
         await createTelecallerTask({
           farmerId: params.farmerId,
           title: 'Symptom confirmation required',
-          notes: `Confidence ${Math.round(result.advisory.confidence * 100)}%, Crop ${context.cropType}, WeatherRisk ${assessment.weatherRiskBand}`,
+          notes: `Confidence ${Math.round(result.advisory.confidence * 100)}%, Crop ${memory.cropType}, WeatherRisk ${assessment.weatherRiskBand}`,
           priority: assessment.escalationPriority === 'urgent' ? 'urgent' : 'high',
         });
         await params.sendText(
@@ -1100,22 +1040,38 @@ export const whatsappInboundPipeline = {
         return;
       }
 
+      const plotPrefix = sessCtx.activePlotLabel ? `📍 ${sessCtx.activePlotLabel}\n\n` : '';
+      const reuseNote = result.reused
+        ? params.language === 'ml'
+          ? '(സമാനമായ മുൻ കേസിൽ നിന്നുള്ള ശുപാർശ)'
+          : '(Similar successful case in your region)'
+        : undefined;
+      const escalateNote = result.escalated
+        ? 'Our agronomist team will review your case shortly.'
+        : undefined;
+      const safetyNote = assessment.safetyNotes.length
+        ? `⚠️ ${assessment.safetyNotes.join(' ')}`
+        : undefined;
+
       let body = localizedSummary(result.advisory, params.language);
-      if (sessCtx.activePlotLabel) {
-        body = `📍 ${sessCtx.activePlotLabel}\n\n${body}`;
+      if (
+        farmerReplyPolishService.isEnabled() &&
+        body?.trim() &&
+        params.channel === 'whatsapp'
+      ) {
+        body = await farmerReplyPolishService.polishDiagnosisSummary({
+          advisory: result.advisory,
+          language: params.language,
+          memory,
+          extraLines: [reuseNote, escalateNote, safetyNote].filter(Boolean) as string[],
+        });
+      } else {
+        if (result.reused && reuseNote) body += `\n\n${reuseNote}`;
+        if (result.escalated && escalateNote) body += `\n\n${escalateNote}`;
+        if (safetyNote) body += `\n\n${safetyNote}`;
       }
-      if (result.reused) {
-        body +=
-          params.language === 'ml'
-            ? '\n\n(സമാനമായ മുൻ കേസിൽ നിന്നുള്ള ശുപാർശ)'
-            : '\n\n(Similar successful case in your region)';
-      }
-      if (result.escalated) {
-        body += '\n\nOur agronomist team will review your case shortly.';
-      }
-      if (assessment.safetyNotes.length) {
-        body += `\n\n⚠️ ${assessment.safetyNotes.join(' ')}`;
-      }
+
+      body = plotPrefix + body;
 
       const productBlock = shopifyLinksService.formatRecommendationsForWhatsApp(
         result.productRecommendations,

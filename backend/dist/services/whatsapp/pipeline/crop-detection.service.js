@@ -1,4 +1,5 @@
 import { env } from '../../../config/env.js';
+import { openaiTokenLimitBody } from '../../ai/providers/openai-chat-params.js';
 import { logger } from '../../../lib/logger.js';
 const OPENAI_BASE = 'https://api.openai.com/v1';
 const SUPPORTED = ['ginger', 'banana', 'cardamom', 'pepper', 'other'];
@@ -29,7 +30,7 @@ export const cropDetectionService = {
                 },
                 body: JSON.stringify({
                     model: env.OPENAI_VISION_MODEL,
-                    max_tokens: 120,
+                    ...openaiTokenLimitBody(env.OPENAI_VISION_MODEL, 120),
                     temperature: 0.1,
                     response_format: { type: 'json_object' },
                     messages: [

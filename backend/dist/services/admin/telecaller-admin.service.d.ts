@@ -57,6 +57,7 @@ export declare const telecallerAdminService: {
     }>;
     getLeadDetail(leadId: string): Promise<{
         lead: {
+            pincode: string | null;
             id: unknown;
             farmerId: unknown;
             intent: unknown;
@@ -87,10 +88,19 @@ export declare const telecallerAdminService: {
             email: null;
             district: {} | null;
             state: {} | null;
+            pincode: string | null;
+            village: string | null;
             language: {};
             territory: string;
             crop: string;
             acreage: string;
+            whatsappSame: boolean;
+            whatsappPhone: string | null;
+            shippingAddress: string | null;
+            deliveryPincode: string | null;
+            roiEnabled: boolean;
+            farmerNotes: string | null;
+            assignedCropAdvisor: string | null;
             farmSize: string;
             irrigation: string;
             soilType: string;
@@ -159,8 +169,26 @@ export declare const telecallerAdminService: {
         cropType?: string;
         district?: string;
         state?: string;
+        whatsappSame?: boolean;
+        whatsappPhone?: string;
+        language?: string;
+        pincode?: string;
+        village?: string;
+        totalAcreage?: number;
+        shippingAddress?: string;
+        deliveryPincode?: string;
+        assignedCropAdvisor?: string;
+        roiEnabled?: boolean;
+        farmerNotes?: string;
+        cropBlocks?: Array<{
+            blockName?: string;
+            cropName: string;
+            acreage?: number;
+            plantingDate?: string;
+        }>;
     }, agentEmail: string): Promise<{
         lead: {
+            pincode: string | null;
             id: unknown;
             farmerId: unknown;
             intent: unknown;
@@ -191,10 +219,19 @@ export declare const telecallerAdminService: {
             email: null;
             district: {} | null;
             state: {} | null;
+            pincode: string | null;
+            village: string | null;
             language: {};
             territory: string;
             crop: string;
             acreage: string;
+            whatsappSame: boolean;
+            whatsappPhone: string | null;
+            shippingAddress: string | null;
+            deliveryPincode: string | null;
+            roiEnabled: boolean;
+            farmerNotes: string | null;
+            assignedCropAdvisor: string | null;
             farmSize: string;
             irrigation: string;
             soilType: string;
@@ -262,6 +299,7 @@ export declare const telecallerAdminService: {
         priority?: string;
     }, agentEmail: string): Promise<{
         lead: {
+            pincode: string | null;
             id: unknown;
             farmerId: unknown;
             intent: unknown;
@@ -292,10 +330,19 @@ export declare const telecallerAdminService: {
             email: null;
             district: {} | null;
             state: {} | null;
+            pincode: string | null;
+            village: string | null;
             language: {};
             territory: string;
             crop: string;
             acreage: string;
+            whatsappSame: boolean;
+            whatsappPhone: string | null;
+            shippingAddress: string | null;
+            deliveryPincode: string | null;
+            roiEnabled: boolean;
+            farmerNotes: string | null;
+            assignedCropAdvisor: string | null;
             farmSize: string;
             irrigation: string;
             soilType: string;
@@ -357,6 +404,7 @@ export declare const telecallerAdminService: {
     }>;
     addNote(leadId: string, note: string, agentEmail: string): Promise<{
         lead: {
+            pincode: string | null;
             id: unknown;
             farmerId: unknown;
             intent: unknown;
@@ -387,10 +435,19 @@ export declare const telecallerAdminService: {
             email: null;
             district: {} | null;
             state: {} | null;
+            pincode: string | null;
+            village: string | null;
             language: {};
             territory: string;
             crop: string;
             acreage: string;
+            whatsappSame: boolean;
+            whatsappPhone: string | null;
+            shippingAddress: string | null;
+            deliveryPincode: string | null;
+            roiEnabled: boolean;
+            farmerNotes: string | null;
+            assignedCropAdvisor: string | null;
             farmSize: string;
             irrigation: string;
             soilType: string;
@@ -463,6 +520,7 @@ export declare const telecallerAdminService: {
         durationSeconds?: number;
     }, agentEmail: string): Promise<{
         lead: {
+            pincode: string | null;
             id: unknown;
             farmerId: unknown;
             intent: unknown;
@@ -493,10 +551,19 @@ export declare const telecallerAdminService: {
             email: null;
             district: {} | null;
             state: {} | null;
+            pincode: string | null;
+            village: string | null;
             language: {};
             territory: string;
             crop: string;
             acreage: string;
+            whatsappSame: boolean;
+            whatsappPhone: string | null;
+            shippingAddress: string | null;
+            deliveryPincode: string | null;
+            roiEnabled: boolean;
+            farmerNotes: string | null;
+            assignedCropAdvisor: string | null;
             farmSize: string;
             irrigation: string;
             soilType: string;

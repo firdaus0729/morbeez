@@ -4,6 +4,7 @@ import { NotFoundError, ValidationError } from '../../lib/errors.js';
 import { shopifyProductsService } from '../shopify/shopify.products.service.js';
 import { crmInternalNotesService } from './crm-internal-notes.service.js';
 import { recommendationFollowUpService } from '../core/recommendation-follow-up.service.js';
+import { emptySoilLabMetrics, normalizeSoilMetrics } from '../soil/soil-lab-metrics.js';
 function formatDateTime(iso) {
     if (!iso)
         return null;
@@ -91,14 +92,18 @@ export const crmFarmerService = {
         return mapBlock(data);
     },
     async createBlock(farmerId, input) {
+        const cropName = input.cropName?.trim();
+        const cropType = cropName ? cropName.toLowerCase().replace(/\s+/g, '_') : null;
         const { data, error } = await supabase
             .from('farm_blocks')
             .insert({
             farmer_id: farmerId,
             name: input.name,
+            plot_label: input.name,
             area: input.area,
             crop_id: input.cropId,
-            crop_name: input.cropName,
+            crop_name: cropName,
+            crop_type: cropType,
             variety_id: input.varietyId,
             variety_name: input.varietyName,
             irrigation_type_id: input.irrigationTypeId,
@@ -114,9 +119,11 @@ export const crmFarmerService = {
     async updateBlock(blockId, patch) {
         const allowed = [
             'name',
+            'plot_label',
             'area',
             'crop_id',
             'crop_name',
+            'crop_type',
             'variety_id',
             'variety_name',
             'irrigation_type_id',
@@ -183,7 +190,7 @@ export const crmFarmerService = {
             soilReports: soilList.map((s) => ({
                 id: s.id,
                 reportedLabel: formatDateTime(s.reported_at),
-                metrics: s.metrics,
+                metrics: normalizeSoilMetrics(s.metrics),
                 pdfUrl: s.pdf_url,
             })),
             visits,
@@ -203,8 +210,12 @@ export const crmFarmerService = {
                 nextStage: 'Flowering',
             },
             soilReport: latestSoil
-                ? { metrics: latestSoil.metrics, pdfUrl: latestSoil.pdf_url, reportedLabel: formatDateTime(latestSoil.reported_at) }
-                : defaultSoilMetrics(),
+                ? {
+                    metrics: normalizeSoilMetrics(latestSoil.metrics),
+                    pdfUrl: latestSoil.pdf_url,
+                    reportedLabel: formatDateTime(latestSoil.reported_at),
+                }
+                : { metrics: emptySoilLabMetrics(), pdfUrl: null, reportedLabel: null },
             latestVisit: latestVisit ? mapFinding(latestVisit) : null,
             recommendations: recommendations.map(mapRecommendation),
             timeline: await this.blockTimeline(farmerId, blockId),
@@ -269,7 +280,9 @@ export const crmFarmerService = {
             .insert({
             farmer_id: farmerId,
             block_id: input.blockId,
-            metrics: input.metrics ?? defaultSoilMetrics().metrics,
+            metrics: (input.metrics
+                ? normalizeSoilMetrics(input.metrics)
+                : emptySoilLabMetrics()),
             pdf_url: input.pdfUrl,
             uploaded_by: input.uploadedBy,
         })
@@ -328,13 +341,214 @@ export const crmFarmerService = {
             pagination: { page, limit, total: count ?? 0, pages: Math.max(1, Math.ceil((count ?? 0) / limit)) },
         };
     },
+    /** Telecaller CRM tab — human/agronomist activity only (no raw WhatsApp chat logs). */
+    async listHumanCrmInteractions(farmerId, leadId, page = 1, limit = 40) {
+        const items = [];
+        const [logsRes, callsRes, tasksRes, recsRes, visitsRes, followUpsRes, recRecordsRes] = await Promise.all([
+            supabase
+                .from('interaction_logs')
+                .select('*')
+                .eq('farmer_id', farmerId)
+                .neq('channel', 'whatsapp')
+                .or('status.is.null,status.neq.archived')
+                .order('created_at', { ascending: false })
+                .limit(80),
+            supabase
+                .from('crm_call_logs')
+                .select('*')
+                .eq('farmer_id', farmerId)
+                .order('created_at', { ascending: false })
+                .limit(40),
+            supabase
+                .from('crm_tasks')
+                .select('*')
+                .eq('farmer_id', farmerId)
+                .order('created_at', { ascending: false })
+                .limit(40),
+            supabase
+                .from('crm_recommendations')
+                .select('*, farm_blocks(name, crop_name)')
+                .eq('farmer_id', farmerId)
+                .neq('status', 'archived')
+                .order('created_at', { ascending: false })
+                .limit(40),
+            supabase
+                .from('crm_field_findings')
+                .select('*')
+                .eq('farmer_id', farmerId)
+                .is('archived_at', null)
+                .order('visited_at', { ascending: false })
+                .limit(40),
+            supabase
+                .from('recommendation_follow_ups')
+                .select('*, recommendation_records(issue_detected, trade_name, technical_name)')
+                .eq('farmer_id', farmerId)
+                .order('created_at', { ascending: false })
+                .limit(60),
+            supabase
+                .from('recommendation_records')
+                .select('id, created_at, communicated_at, issue_detected, trade_name, application_status, status')
+                .eq('farmer_id', farmerId)
+                .not('communicated_at', 'is', null)
+                .order('communicated_at', { ascending: false })
+                .limit(30),
+        ]);
+        throwIfSupabaseError(logsRes.error, 'Could not load interactions');
+        throwIfSupabaseError(callsRes.error, 'Could not load calls');
+        throwIfSupabaseError(tasksRes.error, 'Could not load tasks');
+        for (const r of logsRes.data ?? []) {
+            const ch = String(r.channel ?? '').toLowerCase();
+            if (ch === 'whatsapp' || ch === 'call')
+                continue;
+            const content = String(r.content ?? r.summary ?? '');
+            if (/roi daily prompt|roi\.finish/i.test(content))
+                continue;
+            const mapped = mapInteraction(r);
+            items.push({
+                id: String(r.id),
+                at: String(r.created_at),
+                interactionType: mapped.typeLabel,
+                summary: String(mapped.summary || content).slice(0, 200),
+                status: mapped.status,
+                by: String(mapped.by),
+                role: String(mapped.role),
+                createdLabel: mapped.atLabel ?? formatDateTime(r.created_at) ?? '',
+                source: 'log',
+                canArchive: true,
+            });
+        }
+        for (const c of callsRes.data ?? []) {
+            if (leadId && c.lead_id && String(c.lead_id) !== leadId)
+                continue;
+            items.push({
+                id: `call-${c.id}`,
+                at: String(c.created_at),
+                interactionType: 'Telecaller conversation done',
+                summary: `Phone call — ${c.outcome ?? 'completed'}${c.notes ? `: ${String(c.notes).slice(0, 100)}` : ''}`,
+                status: 'Completed',
+                by: String(c.agent_email ?? 'Telecaller'),
+                role: 'Telecaller',
+                createdLabel: formatDateTime(c.created_at) ?? '',
+                source: 'call',
+                canArchive: false,
+            });
+        }
+        for (const t of tasksRes.data ?? []) {
+            if (leadId && t.lead_id && String(t.lead_id) !== leadId)
+                continue;
+            const completed = String(t.status ?? '') === 'completed';
+            const at = completed && t.updated_at ? String(t.updated_at) : String(t.created_at);
+            items.push({
+                id: `task-${t.id}-${completed ? 'done' : 'created'}`,
+                at,
+                interactionType: completed ? 'Follow-up done' : 'Follow-up created',
+                summary: String(t.title ?? 'Follow-up task'),
+                status: completed ? 'Completed' : String(t.status ?? 'Pending'),
+                by: String(t.assigned_to ?? 'Telecaller'),
+                role: 'Telecaller',
+                createdLabel: formatDateTime(at) ?? '',
+                source: 'task',
+                canArchive: false,
+            });
+        }
+        for (const r of recsRes.data ?? []) {
+            const block = r.farm_blocks;
+            const blockLabel = block?.name ?? block?.crop_name ?? '';
+            const baseSummary = String(r.recommendation ?? r.problem ?? 'Product recommendation');
+            items.push({
+                id: `crm-rec-${r.id}`,
+                at: String(r.created_at),
+                interactionType: 'Recommendation given',
+                summary: `${baseSummary.slice(0, 180)}${blockLabel ? ` · ${blockLabel}` : ''}`,
+                status: String(r.status ?? 'active'),
+                by: String(r.recommended_by ?? 'Agronomist'),
+                role: 'Agronomist',
+                createdLabel: formatDateTime(r.created_at) ?? '',
+                source: 'recommendation',
+                canArchive: false,
+            });
+        }
+        for (const v of visitsRes.data ?? []) {
+            items.push({
+                id: `visit-${v.id}`,
+                at: String(v.visited_at ?? v.created_at),
+                interactionType: 'Agronomist field visit arranged',
+                summary: String(v.observations ?? v.disease_pest ?? 'Field visit completed').slice(0, 200),
+                status: 'Completed',
+                by: String(v.agronomist_name ?? 'Agronomist'),
+                role: 'Agronomist',
+                createdLabel: formatDateTime((v.visited_at ?? v.created_at)) ?? '',
+                source: 'visit',
+                canArchive: false,
+            });
+        }
+        for (const rec of recRecordsRes.data ?? []) {
+            const issue = rec.issue_detected ?? rec.trade_name ?? 'Crop advisory';
+            items.push({
+                id: `rec-wa-${rec.id}`,
+                at: String(rec.communicated_at),
+                interactionType: 'Recommendation given via WhatsApp',
+                summary: String(issue).slice(0, 200),
+                status: String(rec.application_status ?? rec.status ?? 'sent'),
+                by: 'Crop Doctor',
+                role: 'System',
+                createdLabel: formatDateTime(rec.communicated_at) ?? '',
+                source: 'rec_record',
+                canArchive: false,
+            });
+        }
+        for (const f of followUpsRes.data ?? []) {
+            const at = String(f.responded_at ?? f.sent_at ?? f.scheduled_at ?? f.created_at);
+            const response = f.farmer_response ? String(f.farmer_response) : null;
+            const recMeta = f.recommendation_records;
+            const product = recMeta?.trade_name ?? recMeta?.technical_name ?? recMeta?.issue_detected ?? '';
+            let interactionType = followUpPhaseLabel(String(f.phase), response);
+            let summary = product || 'Recommendation follow-up';
+            if (response === 'yes_applied') {
+                interactionType = 'Farmer applied fertigation / spray';
+                summary = product ? `Confirmed applied: ${product}` : 'Farmer confirmed application';
+            }
+            else if (response === 'not_yet') {
+                summary = product ? `Not yet applied: ${product}` : 'Farmer has not applied yet';
+            }
+            else if (response === 'need_clarification') {
+                summary = product ? `Needs clarification: ${product}` : 'Farmer asked for clarification';
+            }
+            else if (response === 'improved' || response === 'no_improvement' || response === 'worsened') {
+                interactionType = 'Follow-up outcome recorded';
+                summary = `Result: ${response.replace(/_/g, ' ')}${product ? ` — ${product}` : ''}`;
+            }
+            items.push({
+                id: `follow-${f.id}`,
+                at,
+                interactionType,
+                summary: summary.slice(0, 200),
+                status: String(f.status ?? 'sent'),
+                by: response ? 'Farmer' : 'System',
+                role: response ? 'Farmer' : 'WhatsApp',
+                createdLabel: formatDateTime(at) ?? '',
+                source: 'follow_up',
+                canArchive: false,
+            });
+        }
+        items.sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime());
+        const from = (page - 1) * limit;
+        const pageItems = items.slice(from, from + limit);
+        return {
+            interactions: pageItems,
+            pagination: {
+                page,
+                limit,
+                total: items.length,
+                pages: Math.max(1, Math.ceil(items.length / limit)),
+            },
+        };
+    },
     async createInteraction(farmerId, leadId, input) {
         const channel = input.channel ??
-            (input.interactionType.toLowerCase().includes('whatsapp')
-                ? 'whatsapp'
-                : input.interactionType.toLowerCase().includes('call')
-                    ? 'call'
-                    : 'note');
+            (input.interactionType.toLowerCase().includes('call')
+                ? 'call'
+                : 'crm');
         const { data, error } = await supabase
             .from('interaction_logs')
             .insert({
@@ -877,6 +1091,18 @@ function mapRecommendation(r) {
         recType: r.rec_type,
     };
 }
+function followUpPhaseLabel(phase, response) {
+    const p = phase.toLowerCase();
+    if (response === 'yes_applied')
+        return 'Farmer applied fertigation / spray';
+    if (p === 'application_check')
+        return 'Application check (WhatsApp)';
+    if (p === 'application_reminder')
+        return 'Application reminder (WhatsApp)';
+    if (p === 'outcome_check')
+        return 'Outcome check (WhatsApp)';
+    return 'Recommendation follow-up';
+}
 function mapInteraction(r) {
     const type = String(r.interaction_type ?? r.channel ?? 'Note');
     const toneMap = {
@@ -935,19 +1161,5 @@ function defaultAgronomist(farmerId) {
         last_review_at: new Date().toISOString(),
         next_visit_at: new Date(Date.now() + 3 * 86400000).toISOString(),
     }, farmerId);
-}
-function defaultSoilMetrics() {
-    return {
-        metrics: {
-            ph: { value: '6.2', status: 'Good' },
-            ec: { value: '0.42 dS/m', status: 'Normal' },
-            organicCarbon: { value: '0.54%', status: 'Low' },
-            nitrogen: { value: '245 kg/ha', status: 'Normal' },
-            phosphorus: { value: '18 kg/ha', status: 'Good' },
-            potassium: { value: '180 kg/ha', status: 'Good' },
-        },
-        reportedLabel: null,
-        pdfUrl: null,
-    };
 }
 //# sourceMappingURL=crm-farmer.service.js.map

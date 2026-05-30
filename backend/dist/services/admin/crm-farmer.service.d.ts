@@ -147,7 +147,7 @@ export declare const crmFarmerService: {
         soilReports: {
             id: any;
             reportedLabel: string | null;
-            metrics: any;
+            metrics: import("../soil/soil-lab-metrics.js").SoilLabMetrics;
             pdfUrl: any;
         }[];
         visits: {
@@ -196,7 +196,7 @@ export declare const crmFarmerService: {
             nextStage: string;
         };
         soilReport: {
-            metrics: any;
+            metrics: import("../soil/soil-lab-metrics.js").SoilLabMetrics;
             pdfUrl: any;
             reportedLabel: string | null;
         };
@@ -314,6 +314,27 @@ export declare const crmFarmerService: {
             status: string;
             statusTone: string;
             block: string;
+        }[];
+        pagination: {
+            page: number;
+            limit: number;
+            total: number;
+            pages: number;
+        };
+    }>;
+    /** Telecaller CRM tab — human/agronomist activity only (no raw WhatsApp chat logs). */
+    listHumanCrmInteractions(farmerId: string, leadId: string | null, page?: number, limit?: number): Promise<{
+        interactions: {
+            id: string;
+            at: string;
+            interactionType: string;
+            summary: string;
+            status: string;
+            by: string;
+            role: string;
+            createdLabel: string;
+            source: "log" | "call" | "task" | "recommendation" | "visit" | "follow_up" | "rec_record";
+            canArchive: boolean;
         }[];
         pagination: {
             page: number;

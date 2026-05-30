@@ -34,7 +34,7 @@ export declare const whatsappInboundPipeline: {
         phone: string;
         language: AdvisoryLanguage;
         isPremium: boolean;
-    }, sendText: (phone: string, text: string) => Promise<void>): Promise<void>;
+    }, sendText: (phone: string, text: string) => Promise<void>, send?: Senders): Promise<void>;
     processImage(msg: InboundMessage, captured: {
         farmerId: string;
         phone: string;

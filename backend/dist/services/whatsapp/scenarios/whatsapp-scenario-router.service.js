@@ -1,11 +1,15 @@
 import { supabase } from '../../../lib/supabase.js';
 import { logger } from '../../../lib/logger.js';
 import { conversationSessionService, } from '../conversation-session.service.js';
-import { mainMenuCopy } from './whatsapp-menu.service.js';
+import { mainMenuCopy, moreMenuCopy, normalizeMenuId } from './whatsapp-menu.service.js';
+import { previousRecommendationsService } from './previous-recommendations.service.js';
+import { roiFlowService } from '../roi/roi-flow.service.js';
+import { ledgerSummaryService } from '../roi/ledger-summary.service.js';
 import { t } from './whatsapp-flow-copy.js';
 import { weatherAlertsService } from './weather-alerts.service.js';
 import { dailyPricesService } from './daily-prices.service.js';
 import { soilFlowService } from './soil-flow.service.js';
+import { nutrientSoilGateService, suggestsNutrientDeficiency, } from './nutrient-soil-gate.service.js';
 import { callbackFlowService } from './callback-flow.service.js';
 import { terminologyService } from './terminology.service.js';
 import { diagnosisFlowService } from './diagnosis-flow.service.js';
@@ -19,17 +23,26 @@ import { createTelecallerTask } from '../pipeline/telecaller-tasks.service.js';
 import { cropSelectionService } from './crop-selection.service.js';
 import { farmerPurgeService } from '../../farmer/farmer-purge.service.js';
 import { blockService } from '../../core/block.service.js';
-import { onboardingFlowService, plantingDatePrompt } from './onboarding-flow.service.js';
+import { invalidPincodeReply, onboardingFlowService, parsePincodeInput, pincodePrompt, pincodeSavedReply, plantingDatePrompt, } from './onboarding-flow.service.js';
+import { pincodeService } from '../../core/pincode.service.js';
 import { recommendationFollowUpService } from '../../core/recommendation-follow-up.service.js';
 import { returnUserGreetingService } from './return-user-greeting.service.js';
+import { farmerFeedbackFlowService } from './farmer-feedback-flow.service.js';
+import { isExplicitAgronomyQuestion } from '../pipeline/agriculture-free-text.service.js';
+import { tryAgronomyReply } from '../pipeline/agronomy-reply.service.js';
 const CROP_MEDIA = new Set(['image', 'image_message', 'document']);
 const MENU_IDS = new Set([
+    'menu.crop_assessment',
     'menu.diagnosis',
     'menu.track_order',
     'menu.weather',
     'menu.prices',
     'menu.soil',
     'menu.expert',
+    'menu.more',
+    'menu.prev_recommendations',
+    'menu.roi_tracker',
+    'menu.ledger',
 ]);
 const ACREAGE_IDS = new Set(['acreage.0_1', 'acreage.2_5', 'acreage.5_plus']);
 const SOIL_CONFIRM_IDS = new Set(['soil.confirm_yes', 'soil.confirm_no']);
@@ -51,8 +64,14 @@ function resolveMenuAction(text) {
         return 'menu.weather';
     if (/^(market price|prices|price|വില|விலை|ಬೆಲೆ|भाव)$/i.test(lower))
         return 'menu.prices';
-    if (/^(diagnosis|രോഗനിർണയം|நோய்|ರೋಗ|रोग)/i.test(lower))
-        return 'menu.diagnosis';
+    if (/^(crop assessment|diagnosis|രോഗനിർണയം|நோய்|ರೋಗ|रोग)/i.test(lower))
+        return 'menu.crop_assessment';
+    if (/^more$/i.test(lower))
+        return 'menu.more';
+    if (/^(roi|ledger|farm ledger)/i.test(lower))
+        return lower.includes('ledger') ? 'menu.ledger' : 'menu.roi_tracker';
+    if (/^(previous|past).*(recommend|advice|ശുപാർശ)/i.test(lower))
+        return 'menu.prev_recommendations';
     if (/^(track order|order track|ഓർഡർ|ஆர்டர்|ಆರ್ಡರ್|ऑर्डर)/i.test(lower))
         return 'menu.track_order';
     if (/^(call back|callback|കോൾബാക്ക്|கால்பேக்|ಕಾಲ್|कॉलबैक)/i.test(lower))
@@ -114,8 +133,8 @@ function parsePlantingDateDDMMYYYY(text) {
 export const whatsappScenarioRouter = {
     async askSoilReportConfirmation(phone, farmerId, lang, send) {
         const body = lang === 'ml'
-            ? 'കൂടുതൽ സ്ഥിരീകരണത്തിന് മണ്ണ് പരിശോധന റിപ്പോർട്ട് ഉണ്ടോ?'
-            : 'For further confirmation, do you have a soil test report?';
+            ? 'വളം ശുപാർശയ്ക്ക് മുമ്പ്: മണ്ണ് പരിശോധന റിപ്പോർട്ട് (PDF/ഫോട്ടോ) ഉണ്ടോ?'
+            : 'Before fertilizer advice: do you have a soil test report (PDF or photo)?';
         const options = [
             { id: 'soil.confirm_yes', title: 'Yes' },
             { id: 'soil.confirm_no', title: 'No' },
@@ -144,9 +163,13 @@ export const whatsappScenarioRouter = {
         await blockService.ensureDefaultBlock(farmerId);
         await conversationSessionService.patchContext(farmerId, {
             onboardingComplete: false,
-            onboardingStep: 'acreage',
+            onboardingStep: 'pincode',
             onboardingAcreageBucket: undefined,
         });
+        await conversationSessionService.setState(farmerId, 'onboarding_minimal');
+        await send.text(phone, pincodePrompt(lang));
+    },
+    async sendAcreageOnboardingStep(phone, lang, send) {
         const copy = lang === 'ml'
             ? 'എത്ര ഏക്കർ കൃഷിയുണ്ട്?'
             : 'How many acres are under cultivation?';
@@ -155,7 +178,6 @@ export const whatsappScenarioRouter = {
             { id: 'acreage.2_5', title: '2-5 acre' },
             { id: 'acreage.5_plus', title: '5+ acre' },
         ];
-        await conversationSessionService.setState(farmerId, 'onboarding_minimal');
         if (send.list) {
             await send.list({
                 phone,
@@ -238,10 +260,48 @@ export const whatsappScenarioRouter = {
         }
         // Scenario 44 — always use stored language
         captured.language = lang;
+        const roiStates = new Set(['roi_entry', 'roi_set_pin', 'roi_edit_pin', 'roi_edit_amount']);
+        if (roiStates.has(session.state) || roiFlowService.isRoiButton(text)) {
+            const roiHandled = await roiFlowService.tryHandleInbound({
+                farmerId: captured.farmerId,
+                phone: msg.phone,
+                language: lang,
+                text,
+                send,
+                sessionState: session.state,
+            });
+            if (roiHandled)
+                return { handled: true };
+        }
         if (text && isFarmerResetCommand(text)) {
             await farmerPurgeService.purgeByPhone(captured.phone);
             await send.text(msg.phone, farmerResetAck(lang));
             return { handled: true };
+        }
+        if (session.state === 'farmer_feedback_capture') {
+            const capturedFb = await farmerFeedbackFlowService.tryHandleCapture({
+                farmerId: captured.farmerId,
+                phone: msg.phone,
+                lang,
+                text,
+                send,
+            });
+            if (capturedFb)
+                return { handled: true };
+        }
+        if (text &&
+            (text === 'feedback.disagree' || farmerFeedbackFlowService.isDisagreementIntent(text))) {
+            const canStart = await farmerFeedbackFlowService.canStartDisagreement(captured.farmerId);
+            if (canStart?.sessionId) {
+                await farmerFeedbackFlowService.startFlow({
+                    farmerId: captured.farmerId,
+                    phone: msg.phone,
+                    lang,
+                    send,
+                    initialText: text === 'feedback.disagree' ? undefined : text,
+                });
+                return { handled: true };
+            }
         }
         // Recommendation follow-up buttons (application + Day-5 outcome)
         if (text?.startsWith('rec.')) {
@@ -337,6 +397,24 @@ export const whatsappScenarioRouter = {
                 await send.text(msg.phone, onboardingFlowService.currentStepPrompt(ctx.onboardingStep, lang));
                 return { handled: true };
             }
+            if (ctx.onboardingStep === 'pincode') {
+                const pc = text ? parsePincodeInput(text) : null;
+                if (!pc) {
+                    await send.text(msg.phone, invalidPincodeReply(lang));
+                    return { handled: true };
+                }
+                const row = await pincodeService.assignFarmerPincode(captured.farmerId, pc);
+                if (!row) {
+                    await send.text(msg.phone, invalidPincodeReply(lang));
+                    return { handled: true };
+                }
+                await conversationSessionService.patchContext(captured.farmerId, {
+                    onboardingStep: 'acreage',
+                });
+                await send.text(msg.phone, pincodeSavedReply(lang, row.district, row.state));
+                await this.sendAcreageOnboardingStep(msg.phone, lang, send);
+                return { handled: true };
+            }
             if (ctx.onboardingStep === 'acreage' || ACREAGE_IDS.has(text)) {
                 const bucket = parseAcreageBucket(text);
                 if (!bucket) {
@@ -422,9 +500,7 @@ export const whatsappScenarioRouter = {
                     .eq('id', primary.id)
                     .eq('farmer_id', captured.farmerId);
                 await onboardingFlowService.markComplete(captured.farmerId);
-                await send.text(msg.phone, lang === 'ml'
-                    ? 'നന്ദി! ഓൺബോർഡിംഗ് പൂർത്തിയായി.\n\nഇപ്പോൾ രോഗനിർണയത്തിനായി ചിത്രം അയയ്ക്കുക, അല്ലെങ്കിൽ *menu* ടൈപ്പ് ചെയ്യുക.'
-                    : 'Thank you! Onboarding is complete.\n\nYou can send a crop photo for diagnosis, or type *menu* for options.');
+                await this.showMainMenu(msg.phone, lang, send);
                 return { handled: true };
             }
             if (text || CROP_MEDIA.has(msg.msgType)) {
@@ -433,6 +509,33 @@ export const whatsappScenarioRouter = {
             }
         }
         if (session.state === 'nutrient_soil_confirm' || SOIL_CONFIRM_IDS.has(text)) {
+            if (CROP_MEDIA.has(msg.msgType) || msg.msgType === 'document') {
+                await nutrientSoilGateService.markSoilReportReceived(captured.farmerId);
+                await send.text(msg.phone, soilFlowService.reportReceivedReply(lang));
+                const delivered = await nutrientSoilGateService.deliverPending({
+                    farmerId: captured.farmerId,
+                    phone: msg.phone,
+                    language: lang,
+                    sendText: send.text,
+                    extraFooter: lang === 'ml'
+                        ? 'മണ്ണ് റിപ്പോർട്ട് ലഭിച്ചു — ഈ മാർഗ്ഗനിർദേശം അതിനെ അടിസ്ഥാനമാക്കി ക്രമീകരിക്കാം.'
+                        : 'Soil report received — we can refine this advice with your lab values.',
+                });
+                if (delivered) {
+                    await this.afterDiagnosis({
+                        phone: msg.phone,
+                        farmerId: captured.farmerId,
+                        lang,
+                        sessionId: delivered.sessionId,
+                        advisory: delivered.advisory,
+                        summary: delivered.summary,
+                        send,
+                        skipNutrientSoilAsk: true,
+                    });
+                }
+                await conversationSessionService.setState(captured.farmerId, 'main_menu');
+                return { handled: true };
+            }
             const normalized = text.trim().toLowerCase();
             if (normalized === 'soil.confirm_yes' ||
                 /^yes$/i.test(normalized) ||
@@ -454,6 +557,28 @@ export const whatsappScenarioRouter = {
                     hi: 'कोई समस्या नहीं। पुष्टि के लिए आप सैंपल हमें भेज सकते हैं।\n\nMorbeez\nSulthan Bathery\nWayanad - 673592',
                 };
                 await send.text(msg.phone, noReportAddress[lang] ?? noReportAddress.en);
+                const noReportFooter = lang === 'ml'
+                    ? 'മണ്ണ് റിപ്പോർട്ട് ഇല്ലാതെ: താഴെ പൊതു മാർഗ്ഗനിർദേശം മാത്രം (സ്ഥിരീകരണം ആവശ്യം).'
+                    : 'Without a soil report: general guidance only (needs confirmation).';
+                const delivered = await nutrientSoilGateService.deliverPending({
+                    farmerId: captured.farmerId,
+                    phone: msg.phone,
+                    language: lang,
+                    sendText: send.text,
+                    extraFooter: noReportFooter,
+                });
+                if (delivered) {
+                    await this.afterDiagnosis({
+                        phone: msg.phone,
+                        farmerId: captured.farmerId,
+                        lang,
+                        sessionId: delivered.sessionId,
+                        advisory: delivered.advisory,
+                        summary: delivered.summary,
+                        send,
+                        skipNutrientSoilAsk: true,
+                    });
+                }
                 await conversationSessionService.setState(captured.farmerId, 'main_menu');
                 return { handled: true };
             }
@@ -541,12 +666,26 @@ export const whatsappScenarioRouter = {
             if (pick.kind === 'custom') {
                 await cropSelectionService.registerCustomCrop(captured.farmerId, pick.label);
             }
-            await cropSelectionService.applyCropToPrimaryBlock(captured.farmerId, pick.slug, pick.kind === 'custom' ? pick.label : undefined);
+            const cropSlug = pick.slug;
+            const cropLabel = pick.kind === 'custom' ? pick.label : undefined;
+            let plot = await multiPlotService.setActivePlotByCropSlug(captured.farmerId, cropSlug);
+            if (!plot) {
+                await cropSelectionService.applyCropToPrimaryBlock(captured.farmerId, cropSlug, cropLabel);
+                plot = await multiPlotService.setActivePlotByCropSlug(captured.farmerId, cropSlug);
+                if (!plot) {
+                    const allPlots = await multiPlotService.listPlots(captured.farmerId);
+                    if (allPlots[0]) {
+                        await multiPlotService.setActivePlot(captured.farmerId, allPlots[0]);
+                        plot = allPlots[0];
+                    }
+                }
+            }
             await conversationSessionService.patchContext(captured.farmerId, {
                 pendingCropSelection: false,
                 onboardingStep: undefined,
+                activeCropType: cropSlug,
+                activePlotLabel: plot?.plot_label ?? (plot ? `${plot.crop_type} plot` : undefined),
             });
-            await conversationSessionService.clearActivePlot(captured.farmerId);
             await conversationSessionService.setState(captured.farmerId, 'diagnosis_awaiting_photos');
             await send.text(msg.phone, t('diagnosisPrompt', lang));
             return { handled: true };
@@ -567,8 +706,9 @@ export const whatsappScenarioRouter = {
                 await conversationSessionService.patchContext(captured.farmerId, {
                     pendingCropSelection: false,
                     onboardingStep: undefined,
+                    activeCropType: custom.slug,
                 });
-                await conversationSessionService.clearActivePlot(captured.farmerId);
+                await multiPlotService.setActivePlotByCropSlug(captured.farmerId, custom.slug);
                 await conversationSessionService.setState(captured.farmerId, 'diagnosis_awaiting_photos');
                 await send.text(msg.phone, t('diagnosisPrompt', lang));
             }
@@ -577,7 +717,11 @@ export const whatsappScenarioRouter = {
         if (ctxCrop.pendingCropSelection && !ctxCrop.onboardingStep && text && !text.startsWith('crop.')) {
             const custom = await cropSelectionService.registerCustomCrop(captured.farmerId, text);
             await cropSelectionService.applyCropToPrimaryBlock(captured.farmerId, custom.slug, custom.label);
-            await conversationSessionService.patchContext(captured.farmerId, { pendingCropSelection: false });
+            await multiPlotService.setActivePlotByCropSlug(captured.farmerId, custom.slug);
+            await conversationSessionService.patchContext(captured.farmerId, {
+                pendingCropSelection: false,
+                activeCropType: custom.slug,
+            });
             await conversationSessionService.setState(captured.farmerId, 'diagnosis_awaiting_photos');
             await send.text(msg.phone, t('diagnosisPrompt', lang));
             return { handled: true };
@@ -621,7 +765,7 @@ export const whatsappScenarioRouter = {
         // Main menu selection (list/button ids or typed labels like "Weather")
         const menuAction = resolveMenuAction(text);
         if (menuAction) {
-            await this.handleMenuSelection(msg, captured, lang, menuAction, send);
+            await this.handleMenuSelection(msg, captured, lang, normalizeMenuId(menuAction), send);
             return { handled: true };
         }
         // Water volume / post-diagnosis actions
@@ -676,7 +820,23 @@ export const whatsappScenarioRouter = {
             }
             return { handled: true };
         }
-        // Scenario 8 — unknown terminology
+        // Tank-mix / fertilizer — verified DB, else OpenAI with farmer memory (no generic menu)
+        if (text && isExplicitAgronomyQuestion(text)) {
+            const agronomyHandled = await tryAgronomyReply({
+                farmerId: captured.farmerId,
+                phone: msg.phone,
+                language: lang,
+                text,
+                sendText: send.text,
+                farmerName: msg.profileName,
+                isPremium: captured.isPremium,
+            });
+            if (agronomyHandled) {
+                await conversationSessionService.setState(captured.farmerId, 'main_menu');
+                return { handled: true };
+            }
+        }
+        // Scenario 8 — unknown regional term (short phrase only, not general ag questions)
         if (text && terminologyService.isLikelyUnknownRegionalPhrase(text)) {
             const { data: farmer } = await supabase
                 .from('farmers')
@@ -711,9 +871,31 @@ export const whatsappScenarioRouter = {
                 return { handled: true };
             }
         }
-        // PDF / document soil report (Scenario 14)
-        if (msg.msgType === 'document' && session.state === 'soil_flow') {
+        // Soil report upload (PDF / photo) while in soil flow
+        if ((msg.msgType === 'document' || CROP_MEDIA.has(msg.msgType)) && session.state === 'soil_flow') {
+            await nutrientSoilGateService.markSoilReportReceived(captured.farmerId);
             await send.text(msg.phone, soilFlowService.reportReceivedReply(lang));
+            const delivered = await nutrientSoilGateService.deliverPending({
+                farmerId: captured.farmerId,
+                phone: msg.phone,
+                language: lang,
+                sendText: send.text,
+                extraFooter: lang === 'ml'
+                    ? 'മണ്ണ് റിപ്പോർട്ട് ലഭിച്ചു — ഈ മാർഗ്ഗനിർദേശം അതിനെ അടിസ്ഥാനമാക്കി ക്രമീകരിക്കാം.'
+                    : 'Soil report received — we can refine this advice with your lab values.',
+            });
+            if (delivered) {
+                await this.afterDiagnosis({
+                    phone: msg.phone,
+                    farmerId: captured.farmerId,
+                    lang,
+                    sessionId: delivered.sessionId,
+                    advisory: delivered.advisory,
+                    summary: delivered.summary,
+                    send,
+                    skipNutrientSoilAsk: true,
+                });
+            }
             await conversationSessionService.setState(captured.farmerId, 'main_menu');
             return { handled: true };
         }
@@ -753,12 +935,7 @@ export const whatsappScenarioRouter = {
                 'plot_select',
             ]);
             if (diagnosisStates.has(session.state) || session.state === 'main_menu') {
-                const { imageCount, shouldRunDiagnosis } = await diagnosisFlowService.recordImageReceived(captured.farmerId);
-                if (imageCount === 1) {
-                    await send.text(msg.phone, diagnosisFlowService.firstImagePrompt(lang));
-                    await conversationSessionService.setState(captured.farmerId, 'diagnosis_awaiting_photos');
-                    return { handled: true };
-                }
+                const { shouldRunDiagnosis } = await diagnosisFlowService.recordImageReceived(captured.farmerId);
                 if (shouldRunDiagnosis) {
                     const welcome = await farmerWelcomeService.buildWelcomeLine(captured.farmerId, lang);
                     await send.text(msg.phone, diagnosisFlowService.analyzingPrompt(lang));
@@ -769,6 +946,11 @@ export const whatsappScenarioRouter = {
         if (session.state === 'diagnosis_awaiting_photos' && text) {
             await send.text(msg.phone, t('diagnosisPrompt', lang));
             return { handled: true };
+        }
+        if (session.state === 'soil_lab_entry' && text) {
+            const handled = await this.handleSoilLabEntry(msg, captured, lang, text, send);
+            if (handled)
+                return { handled: true };
         }
         if (session.state === 'soil_flow' && text && !text.startsWith('soil.')) {
             await send.text(msg.phone, t('mainMenuHint', lang));
@@ -823,30 +1005,92 @@ export const whatsappScenarioRouter = {
             await send.text(phone, menu.welcome);
         }
     },
+    async showMoreMenu(phone, lang, send) {
+        const menu = moreMenuCopy(lang);
+        if (send.list) {
+            await send.list({
+                phone,
+                body: menu.body,
+                buttonText: menu.buttonText,
+                sections: [{ title: 'More', rows: menu.rows }],
+            });
+        }
+        else if (send.buttons) {
+            await sendReplyButtonMenu({
+                to: phone,
+                body: menu.body,
+                options: menu.rows.map((r) => ({ id: r.id, title: r.title })),
+                continuationBody: 'More options:',
+                sendButtons: (p) => send.buttons({
+                    phone: p.to,
+                    body: p.body,
+                    buttons: p.buttons,
+                }),
+            });
+        }
+        else {
+            await send.text(phone, menu.body);
+        }
+    },
     async handleMenuSelection(msg, captured, lang, menuId, send) {
-        switch (menuId) {
-            case 'menu.diagnosis': {
-                await conversationSessionService.patchContext(captured.farmerId, {
-                    diagnosis: { imageCount: 0 },
-                    pendingCropSelection: true,
-                });
-                await conversationSessionService.clearActivePlot(captured.farmerId);
-                await cropSelectionService.sendCropPicker({
+        const action = normalizeMenuId(menuId);
+        switch (action) {
+            case 'menu.more': {
+                await this.showMoreMenu(msg.phone, lang, send);
+                await conversationSessionService.setState(captured.farmerId, 'main_menu');
+                break;
+            }
+            case 'menu.prev_recommendations': {
+                const body = await previousRecommendationsService.formatForFarmer(captured.farmerId, lang);
+                await send.text(msg.phone, body);
+                await conversationSessionService.setState(captured.farmerId, 'main_menu');
+                break;
+            }
+            case 'menu.ledger': {
+                const ledger = await ledgerSummaryService.formatMonthlyLedger(captured.farmerId, lang);
+                await send.text(msg.phone, ledger);
+                await conversationSessionService.setState(captured.farmerId, 'main_menu');
+                break;
+            }
+            case 'menu.roi_tracker': {
+                await roiFlowService.startTracker({
                     farmerId: captured.farmerId,
                     phone: msg.phone,
                     language: lang,
                     send,
-                    body: lang === 'ml'
-                        ? 'ഏത് പ്ലോട്ടിനാണ് രോഗനിർണയം വേണ്ടത്?'
-                        : lang === 'ta'
-                            ? 'எந்த ப்ளாட்டுக்கு நோய் கண்டறிதல் வேண்டும்?'
-                            : lang === 'kn'
-                                ? 'ಯಾವ ಪ್ಲಾಟ್‌ಗೆ ರೋಗ ನಿರ್ಧಾರ ಬೇಕು?'
-                                : lang === 'hi'
-                                    ? 'किस प्लॉट के लिए जांच चाहिए?'
-                                    : 'Which plot do you want to diagnose?',
                 });
-                await conversationSessionService.setState(captured.farmerId, 'crop_select');
+                break;
+            }
+            case 'menu.crop_assessment':
+            case 'menu.diagnosis': {
+                const assessmentPlots = await multiPlotService.listPlots(captured.farmerId);
+                const diagnoseBody = lang === 'ml'
+                    ? 'ഏത് പ്ലോട്ടിനാണ് രോഗനിർണയം വേണ്ടത്?'
+                    : lang === 'ta'
+                        ? 'எந்த ப்ளாட்டுக்கு நோய் கண்டறிதல் வேண்டும்?'
+                        : lang === 'kn'
+                            ? 'ಯಾವ ಪ್ಲಾಟ್‌ಗೆ ರೋಗ ನಿರ್ಧಾರ ಬೇಕು?'
+                            : lang === 'hi'
+                                ? 'किस प्लॉट के लिए जांच चाहिए?'
+                                : 'Which plot do you want to diagnose?';
+                await conversationSessionService.patchContext(captured.farmerId, {
+                    diagnosis: { imageCount: 0 },
+                    pendingCropSelection: false,
+                });
+                await conversationSessionService.clearActivePlot(captured.farmerId);
+                if (assessmentPlots.length >= 2) {
+                    await this.sendPlotPicker(msg.phone, captured.farmerId, lang, send);
+                }
+                else {
+                    await cropSelectionService.sendCropPicker({
+                        farmerId: captured.farmerId,
+                        phone: msg.phone,
+                        language: lang,
+                        send,
+                        body: diagnoseBody,
+                    });
+                    await conversationSessionService.setState(captured.farmerId, 'crop_select');
+                }
                 break;
             }
             case 'menu.track_order': {
@@ -903,6 +1147,17 @@ export const whatsappScenarioRouter = {
                     ? 'മണ്ണ് റിപ്പോർട്ടിന്റെ PDF അല്ലെങ്കിൽ ഫോട്ടോ അയയ്ക്കുക.'
                     : 'Please send your soil report PDF or photo.');
                 break;
+            case 'soil.enter_lab': {
+                const activePlot = await multiPlotService.getActivePlotId(captured.farmerId);
+                await conversationSessionService.patchContext(captured.farmerId, {
+                    soilLabStep: 'macro',
+                    soilLabDraft: {},
+                    soilLabBlockId: activePlot ?? undefined,
+                });
+                await conversationSessionService.setState(captured.farmerId, 'soil_lab_entry');
+                await send.text(msg.phone, soilFlowService.macroEntryPrompt(lang));
+                return;
+            }
             case 'soil.expert':
                 await send.text(msg.phone, await callbackFlowService.createCallback(captured.farmerId, lang, 'Soil expert'));
                 break;
@@ -910,6 +1165,73 @@ export const whatsappScenarioRouter = {
                 break;
         }
         await conversationSessionService.setState(captured.farmerId, 'soil_flow');
+    },
+    async handleSoilLabEntry(msg, captured, lang, text, send) {
+        const ctx = await conversationSessionService.getContext(captured.farmerId);
+        const step = ctx.soilLabStep ?? 'macro';
+        if (step === 'macro') {
+            const draft = soilFlowService.parseMacroInput(text);
+            if (!draft) {
+                await send.text(msg.phone, soilFlowService.invalidValuesReply(lang, 'macro'));
+                return true;
+            }
+            await conversationSessionService.patchContext(captured.farmerId, {
+                soilLabStep: 'micro',
+                soilLabDraft: soilFlowService.draftToContext(draft),
+            });
+            await send.text(msg.phone, soilFlowService.microEntryPrompt(lang));
+            return true;
+        }
+        if (step === 'micro') {
+            const draft = soilFlowService.draftFromContext(ctx);
+            const withMicro = soilFlowService.parseMicroInput(draft, text);
+            if (!withMicro) {
+                await send.text(msg.phone, soilFlowService.invalidValuesReply(lang, 'micro'));
+                return true;
+            }
+            await conversationSessionService.patchContext(captured.farmerId, {
+                soilLabStep: 'soil_type',
+                soilLabDraft: soilFlowService.draftToContext(withMicro),
+            });
+            await send.text(msg.phone, soilFlowService.soilTypeEntryPrompt(lang));
+            return true;
+        }
+        if (step === 'soil_type') {
+            const soilType = soilFlowService.parseSoilTypeInput(text);
+            if (!soilType) {
+                await send.text(msg.phone, soilFlowService.soilTypeEntryPrompt(lang));
+                return true;
+            }
+            const draft = soilFlowService.draftFromContext(ctx);
+            draft.soilType = soilType;
+            if (!soilFlowService.metricsHasValues(draft)) {
+                await send.text(msg.phone, soilFlowService.invalidValuesReply(lang, 'micro'));
+                return true;
+            }
+            const summary = await soilFlowService.saveLabMetrics(captured.farmerId, draft, {
+                blockId: ctx.soilLabBlockId,
+                uploadedBy: 'whatsapp',
+            });
+            await nutrientSoilGateService.markSoilReportReceived(captured.farmerId);
+            await conversationSessionService.patchContext(captured.farmerId, {
+                soilLabStep: undefined,
+                soilLabDraft: undefined,
+                soilLabBlockId: undefined,
+            });
+            await conversationSessionService.setState(captured.farmerId, 'main_menu');
+            await send.text(msg.phone, soilFlowService.savedLabReply(lang, summary));
+            const delivered = await nutrientSoilGateService.deliverPending({
+                farmerId: captured.farmerId,
+                phone: msg.phone,
+                language: lang,
+                sendText: (phone, body) => send.text(phone, body),
+            });
+            if (delivered?.delivered && delivered.summary) {
+                await send.text(msg.phone, delivered.summary);
+            }
+            return true;
+        }
+        return false;
     },
     async handleWaterVolume(msg, captured, lang, text, send) {
         if (text === 'action.callback') {
@@ -953,7 +1275,9 @@ export const whatsappScenarioRouter = {
             await conversationSessionService.setState(params.farmerId, 'root_photos_requested');
             return;
         }
-        if ((params.advisory.nutrientDeficiency?.length ?? 0) > 0) {
+        if (!params.skipNutrientSoilAsk &&
+            suggestsNutrientDeficiency(params.advisory) &&
+            !(await soilFlowService.hasSoilReport(params.farmerId))) {
             await this.askSoilReportConfirmation(params.phone, params.farmerId, params.lang, params.send);
             return;
         }
@@ -981,6 +1305,16 @@ export const whatsappScenarioRouter = {
         await recommendationFollowUpService
             .bootstrapFromDiagnosisSession(params.sessionId, params.farmerId)
             .catch((err) => logger.error({ err }, 'Recommendation follow-up bootstrap failed'));
+        if (params.send.buttons) {
+            const disagreeLabel = params.lang === 'ml' ? 'AI തെറ്റാണ്' : params.lang === 'hi' ? 'AI गलत है' : 'AI is wrong';
+            await params.send.buttons({
+                phone: params.phone,
+                body: params.lang === 'ml'
+                    ? 'ഈ നിർണയം ശരിയല്ലെങ്കിൽ, നിങ്ങളുടെ അനുഭവം പങ്കിടുക:'
+                    : 'If this diagnosis is not right, share your field experience:',
+                buttons: [{ id: 'feedback.disagree', title: disagreeLabel.slice(0, 20) }],
+            });
+        }
     },
 };
 //# sourceMappingURL=whatsapp-scenario-router.service.js.map

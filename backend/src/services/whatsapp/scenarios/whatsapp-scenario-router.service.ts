@@ -44,7 +44,7 @@ import { recommendationFollowUpService } from '../../core/recommendation-follow-
 import { returnUserGreetingService } from './return-user-greeting.service.js';
 import { farmerFeedbackFlowService } from './farmer-feedback-flow.service.js';
 import { isExplicitAgronomyQuestion } from '../pipeline/agriculture-free-text.service.js';
-import { tryCompatibilityQuickReply } from '../pipeline/compatibility-lookup.service.js';
+import { tryAgronomyReply } from '../pipeline/agronomy-reply.service.js';
 
 const CROP_MEDIA = new Set(['image', 'image_message', 'document']);
 const MENU_IDS = new Set([
@@ -1012,15 +1012,18 @@ export const whatsappScenarioRouter = {
       return { handled: true };
     }
 
-    // Tank-mix / fertilizer questions — verified DB rules only; else fall through to OpenAI
+    // Tank-mix / fertilizer — verified DB, else OpenAI with farmer memory (no generic menu)
     if (text && isExplicitAgronomyQuestion(text)) {
-      const compatHandled = await tryCompatibilityQuickReply({
-        text,
-        language: lang,
+      const agronomyHandled = await tryAgronomyReply({
+        farmerId: captured.farmerId,
         phone: msg.phone,
+        language: lang,
+        text,
         sendText: send.text,
+        farmerName: msg.profileName,
+        isPremium: captured.isPremium,
       });
-      if (compatHandled) {
+      if (agronomyHandled) {
         await conversationSessionService.setState(captured.farmerId, 'main_menu');
         return { handled: true };
       }

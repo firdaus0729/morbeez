@@ -14,7 +14,7 @@ export declare const aiMappingAdminService: {
             productName: string;
             imageUrl: string;
             mapped: string[];
-            mappedDisplay: "tags" | "all" | "empty";
+            mappedDisplay: "tags" | "empty" | "all";
             mappedTags: string[] | never[];
             mappedCount: number;
             allCropsLabel: string | null;
