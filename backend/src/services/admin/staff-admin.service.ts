@@ -71,14 +71,7 @@ type ProfileRow = {
   role: string;
   status: string;
   created_at: string;
-  admin_users: AdminRow | AdminRow[] | null;
 };
-
-function normalizeAdmin(raw: ProfileRow['admin_users']): AdminRow | null {
-  if (!raw) return null;
-  if (Array.isArray(raw)) return raw[0] ?? null;
-  return raw;
-}
 
 function performanceLabel(score: number): string {
   if (score >= 90) return 'Excellent';
@@ -191,17 +184,35 @@ export const staffAdminService = {
     const { data: profiles, error: profileErr } = await supabase
       .from('employee_profiles')
       .select(
-        `id, admin_user_id, employee_code, full_name, email, role, status, created_at,
-         admin_users ( id, email, full_name, role, active, last_login_at, created_at )`
+        'id, admin_user_id, employee_code, full_name, email, role, status, created_at'
       )
       .order('created_at', { ascending: false });
     throwIfSupabaseError(profileErr, 'Could not load employee profiles');
+
+    const adminIds = [
+      ...new Set(
+        (profiles ?? [])
+          .map((p) => p.admin_user_id)
+          .filter((id): id is string => Boolean(id))
+      ),
+    ];
+    const adminById = new Map<string, AdminRow>();
+    if (adminIds.length) {
+      const { data: admins, error: adminsErr } = await supabase
+        .from('admin_users')
+        .select('id, email, full_name, role, active, last_login_at, created_at')
+        .in('id', adminIds);
+      throwIfSupabaseError(adminsErr, 'Could not load linked admin accounts');
+      for (const a of admins ?? []) {
+        adminById.set(a.id, a as AdminRow);
+      }
+    }
 
     const linkedAdminIds = new Set<string>();
     const employees: StaffMember[] = [];
 
     for (const row of (profiles ?? []) as ProfileRow[]) {
-      const admin = normalizeAdmin(row.admin_users);
+      const admin = row.admin_user_id ? adminById.get(row.admin_user_id) ?? null : null;
       const email = (admin?.email ?? row.email ?? '').trim().toLowerCase();
       if (!email) continue;
       if (admin?.id) linkedAdminIds.add(admin.id);

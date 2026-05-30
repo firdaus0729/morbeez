@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { api } from '../../lib/api';
-import { Alert, Btn } from '../ui';
+import { Alert, Btn, Loading } from '../ui';
 import {
   IconArrowUp,
   IconChevronLeft,
@@ -232,7 +232,6 @@ export function CaseReviewPanel({ canWrite }: { canWrite: boolean }) {
       setDetail(null);
       return;
     }
-    setDetail(null);
     void loadDetail(selectedId);
   }, [selectedId, loadDetail]);
 
@@ -333,7 +332,7 @@ export function CaseReviewPanel({ canWrite }: { canWrite: boolean }) {
             </label>
 
             {loading && queue.length === 0 ? (
-              <p className="cr-muted cr-pad text-sm">Loading queue…</p>
+              <Loading label="Loading queue…" />
             ) : null}
             <ul className="cr-queue-list" aria-busy={loading}>
               {queue.map((item) => (
@@ -496,10 +495,12 @@ export function CaseReviewPanel({ canWrite }: { canWrite: boolean }) {
         <main className="cr-col-center">
           {!selectedId ? (
             <p className="cr-empty-center">Select a case from the escalation queue.</p>
-          ) : detailLoading && !detail ? (
-            <p className="cr-muted cr-pad">Loading case…</p>
-          ) : !detail ? (
-            <p className="cr-empty-center">Could not load this case.</p>
+          ) : detailLoading || !detail ? (
+            detailLoading ? (
+              <Loading label="Loading case…" />
+            ) : (
+              <p className="cr-empty-center">Could not load this case.</p>
+            )
           ) : (
             <>
               {detail.images.length > 0 ? (
